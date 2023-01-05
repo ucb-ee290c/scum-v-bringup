@@ -1,5 +1,20 @@
-# Created by https://www.toptal.com/developers/gitignore/api/macos
-# Edit at https://www.toptal.com/developers/gitignore?templates=macos
+# Created by https://www.toptal.com/developers/gitignore/api/linux,macos,xilinxvivado
+# Edit at https://www.toptal.com/developers/gitignore?templates=linux,macos,xilinxvivado
+
+### Linux ###
+*~
+
+# temporary files which can be created if a process still has a handle open of a deleted file
+.fuse_hidden*
+
+# KDE directory preferences
+.directory
+
+# Linux trash folder which might appear on any partition or disk
+.Trash-*
+
+# .nfs files are created when an open file is removed but is still being accessed
+.nfs*
 
 ### macOS ###
 # General
@@ -30,8 +45,11 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
-### macOS Patch ###
-# iCloud generated files
-*.icloud
-
-# End of https://www.toptal.com/developers/gitignore/api/macos
+build/
+*.elf
+*.bin
+*.dump
+*.mif
+*.fst
+*.tbi
+.vscode
