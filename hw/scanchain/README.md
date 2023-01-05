@@ -1,23 +1,17 @@
-# SPIGlass
+# hw-scanchain
 
-This project is a simple, fully synthesizable SPI Flash device. It is currently
-implemented for the Arty A7-100T but can trivially be ported to any device by 
-modifying the `Makefile`, the top file, and the constraints file. This project
-is written in Verilog.
+This is a simple, parameterized scanchain interface which can be used to 
+interact with targets from a host machine over UART. This was designed for
+SCUM-V and the Arty-A7 100T but can trivially ported to other FPGAs and SoCs.
 
-On the Arty A7-100T, this design is able to provide read and write access to
-512K of BRAM backed memory at 52.6MHz.
+By default, this project uses a scan clock of 100KHz. This can be changed in
+`a7top.v`. To use this, attach `SCAN_CLK`, `SCAN_EN`, `SCAN_IN`, and 
+`SCAN_RESET` to the target. Next, press the reset switch on the FPGA to start
+the UART interface. The target SoC does not need to be configured directly; a
+remote reset can be triggered via the scan chain over UART. 
 
-### Limitations
-This design supports only the handful of commands necessary to support basic
-reading and writing. Thus, the only instructions (currently) supported are:
+This project uses the following binary wire format for UART:
 
-* Write Enable
-* Write Disable
-* Read Data
-* Program Page
-
-Additionally, while some efforts have been made to verify the correctness of
-the design, no serious guarantees are given about whether or not this design
-really works. Use at your own peril <3
+    Scan chain write request:  {2'b0, 1'b_reset, 169'b_payload, 12'b_addr}.
+    Scan chain write response: {7'b0, 1'b_success}
 

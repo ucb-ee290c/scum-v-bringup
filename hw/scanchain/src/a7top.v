@@ -78,21 +78,6 @@ module a7top #(
 
     assign uart_ready = sc_writer_ready;
 
-    // always @(posedge clk) begin
-    //     if (reset) begin
-    //         uart_ready <= 1;
-    //     end
-    //     else if (uart_ready && uart_valid) begin
-    //         /* 
-    //         We've just turned ready! Hold on to it till we can hand it off.
-    //         If the writer is ready right now, we can take another UART packet
-    //         next cycle since they writer will internalize first.
-    //         */
-    //         uart_ready <= sc_writer_ready;
-    //     end
-    //     else if (uart_valid && sc_read)
-    // end
-
     assign led[0] = n_reset;
     assign led[1] = SCAN_EN;
     assign led[2] = SCAN_CLK;
