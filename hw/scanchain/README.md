@@ -13,5 +13,10 @@ remote reset can be triggered via the scan chain over UART.
 This project uses the following binary wire format for UART:
 
     Scan chain write request:  {2'b0, 1'b_reset, 169'b_payload, 12'b_addr}.
-    Scan chain write response: {7'b0, 1'b_success}
+    Scan chain write response: {8'd_ascii_response_code}
+
+ASCII response codes from the FPGA:
+0x30    |   '0' |   Write request denied
+0x31    |   '1' |   Write request accepted
+
 

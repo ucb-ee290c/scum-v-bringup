@@ -1,8 +1,7 @@
 module a7top #(
     parameter CLOCK_FREQ = 100_000_000,
     parameter CLOCK_PERIOD = 1_000_000_000 / CLOCK_FREQ,
-    // 100KHz scan_clock
-    parameter SCAN_CLK_FREQ    = 100_000_000,
+    parameter SCAN_CLK_FREQ    = 1000,
     parameter SCAN_CLK_PERIOD  = 1_000_000_000 / SCAN_CLK_FREQ,
     parameter CLKS_PER_SCAN_CLK = CLOCK_FREQ / SCAN_CLK_FREQ,
 
@@ -38,6 +37,10 @@ module a7top #(
     wire [PAYLOAD_BITS - 1 : 0] write_payload;
     wire FPGA_CLK = CLK100MHZ;
 
+    wire scan_en_mid;
+    // invert
+    assign SCAN_EN = scan_en_mid;
+
     scanchain_uart_client #(
         .CLOCK_FREQ(CLOCK_FREQ),
         .BAUD_RATE(BAUD_RATE)
@@ -71,7 +74,7 @@ module a7top #(
         .write_reset(write_reset),
 
         .scan_clk(SCAN_CLK),
-        .scan_en(SCAN_EN),
+        .scan_en(scan_en_mid),
         .scan_in(SCAN_IN),
         .scan_reset(SCAN_RESET)
     );

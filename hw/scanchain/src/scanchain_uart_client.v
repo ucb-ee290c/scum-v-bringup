@@ -179,8 +179,9 @@ always @(posedge clk) begin
         /* 
         This path will only be taken once because next_state always is READ
         after will_transmit
+        Send a 0 if the write was not accepted, 1 if it was accepted
         */
-        uart_data_in <= {7'b0, write_accepted};
+        uart_data_in <= write_accepted ? 8'd49: 8'd48 ;
         uart_data_in_valid <= 1;
     end
     else begin

@@ -23,9 +23,9 @@ localparam TX_BUFFER_SIZE = (ADDR_BITS + PAYLOAD_BITS);
 localparam TX_BUFFER_BIT_SIZE = $clog2(TX_BUFFER_SIZE);
 localparam TX_BUFFER_COUNTER_MAX = TX_BUFFER_SIZE;
 
-localparam SCAN_CLK_COUNTER_MAX = (CLOCK_FREQ / CLOCKS_PER_SCAN_CLK) - 1;
-localparam SCAN_CLK_COUNTER_BIT_SIZE = $clog2(SCAN_CLK_COUNTER_MAX + 1);
-localparam SCAN_CLK_COUNTER_HALF_PERIOD = ((SCAN_CLK_COUNTER_MAX + 1) / 2);
+localparam SCAN_CLK_COUNTER_MAX = CLOCKS_PER_SCAN_CLK;
+localparam SCAN_CLK_COUNTER_BIT_SIZE = $clog2(SCAN_CLK_COUNTER_MAX);
+localparam SCAN_CLK_COUNTER_HALF_PERIOD = ((SCAN_CLK_COUNTER_MAX) / 2);
 
 reg [SCAN_CLK_COUNTER_BIT_SIZE - 1 : 0] scan_clk_counter;
 reg internalized_write_valid;
@@ -53,6 +53,9 @@ endgenerate
 
 always @(posedge clk) begin
     if (reset) begin
+        scan_clk_counter <= 0;
+    end
+    else if (scan_clk_counter == SCAN_CLK_COUNTER_MAX) begin
         scan_clk_counter <= 0;
     end
     else begin
