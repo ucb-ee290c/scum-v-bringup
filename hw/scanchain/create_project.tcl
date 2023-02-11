@@ -91,7 +91,7 @@ if { [info exists ::user_project_name] } {
 }
 
 variable script_file
-set script_file "build.tcl"
+set script_file "create_project.tcl"
 
 # Help information for this script
 proc print_help {} {
@@ -256,7 +256,7 @@ set_property -name "top_lib" -value "xil_defaultlib" -objects $obj
 set obj [get_filesets utils_1]
 # Import local files from the original project
 set files [list \
- [file normalize "${origin_dir}/scanchain.srcs/utils_1/imports/synth_1/a7top.dcp" ]\
+ [file normalize "${origin_dir}/checkpoints/a7top.dcp" ]\
 ]
 set imported_files [import_files -fileset utils_1 $files]
 
