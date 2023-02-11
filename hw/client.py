@@ -23,6 +23,11 @@ def pkt_send(pkt:ScanChainPacket)->bool:
     resp = s.read(1)
     print(f"[RX] {str(resp)}")
 
+
+OSC_ADDR = 1
+RF_ADDR = 2
+PWR_ADDR = 3
+
 reset_pkt = ScanChainPacket()
 reset_pkt.reset = 1
 reset_pkt.addr = 0 #probably not needed but yolo
@@ -33,16 +38,30 @@ reset_pkt.payload = 0
 # osc_payload |= 0b10 << 3 #MUX_CLK_OUT := RTC clk? 
 # osc_payload |= 0b1 << 6 #CPU clock := external
 # osc_payload = 0xffff_ffff_ffff_ffff
-osc_payload = 0b1100
+cpu_bypass = 0b1
+adc_bypass = 0b0
+
+# sel0, sel1
+# 0, 0 -> DIG_CLK
+# 0, 1 -> DIG_CLK
+# 1, 0 -> RTC_CLK
+# 1, 1 -> ADC_CLK
+sel_0 = 0b0
+sel_1 = 0b0
+osc_payload = (sel_1 << 3) | (sel_0 << 2) 
+osc_payload |=  (cpu_bypass << 5) | (adc_bypass << 4)
+
 
 clk_pkt = ScanChainPacket()
-clk_pkt.addr = 1
+clk_pkt.addr = OSC_ADDR
 clk_pkt.reset = 0
 clk_pkt.payload = osc_payload #0b1111_1010_1010_1010#bytearray(b'\x41\xff')
 
-# pkt_send(reset_pkt)
-# sleep(2)
+#pkt_send(reset_pkt)
+#sleep(2)
 pkt_send(clk_pkt)
+#sleep(5)
+#pkt_send(clk_pkt)
 
 # for i in range(54):
 #     pkt = ScanChainPacket()
