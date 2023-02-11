@@ -47,3 +47,27 @@ A level shifter from 3.3V to 1.8V is needed for each signal here.
 
 - SCAN_SEL  <>  +1.8V
 - RESET     <>  GND
+
+## FPGA Setup
+
+### Flashing the bitstream
+
+This guide is based on and tested with Vivado 2022.1 on Windows. The steps should work for other versions of Vivado, but cannot be guaranteed. 
+
+If you do run this on a different version of Vivado, please let us know if there are any issues or if your version is supported.
+
+1. Open Vivado
+2. In the TCL console and change the working directory to the `scum-v-bringup/hw/scanchain` directory. For example, if you cloned this repo to `C:\Projects\Repositories\scum-v-bringup`, then you would run the following command in the TCL console:
+
+    ```cd C:/Projects/Repositories/scum-v-bringup/hw/scanchain```
+3. Generate the Vivado project by running the following command in the TCL console:
+
+    ```source create_project.tcl```
+
+4. The Vivado project should now be open. Build the bitstream by running `Generate Bitstream` in the `Flow Navigator` panel.
+
+5. Connect the Arty A7-100T to your computer via USB. The Arty A7-100T should show up as a USB device in the `Device Manager` on Windows or `lsusb` on Linux.
+
+6. In the `Flow Navigator` panel, click on `Open Target` and select the Arty A7-100T as the device. Then `Program Device` The bitstream should now be flashed to the FPGA. You can verify that the bitstream has been flashed by seeing LED2 on the Arty A7-100T turn on (it is slaved to SCAN_CLK).
+
+
