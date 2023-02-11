@@ -59,15 +59,32 @@ If you do run this on a different version of Vivado, please let us know if there
 1. Open Vivado
 2. In the TCL console and change the working directory to the `scum-v-bringup/hw/scanchain` directory. For example, if you cloned this repo to `C:\Projects\Repositories\scum-v-bringup`, then you would run the following command in the TCL console:
 
-    ```cd C:/Projects/Repositories/scum-v-bringup/hw/scanchain```
+    ```
+    cd C:/Projects/Repositories/scum-v-bringup/hw/scanchain
+    ```
 3. Generate the Vivado project by running the following command in the TCL console:
 
-    ```source create_project.tcl```
+    ```
+    source create_project.tcl
+    ```
 
 4. The Vivado project should now be open. Build the bitstream by running `Generate Bitstream` in the `Flow Navigator` panel.
 
 5. Connect the Arty A7-100T to your computer via USB. The Arty A7-100T should show up as a USB device in the `Device Manager` on Windows or `lsusb` on Linux.
 
 6. In the `Flow Navigator` panel, click on `Open Target` and select the Arty A7-100T as the device. Then `Program Device` The bitstream should now be flashed to the FPGA. You can verify that the bitstream has been flashed by seeing LED2 on the Arty A7-100T turn on (it is slaved to SCAN_CLK).
+
+## Writing to SCuM-V's ASC
+
+Ensure **every** connection listed in the `Connections` section above was made correctly.
+
+1. Make any modifications to the `client.py` script in the `hw/` folder then run:
+
+    ```
+    python client.py
+    ```
+    
+
+
 
 
