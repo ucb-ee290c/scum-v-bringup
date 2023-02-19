@@ -169,85 +169,21 @@ int main() {
   HAL_init();
 
   UART_InitTypeDef UART_init_config;
-  UART_init_config.baudrate = 9600;
+  UART_init_config.baudrate = 10000;
 
 
   HAL_UART_init(UART0, &UART_init_config);
-  HAL_GPIO_init(GPIOA, GPIO_PIN_0);
-  HAL_GPIO_writePin(GPIOA, GPIO_PIN_0, 1);
+  //HAL_GPIO_init(GPIOA, GPIO_PIN_0);
+  //HAL_GPIO_writePin(GPIOA, GPIO_PIN_0, 1);
 
   // HAL_delay(2000);
 
   // set tuning trim G0 0th bit 1
-  CLEAR_BITS(*(uint8_t *)BASEBAND_TRIM_G0, 0b1);
-  sprintf(str, "TRIM G0 value: %x\n", *(uint8_t *)BASEBAND_TRIM_G0);
-  HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-
-  // Payload is <header><data>, where data is "TEST DATA FOR BASEBAND!"
-  uint8_t payload[]  = {0x1, 0x17, 0x54, 0x45, 0x53, 0x54, 0x20, 0x44, 0x41, 0x54, 0x41, 0x20, 0x46, 0x4f, 0x52, 0x20, 0x42, 0x41, 0x53, 0x45, 0x42, 0x41, 0x4e, 0x44, 0x21};
-
-  //  baseband_set_lut(uint8_t lut, uint8_t address, uint32_t value)
-  // Initialize all the LO LUT entries with a linspace of values
-  baseband_set_lut(LUT_LOCT, 0, (uint8_t)128);
-  // Set the LUT_LOFSK values to a linear ramp
-  for (int i = 0; i < 64; i++) {
-    baseband_set_lut(LUT_LOFSK, i, (uint8_t)255);
-  }
-
-  //void ble_configure(uint8_t target, uint32_t value)
-  ble_configure(BASEBAND_CONFIG_CHANNEL_INDEX, 0);
-  /*
-  for(int i = 0; i < 63; i++) {
-    baseband_set_lut(LUT_LOCT, i, 0x00);
-  }
-  */
-
-  // Interrupts for baseband TX are 9, 10
-  // plic_enable_for_hart(0, 9);
-  // plic_enable_for_hart(0, 10);
-  // plic_set_priority(9, 5); // Set all the priorities to 5 for now
-  // plic_set_priority(10, 5);
-  
-  // HAL_CORE_enableIRQ(MachineExternal_IRQn);
-  // HAL_CORE_enableInterrupt();
-
-  //uint32_t timer = 0;
-  //  uint16_t cur_channel = 1;
-
   sprintf(str, "I'm alive!\n");
   HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
 
   while (1) {
-
-/*
-    uint32_t dcsr = 0;
-    asm volatile("csrr %0, dcsr" : "=r"(dcsr));
-
-    sprintf(str, "dcsr value: %x\n", dcsr);
+    HAL_delay(100);
     HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-  */  
-    //sprintf(str, "Hi :) \n");
-    //HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-
-
-    // sprintf(str, "Sending payload to baseband...\n");
-    // HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-    ble_send((uint32_t) payload, sizeof(payload));
-    /*
-    // Channel switching 
-    if(timer > 200000) {
-      timer = 0;
-      //void ble_configure(uint8_t target, uint32_t value)
-      baseband_config(BASEBAND_CONFIG_CHANNEL_INDEX, )
-    }
-    */
-
-    // while (done_status != 1) {
-    //   sprintf(str, "*");
-    // }
-    // sprintf(str, "\nDone.\n");
-    // HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-
-    //HAL_delay(100);
   }
 }
