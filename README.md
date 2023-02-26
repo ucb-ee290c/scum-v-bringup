@@ -1,6 +1,30 @@
 # scum-v-bringup
 Various files for bringing up the EE290C Spring '21 variant
 
+## Project Structure
+
+- hw/
+    - scanchain/
+        - Vivado project for the bitstream to be used on an Arty A7-100T to translate UART from UART to SCuM's analog scan chain. 
+    - tiny_adapter/
+        - **Not functional**. Vivado project for the bitstream to be used on a CMOD A7 to translate from UART to SCuM's TSI bus.
+    - scanchain/
+        - Vivado project for the STM32F446RE analog scan chain adapter.
+    - client.py
+        - Python script for use with the Arty A7-100T to translate UART to SCuM's analog scan chain.
+
+- sw/
+    - scum_firmware/
+        - RISC-V firmware to be loaded onto the SCuM-V.
+    - TileLinkTrafficAdapter-F446/
+        - STM32F446RE firmware for translating UART to the TSI bus.
+    - scanchain/
+        - **Not functional**. STM32F446RE firmware for translating UART to the analog scan chain bus. 
+    - proxyFESVR/
+        - **Not functional**. Fork of Franklin Huang's proxyFESVR library, modified to support SCuM-V. See the [README](sw/proxyFESVR/README.md) for more details.
+    - tl_host.py
+        - Python script for use with the STM32F446RE to translate UART to SCuM's TSI bus.
+
 ## Hardware Setup
 
 ### Equipment needed:
