@@ -1,5 +1,5 @@
 #*****************************************************************************************
-# Vivado (TM) v2022.1 (64-bit)
+# Vivado (TM) v2022.2 (64-bit)
 #
 # create_project.tcl: Tcl script for re-creating project 'scanchain'
 #
@@ -23,24 +23,25 @@
 # 2. The following source(s) files that were local or imported into the original project.
 #    (Please see the '$orig_proj_dir' and '$origin_dir' variable setting below at the start of the script)
 #
-#    "C:/Projects/Repositories/scum-v-bringup/hw/scanchain/src/scanchain_uart_client.v"
-#    "C:/Projects/Repositories/scum-v-bringup/hw/scanchain/src/scanchain_writer.v"
-#    "C:/Projects/Repositories/scum-v-bringup/hw/scanchain/src/uart.v"
-#    "C:/Projects/Repositories/scum-v-bringup/hw/scanchain/src/uart_receiver.v"
-#    "C:/Projects/Repositories/scum-v-bringup/hw/scanchain/src/uart_transmitter.v"
-#    "C:/Projects/Repositories/scum-v-bringup/hw/scanchain/src/a7top.v"
-#    "C:/Projects/Repositories/scum-v-bringup/hw/scanchain/src/ScanChain.v"
-#    "C:/Projects/Repositories/scum-v-bringup/hw/scanchain/src/fifo.v"
-#    "C:/Projects/Repositories/scum-v-bringup/hw/scanchain/src/a7top.xdc"
-#    "C:/Projects/Repositories/scum-v-bringup/hw/scanchain/sim/scanchain_integration_tb.v"
-#    "C:/Projects/Repositories/scum-v-bringup/hw/scanchain/sim/scanchain_uart_client_tb.v"
-#    "C:/Projects/Repositories/scum-v-bringup/hw/scanchain/sim/scanchain_writer_tb.v"
-#    "C:/Projects/Repositories/scum-v-bringup/hw/scanchain/sim/scanchain_top_tb.v"
-#    "C:/Projects/Repositories/scum-v-bringup/hw/scanchain/sim/ScanTop_tb.v"
-#
 # 3. The following remote source files that were added to the original project:-
 #
-#    <none>
+#    "G:/My Drive/2023-1 Spring/EE 194/scum-v-bringup/hw/scanchain/src/uart.v"
+#    "G:/My Drive/2023-1 Spring/EE 194/scum-v-bringup/hw/scanchain/src/ScanChain.v"
+#    "G:/My Drive/2023-1 Spring/EE 194/scum-v-bringup/hw/scanchain/src/button_parser/button_parser.v"
+#    "G:/My Drive/2023-1 Spring/EE 194/scum-v-bringup/hw/scanchain/src/fifo.v"
+#    "G:/My Drive/2023-1 Spring/EE 194/scum-v-bringup/hw/scanchain/src/scanchain_writer.v"
+#    "G:/My Drive/2023-1 Spring/EE 194/scum-v-bringup/hw/scanchain/src/uart_transmitter.v"
+#    "G:/My Drive/2023-1 Spring/EE 194/scum-v-bringup/hw/scanchain/src/button_parser/synchronizer.v"
+#    "G:/My Drive/2023-1 Spring/EE 194/scum-v-bringup/hw/scanchain/src/a7top.v"
+#    "G:/My Drive/2023-1 Spring/EE 194/scum-v-bringup/hw/scanchain/src/scanchain_uart_client.v"
+#    "G:/My Drive/2023-1 Spring/EE 194/scum-v-bringup/hw/scanchain/src/uart_receiver.v"
+#    "G:/My Drive/2023-1 Spring/EE 194/scum-v-bringup/hw/scanchain/src/button_parser/debouncer.v"
+#    "G:/My Drive/2023-1 Spring/EE 194/scum-v-bringup/hw/scanchain/src/a7top.xdc"
+#    "G:/My Drive/2023-1 Spring/EE 194/scum-v-bringup/hw/scanchain/sim/scanchain_integration_tb.v"
+#    "G:/My Drive/2023-1 Spring/EE 194/scum-v-bringup/hw/scanchain/sim/scanchain_writer_tb.v"
+#    "G:/My Drive/2023-1 Spring/EE 194/scum-v-bringup/hw/scanchain/sim/ScanTop_tb.v"
+#    "G:/My Drive/2023-1 Spring/EE 194/scum-v-bringup/hw/scanchain/sim/scanchain_top_tb.v"
+#    "G:/My Drive/2023-1 Spring/EE 194/scum-v-bringup/hw/scanchain/sim/scanchain_uart_client_tb.v"
 #
 #*****************************************************************************************
 
@@ -48,24 +49,27 @@
 proc checkRequiredFiles { origin_dir} {
   set status true
   set files [list \
- "[file normalize "$origin_dir/src/scanchain_uart_client.v"]"\
- "[file normalize "$origin_dir/src/scanchain_writer.v"]"\
  "[file normalize "$origin_dir/src/uart.v"]"\
- "[file normalize "$origin_dir/src/uart_receiver.v"]"\
- "[file normalize "$origin_dir/src/uart_transmitter.v"]"\
- "[file normalize "$origin_dir/src/a7top.v"]"\
  "[file normalize "$origin_dir/src/ScanChain.v"]"\
+ "[file normalize "$origin_dir/src/button_parser/button_parser.v"]"\
  "[file normalize "$origin_dir/src/fifo.v"]"\
+ "[file normalize "$origin_dir/src/scanchain_writer.v"]"\
+ "[file normalize "$origin_dir/src/uart_transmitter.v"]"\
+ "[file normalize "$origin_dir/src/button_parser/synchronizer.v"]"\
+ "[file normalize "$origin_dir/src/a7top.v"]"\
+ "[file normalize "$origin_dir/src/scanchain_uart_client.v"]"\
+ "[file normalize "$origin_dir/src/uart_receiver.v"]"\
+ "[file normalize "$origin_dir/src/button_parser/debouncer.v"]"\
  "[file normalize "$origin_dir/src/a7top.xdc"]"\
  "[file normalize "$origin_dir/sim/scanchain_integration_tb.v"]"\
- "[file normalize "$origin_dir/sim/scanchain_uart_client_tb.v"]"\
  "[file normalize "$origin_dir/sim/scanchain_writer_tb.v"]"\
- "[file normalize "$origin_dir/sim/scanchain_top_tb.v"]"\
  "[file normalize "$origin_dir/sim/ScanTop_tb.v"]"\
+ "[file normalize "$origin_dir/sim/scanchain_top_tb.v"]"\
+ "[file normalize "$origin_dir/sim/scanchain_uart_client_tb.v"]"\
   ]
   foreach ifile $files {
     if { ![file isfile $ifile] } {
-      puts " Could not find local file $ifile "
+      puts " Could not find remote file $ifile "
       set status false
     }
   }
@@ -137,7 +141,7 @@ if { $::argc > 0 } {
 }
 
 # Set the directory path for the original project from where this script was exported
-set orig_proj_dir "[file normalize "$origin_dir/"]"
+set orig_proj_dir "[file normalize "$origin_dir/scanchain"]"
 
 # Check for paths and files needed for project creation
 set validate_required 0
@@ -169,6 +173,8 @@ set_property -name "revised_directory_structure" -value "1" -objects $obj
 set_property -name "sim.central_dir" -value "$proj_dir/${_xil_proj_name_}.ip_user_files" -objects $obj
 set_property -name "sim.ip.auto_export_scripts" -value "1" -objects $obj
 set_property -name "simulator_language" -value "Mixed" -objects $obj
+set_property -name "sim_compile_state" -value "1" -objects $obj
+set_property -name "source_mgmt_mode" -value "DisplayOnly" -objects $obj
 set_property -name "webtalk.xsim_launch_sim" -value "4" -objects $obj
 
 # Create 'sources_1' fileset (if not found)
@@ -180,14 +186,17 @@ if {[string equal [get_filesets -quiet sources_1] ""]} {
 set obj [get_filesets sources_1]
 # Add local files from the original project (-no_copy_sources specified)
 set files [list \
- [file normalize "${origin_dir}/src/scanchain_uart_client.v" ]\
- [file normalize "${origin_dir}/src/scanchain_writer.v" ]\
- [file normalize "${origin_dir}/src/uart.v" ]\
- [file normalize "${origin_dir}/src/uart_receiver.v" ]\
- [file normalize "${origin_dir}/src/uart_transmitter.v" ]\
- [file normalize "${origin_dir}/src/a7top.v" ]\
- [file normalize "${origin_dir}/src/ScanChain.v" ]\
- [file normalize "${origin_dir}/src/fifo.v" ]\
+ [file normalize "${origin_dir}/src/uart.v"] \
+ [file normalize "${origin_dir}/src/ScanChain.v"] \
+ [file normalize "${origin_dir}/src/button_parser/button_parser.v"] \
+ [file normalize "${origin_dir}/src/fifo.v"] \
+ [file normalize "${origin_dir}/src/scanchain_writer.v"] \
+ [file normalize "${origin_dir}/src/uart_transmitter.v"] \
+ [file normalize "${origin_dir}/src/button_parser/synchronizer.v"] \
+ [file normalize "${origin_dir}/src/a7top.v"] \
+ [file normalize "${origin_dir}/src/scanchain_uart_client.v"] \
+ [file normalize "${origin_dir}/src/uart_receiver.v"] \
+ [file normalize "${origin_dir}/src/button_parser/debouncer.v"] \
 ]
 set added_files [add_files -fileset sources_1 $files]
 
@@ -232,11 +241,11 @@ if {[string equal [get_filesets -quiet sim_1] ""]} {
 set obj [get_filesets sim_1]
 # Add local files from the original project (-no_copy_sources specified)
 set files [list \
- [file normalize "${origin_dir}/sim/scanchain_integration_tb.v" ]\
- [file normalize "${origin_dir}/sim/scanchain_uart_client_tb.v" ]\
- [file normalize "${origin_dir}/sim/scanchain_writer_tb.v" ]\
- [file normalize "${origin_dir}/sim/scanchain_top_tb.v" ]\
- [file normalize "${origin_dir}/sim/ScanTop_tb.v" ]\
+ [file normalize "${origin_dir}/sim/scanchain_integration_tb.v"] \
+ [file normalize "${origin_dir}/sim/scanchain_writer_tb.v"] \
+ [file normalize "${origin_dir}/sim/ScanTop_tb.v"] \
+ [file normalize "${origin_dir}/sim/scanchain_top_tb.v"] \
+ [file normalize "${origin_dir}/sim/scanchain_uart_client_tb.v"] \
 ]
 set added_files [add_files -fileset sim_1 $files]
 

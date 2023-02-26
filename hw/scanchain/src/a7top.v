@@ -8,10 +8,16 @@ module a7top #(
     parameter ADDR_BITS = 12,
     parameter PAYLOAD_BITS = 169,
 
-    parameter BAUD_RATE = 115_200
+    parameter BAUD_RATE = 115_200,
+    
+    // Sample the button signal every 500us
+    parameter integer B_SAMPLE_CNT_MAX = 0.0005 * CLOCK_FREQ,
+    // The button is considered 'pressed' after 100ms of continuous pressing
+    parameter integer B_PULSE_CNT_MAX = 0.100 / 0.0005
 )(
     input CLK100MHZ,
     input RESET,
+    input BUTTON_0,
 
     output UART_RXD_IN,
     input UART_TXD_IN,
@@ -20,6 +26,7 @@ module a7top #(
     output SCAN_EN,
     output SCAN_IN,
     output SCAN_RESET,
+    output CHIP_RESET,
 
     output [3 : 0] led
 );
@@ -80,6 +87,16 @@ module a7top #(
     );
 
     assign uart_ready = sc_writer_ready;
+
+    button_parser #(
+        .WIDTH(1),
+        .SAMPLE_CNT_MAX(B_SAMPLE_CNT_MAX),
+        .PULSE_CNT_MAX(B_PULSE_CNT_MAX)
+    ) bp (
+        .clk(FPGA_CLK),
+        .in(BUTTON_0),
+        .out(CHIP_RESET)
+    );
 
     assign led[0] = n_reset;
     assign led[1] = SCAN_EN;
