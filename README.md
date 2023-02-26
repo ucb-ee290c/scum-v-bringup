@@ -8,12 +8,16 @@ Various files for bringing up the EE290C Spring '21 variant
 1. SCuM-V Universal PCB 
     - [Schematic/Layout for Rev. 1](https://uc-berkeley-9.365.altium.com/designs/3D0D350B-0F0E-4E78-9462-98D18BF7F627)
     - [Schematic/Layout for Rev. 3](https://uc-berkeley-9.365.altium.com/designs/57925AD0-466D-477E-A70E-7C0E4B06D00B)
-2. Arty A7-35T or Art A7-100T FPGA Board
+2. Arty A7-35T or Art A7-100T FPGA Board (to program the Analog Scan Chain)
     - The Arty A7-35T is unfortunately retired by Digilent, but the A7-100T is still available
     - [Arty A7-100T](https://digilent.com/shop/arty-a7-100t-artix-7-fpga-development-board/)
-3. 3.3V to 1.8V Level Shifter
+3. 2x 3.3V to 1.8V Level Shifter (1x for Analog Scan Chain 1x for TSI)
     - A breadboarded voltage divider circuit for level shifting will work
     - [Digilent PMOD Level Shifter](https://digilent.com/shop/pmod-lvlshft-logic-level-shifter/)
+4. STM32 Nucleo-64 development board with STM32F446RE MCU
+    - The STM32 board is used as a UART to TSI adapter to communicate with the digital portion of SCuM
+    - [NUCLEO-F446RE](https://www.st.com/en/evaluation-tools/nucleo-f446re.html)
+    
 
 ### Connections
 
@@ -84,7 +88,12 @@ Ensure **every** connection listed in the `Connections` section above was made c
     python client.py
     ```
     
+## STM32 Setup
 
+### Flashing the firmware
+
+The STM32CubeIDE is needed to build and flash the firmware to the STM32 board. The IDE can be downloaded here: 
+https://www.st.com/en/development-tools/stm32cubeide.html
 
 
 
