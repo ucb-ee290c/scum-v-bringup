@@ -1,5 +1,5 @@
 # scum-v-bringup
-Various files for bringing up the EE290C Spring '21 variant
+Various files for bringing up the Single-Chip Micro Mote V (SCμM-V)
 
 ## Project Structure
 
