@@ -149,3 +149,10 @@ https://www.st.com/en/development-tools/stm32cubeide.html
 
 
 
+## Building SCuM-V's firmware
+
+### Sofware setup
+
+```
+export PATH="C:\path\to\xpack-riscv-none-elf-gcc-12.1.0-2\bin:$PATH"
+```

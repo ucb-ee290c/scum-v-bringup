@@ -10,7 +10,7 @@ extern "C" {
 #include <stdio.h>
 #include <string.h>
 
-#include "baseband.h"
+//#include "baseband.h"
 
 #include "scum_hal.h"
 

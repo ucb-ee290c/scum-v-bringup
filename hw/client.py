@@ -5,6 +5,7 @@ from time import sleep
 
 class Addr(Enum):
     '''Address of the scan chain domain (set value as the address)'''
+    RESET_ADDR = 0
     OSC_ADDR = 1
     RF_ADDR = 2
     PWR_ADDR = 3
@@ -20,6 +21,7 @@ class ScanChainPacket:
     '''
     
     def __init__(self, addr: Addr, payload: int, reset: bool = False):
+        # check type of addr
         self.addr: int = addr.value
         self.payload = payload
         self.reset = reset
@@ -89,11 +91,12 @@ class OscillatorPayload(ScanChainPayload):
     '''
 
     _reg = [
-        ('cpu_bypass', 1),
-        ('adc_bypass', 1),
-        ('dbg_mux_sel_1', 1),
-        ('dbg_mux_sel_0', 1),
-        ('??', 2)
+        # ('cpu_bypass', 1),
+        # ('adc_bypass', 1),
+        # ('dbg_mux_sel_1', 1),
+        # ('dbg_mux_sel_0', 1),
+        # ('??', 2)
+        ('all_bits', 10),
     ]
 
     def set_dbg_clock(self, clock: Clock):
@@ -206,7 +209,7 @@ Last (BITS 9-0)
         ('mux_dbg_out', 10)
     ]
 
-s = serial.Serial('COM10', 115200)
+s = serial.Serial('COM8', 115200)
 def pkt_send(pkt:ScanChainPacket)->bool:
     pkt_bytes = pkt.to_bits()
     print(f"[TX] {str(pkt_bytes)}")
@@ -216,13 +219,31 @@ def pkt_send(pkt:ScanChainPacket)->bool:
 
 
 # Prepare a scan chain reset packet
-reset_pkt = ScanChainPacket(0, 0, True)
+reset_pkt = ScanChainPacket(Addr.RESET_ADDR, 0, True)
+
+
 
 # Prepare a packet to configure the oscillator/clocks subsystem
-osc_payload = OscillatorPayload({'cpu_bypass': 1})
-osc_payload.set_dbg_clock(Clock.CPU_CLK)
+mystery_0 = 0b0
+mystery_1 = 0b0
+mystery_2 = 0b0 
+dbg_mux_sel_0 = 0b0 
+dbg_mux_sel_1 = 0b1
+adc_bypass  = 0b0
+cpu_bypass  = 0b1
+cpu_bypass_real = 0b0
+
+payload = (cpu_bypass_real << 4) | (adc_bypass << 3) | (cpu_bypass << 2) | (dbg_mux_sel_1 << 1) | dbg_mux_sel_0 
+payload = (payload << 4) | (mystery_1 << 1) | mystery_0
+osc_payload = OscillatorPayload({'all_bits': payload})
+# osc_payload.set_dbg_clock(Clock.ADC_CLK)
+
 
 clk_pkt = ScanChainPacket(Addr.OSC_ADDR, osc_payload.create())
+
+
+sup_payload = SupplyPayload({'bgr_vref_ctrl': 0b00011})
+sup_pkt = ScanChainPacket(Addr.PWR_ADDR, sup_payload.create())
 
 rf_low_payload = RFAnalogPayload({
     'vco_cap_coarse': 0,
@@ -269,20 +290,26 @@ rf_post_tia_pkt = ScanChainPacket(
     Addr.RF_ADDR, rf_post_tia_payload.create())
 
 # SEND PACKETS
-pkt_send(reset_pkt)
+#pkt_send(reset_pkt)    
 sleep(2)
 pkt_send(clk_pkt)
 sleep(2)
-pkt_send(rf_post_tia_pkt)
-sleep(2)
+pkt_send(sup_pkt)
 
 # Sweep through the mux_dbg_out
-for i in range(0, 10):
-    print(i)
-    rf_post_tia_payload.set_reg('mux_dbg_out', 0b1 << i)
-    pkt = ScanChainPacket(Addr.RF_ADDR, rf_post_tia_payload.create())
-    pkt_send(pkt)
-    sleep(2)
-    
+# for i in range(0, 10):
+#     print(i)
+#     rf_post_tia_payload.set_reg('mux_dbg_out', 0b1 << i)
+#     pkt = ScanChainPacket(Addr.RF_ADDR, rf_post_tia_payload.create())
+#     pkt_send(pkt)
+#     sleep(2)
+
+# Sweep through the mux_dbg_out
+# for i in range(0, 5):
+#     print(i)
+#     osc_payload.set_reg('all_bits', 0b11 << i)
+#     pkt = ScanChainPacket(Addr.PWR_ADDR, osc_payload.create())
+#     pkt_send(pkt)
+#     sleep(2)
 
 s.close()

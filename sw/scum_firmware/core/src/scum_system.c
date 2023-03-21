@@ -5,19 +5,13 @@
 
 
 void system_init(void) {
-//   asm("li t1, 0x80005000");
-//   asm("csrr t0, mstatus");
-//   asm("sw t0, 0(t1)");
-//   asm("csrr t0, mtvec");
-//   asm("sw t0, 4(t1)");
-//   asm("csrr t0, mcause");
-//   asm("sw t0, 8(t1)");
-//   asm("li t0, 0b100");
-//   asm("csrs mstatus, t0");
-//   asm("csrr t0, mstatus");
-//   asm("sw t0, 12(t1)");
+  // Store the word 0x1 at address 0x8020   
+  asm("li t1, 0x8020");
+  asm("li t0, 0x1");
+  asm("sw t0, 0(t1)");
 }
 
+/**/
 void UserSoftware_IRQn_Handler() {}
 void SupervisorSoftware_IRQn_Handler() {}
 void HypervisorSoftware_IRQn_Handler() {}
@@ -34,7 +28,7 @@ void MachineExternal_IRQn_Handler() {
   uint32_t m_cause;
   char str[16];
   sprintf(str, "interrupt: %x\n", m_cause);
-  HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+  //HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
 }
 
 
@@ -62,7 +56,7 @@ void trap_handler() {
     uint32_t irqSource = plic_claim_irq(0);
   
     char str[128];
-
+    /*
     sprintf(str, "intr %d\n", irqSource);
     HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
   
@@ -83,6 +77,7 @@ void trap_handler() {
     }
 
     HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+    */
     plic_complete_irq(0, irqSource);
 
     // HAL_GPIO_writePin(GPIOA, GPIO_PIN_0, 1);

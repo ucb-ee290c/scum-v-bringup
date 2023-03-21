@@ -9,16 +9,14 @@ extern "C" {
 #include "scum.h"
 
 typedef enum {
-  GPIO_PIN_0 = 0b0001U,
-  GPIO_PIN_1 = 0b0010U,
-  GPIO_PIN_2 = 0b0100U
-} GPIO_PIN;
+  GPIO_PIN_0 = 0b0001U
+} GPIO_Pin;
 
-void HAL_GPIO_init(GPIO_TypeDef *GPIOx, GPIO_PIN pin);
+void HAL_GPIO_init(GPIO_TypeDef *GPIOx, GPIO_Pin pin);
 
-uint8_t HAL_GPIO_readPin(GPIO_TypeDef *GPIOx, GPIO_PIN pin);
+uint8_t HAL_GPIO_readPin(GPIO_TypeDef *GPIOx, GPIO_Pin pin);
 
-void HAL_GPIO_writePin(GPIO_TypeDef *GPIOx, GPIO_PIN pin, uint8_t value);
+void HAL_GPIO_writePin(GPIO_TypeDef *GPIOx, GPIO_Pin pin, uint8_t value);
 
 #ifdef __cplusplus
 }

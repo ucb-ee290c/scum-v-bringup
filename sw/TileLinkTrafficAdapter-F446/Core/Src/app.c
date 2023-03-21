@@ -54,7 +54,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
     tl.tx_frame.size    = *(serial_rx_buffer + 2);
     tl.tx_frame.source  = 0;
     tl.tx_frame.address = *(uint32_t *)(serial_rx_buffer + 4);
-    tl.tx_frame.data    = *(uint32_t *)(serial_rx_buffer + 8);
+    tl.tx_frame.data    = *(uint64_t *)(serial_rx_buffer + 8);
     tl.tx_frame.corrupt = (*(serial_rx_buffer + 1) >> 7) & 0b1;
     tl.tx_frame.mask    = *(serial_rx_buffer + 3);
     tl.tx_frame.last    = 1;
@@ -62,7 +62,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
     frame_pending = 1;
   }
 
-  HAL_UARTEx_ReceiveToIdle_DMA(&huart2, serial_rx_buffer, 20);
+  HAL_UARTEx_ReceiveToIdle_DMA(&huart2, serial_rx_buffer, 32);
 }
 
 
@@ -78,7 +78,7 @@ void APP_init() {
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
   HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_1);
 
-  HAL_UARTEx_ReceiveToIdle_DMA(&huart2, serial_rx_buffer, 20);
+  HAL_UARTEx_ReceiveToIdle_DMA(&huart2, serial_rx_buffer, 32);
 }
 
 
@@ -94,8 +94,8 @@ void APP_main() {
     *(serial_tx_buffer + 2) = tl.rx_frame.size;
     *(serial_tx_buffer + 3) = tl.rx_frame.mask;
     *(uint32_t *)(serial_tx_buffer + 4) = tl.rx_frame.address;
-    *(uint32_t *)(serial_tx_buffer + 8) = tl.rx_frame.data;
+    *(uint64_t *)(serial_tx_buffer + 8) = tl.rx_frame.data;
 
-    HAL_UART_Transmit(&huart2, serial_tx_buffer, 12, 1000);
+    HAL_UART_Transmit(&huart2, serial_tx_buffer, 16, 1000);
   }
 }

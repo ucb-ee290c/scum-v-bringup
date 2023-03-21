@@ -91,6 +91,9 @@ isr_vector:
 .section .text.init
 .globl _start
 _start:
+  li t1, 0x8000A000
+  li t0, 0xbaadc0de
+  sw t0, 0(t1)
   li x1, 0
   li x2, 0
   li x3, 0
@@ -124,7 +127,7 @@ _start:
   li x31, 0
 
   la t0, isr_vector
-  #addi t0, t0, 1    # vectored mode
+  # addi t0, t0, 1    # vectored mode
   csrw mtvec, t0
 
 .option push

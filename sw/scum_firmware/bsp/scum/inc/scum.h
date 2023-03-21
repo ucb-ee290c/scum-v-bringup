@@ -87,7 +87,7 @@ typedef struct {
 #define PLIC_BASE               0x0C000000
 #define LBWIF_RAM_BASE          0x10000000
 #define UART_BASE               0x1001a000
-#define GPIO_BASE               0x10012000  // TODO: check
+#define GPIO_BASE               0x10012000
 #define QSPI_BASE               0x10040000  // TODO: check
 #define FLASH_BASE              0x20000000
 

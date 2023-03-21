@@ -1,4 +1,4 @@
-module a7top #(
+    module a7top #(
     parameter CLOCK_FREQ = 100_000_000,
     parameter CLOCK_PERIOD = 1_000_000_000 / CLOCK_FREQ,
     parameter SCAN_CLK_FREQ    = 1000,

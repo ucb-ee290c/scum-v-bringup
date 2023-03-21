@@ -99,7 +99,7 @@ void TL_deserialize(TileLinkFrame *frame) {
     frame->corrupt |= ((frame->buffer[i+TL_SERDES_MASK_OFFSET] & 0b1) << i);
   }
   for (uint16_t i=0; i<TL_SERDES_DATA_SIZE; i+=1) {
-    frame->data |= ((frame->buffer[i+TL_SERDES_CORRUPT_OFFSET] & 0b1) << i);
+    frame->data |= ((uint64_t)(frame->buffer[i+TL_SERDES_CORRUPT_OFFSET] & 0b1) << i);
   }
   for (uint16_t i=0; i<TL_SERDES_ADDRESS_SIZE; i+=1) {
     frame->address |= ((frame->buffer[i+TL_SERDES_DATA_OFFSET] & 0b1) << i);

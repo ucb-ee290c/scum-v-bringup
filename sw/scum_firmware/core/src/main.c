@@ -4,7 +4,7 @@
 volatile int done_status = 0;
 char str[512];
 
-
+/*
 // Command functions
 // Load and send <bytes> bytes of data from address <addr>
 void ble_send(uint32_t addr, uint32_t bytes) {
@@ -127,7 +127,7 @@ void baseband_debug(uint32_t addr, size_t byte_size) {
   HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
 }
 
-
+*/
 
 typedef struct plic_context_control
 {
@@ -166,22 +166,28 @@ void plic_complete_irq(uint32_t hart_id, uint32_t irq_id){
 
 
 int main() {
+    
   HAL_init();
+  
+  //HAL_GPIO_init(GPIOA, GPIO_PIN_0);
+  
+  //HAL_GPIO_writePin(GPIOA, GPIO_PIN_0, 0);
 
   UART_InitTypeDef UART_init_config;
   UART_init_config.baudrate = 10000;
-
+  
 
   HAL_UART_init(UART0, &UART_init_config);
-  //HAL_GPIO_init(GPIOA, GPIO_PIN_0);
-  //HAL_GPIO_writePin(GPIOA, GPIO_PIN_0, 1);
 
+  
   // HAL_delay(2000);
 
   // set tuning trim G0 0th bit 1
-  sprintf(str, "I'm alive!\n");
+  sprintf(str, "SCuM-V22 says, 'I'm alive!'\r\n");
+  
   HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-
+  *(uint32_t*)0x8000B000 = 0xdeadbeef;
+  uint8_t counter = 0;
   while (1) {
     HAL_delay(100);
     HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);

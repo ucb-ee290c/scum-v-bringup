@@ -77,8 +77,8 @@ TARGET_VERILOG = $(BUILD_DIR)$(TARGET).out
 #################################
 
 # MCU Settings
-ARCH = rv32imafc_zicsr
-ABI = ilp32f
+ARCH = rv64imafc_zicsr
+ABI = lp64f
 CODEMODEL = medany
 LD_SCRIPT = $(SRC_DIR)scum.ld
 
@@ -86,7 +86,7 @@ ARCHFLAGS = -march=$(ARCH) -mabi=$(ABI) -mcmodel=$(CODEMODEL) -fno-pie
 SPECFLAGS = --specs="nano.specs"
 
 # compiler Flags
-CFLAGS  = -g -std=gnu11 -O0 -Wall -Wextra -Warray-bounds -Wno-unused-parameter
+CFLAGS  = -g -std=gnu11 -Os -Wall -Wextra -Warray-bounds -Wno-unused-parameter
 CFLAGS += -fno-common -fno-builtin-printf
 CFLAGS += $(ARCHFLAGS)
 CFLAGS += $(SPECFLAGS)
