@@ -1,7 +1,65 @@
 
+#include "scum_system.h"
 #include "scum_hal.h"
-
 #include "main.h"
+
+inline void print_fcsr()
+{
+  uint64_t fcsr_val = 0;
+  char str[128];
+  asm volatile("csrr %0, fcsr" : "=r"(fcsr_val));
+  sprintf(str, "fcsr = %lx\r\n", fcsr_val); 
+  HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+  asm volatile("csrr %0, misa" : "=r"(fcsr_val));
+  sprintf(str, "ISA extension = %lx\r\n", fcsr_val); 
+  HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+  asm volatile("csrr %0, marchid" : "=r"(fcsr_val));
+  sprintf(str, "Architecture ID = %lx\r\n", fcsr_val); 
+  HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+}
+
+
+void enable_fpu(void) {
+    uint64_t mstatus;
+    asm volatile("csrr %0, mstatus" : "=r"(mstatus));
+    mstatus |= (1 << 13); // Set the FS field of mstatus register to Initial (0b01)
+    asm volatile("csrw mstatus, %0" ::"r"(mstatus));
+    // Clear the fcsr register
+    asm volatile("csrci fcsr, %0" :: "i"(0));
+    // Zero out all FPU registers
+    asm volatile("fmv.w.x ft0, x0");
+    asm volatile("fmv.w.x ft1, x0");
+    asm volatile("fmv.w.x ft2, x0");
+    asm volatile("fmv.w.x ft3, x0");
+    asm volatile("fmv.w.x ft4, x0");
+    asm volatile("fmv.w.x ft5, x0");
+    asm volatile("fmv.w.x ft6, x0");
+    asm volatile("fmv.w.x ft7, x0");
+    asm volatile("fmv.w.x fs0, x0");
+    asm volatile("fmv.w.x fs1, x0");
+    asm volatile("fmv.w.x fa0, x0");
+    asm volatile("fmv.w.x fa1, x0");
+    asm volatile("fmv.w.x fa2, x0");
+    asm volatile("fmv.w.x fa3, x0");
+    asm volatile("fmv.w.x fa4, x0");
+    asm volatile("fmv.w.x fa5, x0");
+    asm volatile("fmv.w.x fa6, x0");
+    asm volatile("fmv.w.x fa7, x0");
+    asm volatile("fmv.w.x fs2, x0");
+    asm volatile("fmv.w.x fs3, x0");
+    asm volatile("fmv.w.x fs4, x0");
+    asm volatile("fmv.w.x fs5, x0");
+    asm volatile("fmv.w.x fs6, x0");
+    asm volatile("fmv.w.x fs7, x0");
+    asm volatile("fmv.w.x fs8, x0");
+    asm volatile("fmv.w.x fs9, x0");
+    asm volatile("fmv.w.x fs10, x0");
+    asm volatile("fmv.w.x fs11, x0");
+    asm volatile("fmv.w.x ft8, x0");
+    asm volatile("fmv.w.x ft9, x0");
+    asm volatile("fmv.w.x ft10, x0");
+    asm volatile("fmv.w.x ft11, x0");
+}
 
 
 void system_init(void) {
@@ -9,7 +67,9 @@ void system_init(void) {
   asm("li t1, 0x8020");
   asm("li t0, 0x1");
   asm("sw t0, 0(t1)");
+  enable_fpu();
 }
+
 
 /**/
 void UserSoftware_IRQn_Handler() {}
