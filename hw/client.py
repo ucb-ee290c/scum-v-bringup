@@ -91,12 +91,12 @@ class OscillatorPayload(ScanChainPayload):
     '''
 
     _reg = [
-        # ('cpu_bypass', 1),
-        # ('adc_bypass', 1),
-        # ('dbg_mux_sel_1', 1),
-        # ('dbg_mux_sel_0', 1),
-        # ('??', 2)
-        ('all_bits', 10),
+        ('cpu_bypass', 1),
+        ('adc_bypass', 1),
+        ('dbg_mux_sel_1', 1),
+        ('dbg_mux_sel_0', 1),
+        ('??', 2)
+        #('all_bits', 10),
     ]
 
     def set_dbg_clock(self, clock: Clock):
@@ -221,24 +221,17 @@ def pkt_send(pkt:ScanChainPacket)->bool:
 # Prepare a scan chain reset packet
 reset_pkt = ScanChainPacket(Addr.RESET_ADDR, 0, True)
 
-
-
 # Prepare a packet to configure the oscillator/clocks subsystem
-mystery_0 = 0b0
-mystery_1 = 0b0
-mystery_2 = 0b0 
-dbg_mux_sel_0 = 0b0 
-dbg_mux_sel_1 = 0b1
+
 adc_bypass  = 0b0
 cpu_bypass  = 0b1
-cpu_bypass_real = 0b0
-
-payload = (cpu_bypass_real << 4) | (adc_bypass << 3) | (cpu_bypass << 2) | (dbg_mux_sel_1 << 1) | dbg_mux_sel_0 
-payload = (payload << 4) | (mystery_1 << 1) | mystery_0
-osc_payload = OscillatorPayload({'all_bits': payload})
-# osc_payload.set_dbg_clock(Clock.ADC_CLK)
 
 
+osc_payload = OscillatorPayload({
+    'cpu_bypass': 1,
+    'adc_bypass': 0
+})
+osc_payload.set_dbg_clock(Clock.CPU_CLK)
 clk_pkt = ScanChainPacket(Addr.OSC_ADDR, osc_payload.create())
 
 
@@ -290,7 +283,7 @@ rf_post_tia_pkt = ScanChainPacket(
     Addr.RF_ADDR, rf_post_tia_payload.create())
 
 # SEND PACKETS
-#pkt_send(reset_pkt)    
+pkt_send(reset_pkt)    
 sleep(2)
 pkt_send(clk_pkt)
 sleep(2)
