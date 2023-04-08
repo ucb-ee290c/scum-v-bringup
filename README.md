@@ -56,7 +56,7 @@ For the revision 1 Universal PCB (SCuM-V PCB), the level shifters on-board are n
 - LDO_VDD_A_RF <> VDD_A_RF
 
 **Power supplies**
-- External 3.5V supply (~80 mA current limit) <> PCB J1
+- External 3.5V supply (~120 mA current limit) <> PCB J1
 - External 0.85V Supply (50 mA current limit) <> SCuM's VDD_D 
 - Both supply grounds to J5
 
@@ -74,7 +74,33 @@ A level shifter from 3.3V to 1.8V is needed for each signal here.
 **Other connections**
 
 - SCAN_SEL  <>  +1.8V
-- RESET     <>  GND
+- RESET     <>  GND  (active high)
+
+**Serial TL Connection**
+
+Serial TL connection between STM32 and SCuM-V. SCuM-V generates the clock in STL connection.
+
+- PA0 <> TL_OUT_RDY [after shift down 3.3V to 1.8V]
+- PA1 <> TL_OUT_VALID
+- PA4 <> TL_OUT_DATA
+- PB0 <> TL_IN_RDY
+- PC1 <> TL_IN_VALID [after shift down 3.3V to 1.8V]
+- PC0 <> TL_IN_DATA [after shift down 3.3V to 1.8V]
+- D10 <> TL_CLK
+- boot_sel <> ground (tsi-boot)
+ 
+The level shifter from 3.3V TTL to 1.8V most commonly used is a simple voltage divider. When using the STM32 board as a TSI adapter, it is not necessary to shift up from 1.8V to 3.3V.
+
+If using another level shifter, bandwidth should be >1 MHz and unidirectional shifting is acceptable.
+
+
+**Clock Configuration**
+- Clock input 0.85Vpp
+    * Square Wave, 50% duty cycle
+    * Offset: 0.425V
+    * Frequency: 200kHz
+- Clock <> J20, bypass 0
+- dDebug <> J19 
 
 ## FPGA Setup
 
