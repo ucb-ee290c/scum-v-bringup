@@ -165,12 +165,12 @@ void plic_complete_irq(uint32_t hart_id, uint32_t irq_id){
 }
 
 
+
 int main() {
     
   HAL_init();
   
   //HAL_GPIO_init(GPIOA, GPIO_PIN_0);
-  
   //HAL_GPIO_writePin(GPIOA, GPIO_PIN_0, 0);
 
   UART_InitTypeDef UART_init_config;
@@ -179,7 +179,6 @@ int main() {
 
   HAL_UART_init(UART0, &UART_init_config);
 
-  
   // HAL_delay(2000);
 
   // set tuning trim G0 0th bit 1
