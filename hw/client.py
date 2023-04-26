@@ -89,13 +89,30 @@ class OscillatorPayload(ScanChainPayload):
     # 1, 0 -> RTC_CLK
     # 1, 1 -> ADC_CLK
     '''
+    # adc_tune_out[16]
+    # adc_reset[1]
+    # dig_tune_out[16]
+    # dig_reset[1]
+    # rtc_tune_out[16]
+    # rtc_reset[1]
+    # debug_mux_ctrl[2]
 
     _reg = [
+        ('?????',1),
+        ('adc_coarse_dac', 7),
+        ('adc_fine_dac', 8),
+        ('adc_reset', 1),
+        ('dig_div_two', 1),
+        ('????', 4),
+        ('dig_col_decoder', 5),
+        ('dig_row_decoder', 6),
+        ('dig_reset', 1),
+        ('???', 12),
         ('cpu_bypass', 1),
         ('adc_bypass', 1),
         ('dbg_mux_sel_1', 1),
         ('dbg_mux_sel_0', 1),
-        ('??', 2)
+        ('??', 2),
         #('all_bits', 10),
     ]
 
@@ -222,14 +239,14 @@ def pkt_send(pkt:ScanChainPacket)->bool:
 reset_pkt = ScanChainPacket(Addr.RESET_ADDR, 0, True)
 
 # Prepare a packet to configure the oscillator/clocks subsystem
-
-adc_bypass  = 0b0
-cpu_bypass  = 0b1
-
-
 osc_payload = OscillatorPayload({
-    'cpu_bypass': 1,
-    'adc_bypass': 0
+    'cpu_bypass': 0,
+    'adc_bypass': 0,
+    'dig_div_two': 1,
+    'adc_fine_dac': 0b01000000,
+    'adc_coarse_dac': 0b0010000, # 0b0001111 gets close to 32 MHz
+    'dig_col_decoder': 0b10110,
+    'dig_row_decoder': 0b000001,
 })
 osc_payload.set_dbg_clock(Clock.CPU_CLK)
 clk_pkt = ScanChainPacket(Addr.OSC_ADDR, osc_payload.create())
@@ -269,6 +286,39 @@ rf_post_tia_payload = RFAnalogPayload({
     'vco_cap_med': 2 ** 6 // 2,
     'vco_cap_mod': 2 ** 8 // 2,
 })
+# Mux DBG In
+# Bit 0: After TIA I
+# Bit 1: After TIA Q
+# Bit 2: After BPF I
+# Bit 3: After VGA I 
+# Bit 4: After BPF Q
+# Bit 5: After VGA Q
+
+
+
+
+rf_dbg_adc_payload = RFAnalogPayload({
+    'mux_dbg_in': 0b001000,         
+    'mux_dbg_out': 0b00000,         
+
+    'en_bpf_i': 1,              # Does nothing
+    'en_bpf_q': 1,              # Does nothing
+
+    'en_vga_i': 0,              
+    'en_vga_q': 0,              
+
+    'bpf_q_clp0': 0b0000,       # Maximum corner
+    'bpf_q_clp1': 0b0000,       # Maximum corner
+    'bpf_q_clp2': 0b0000,       # Maximum corner
+
+    'bpf_q_chp0': 0b0000,       # Minimum corner
+    'bpf_q_chp1': 0b0000,       # Minimum corner
+    'bpf_q_chp2': 0b0000,       # Minimum corner
+    'bpf_q_chp3': 0b0000,       # Minimum corner
+    'bpf_q_chp4': 0b0000,       # Minimum corner
+    'bpf_q_chp5': 0b0000,       # Minimum corner
+
+})
 
 rf_pkt_high = ScanChainPacket(
     Addr.RF_ADDR, rf_high_payload.create())
@@ -282,12 +332,17 @@ rf_pkt_mid = ScanChainPacket(
 rf_post_tia_pkt = ScanChainPacket(
     Addr.RF_ADDR, rf_post_tia_payload.create())
 
+rf_dbg_adc_pkt = ScanChainPacket(
+    Addr.RF_ADDR, rf_dbg_adc_payload.create())
+
 # SEND PACKETS
 pkt_send(reset_pkt)    
 sleep(2)
 pkt_send(clk_pkt)
 sleep(2)
 pkt_send(sup_pkt)
+# sleep(2)
+# pkt_send(rf_dbg_adc_pkt)
 
 # Sweep through the mux_dbg_out
 # for i in range(0, 10):
