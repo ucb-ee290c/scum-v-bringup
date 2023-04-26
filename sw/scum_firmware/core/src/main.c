@@ -190,7 +190,7 @@ int main() {
   //HAL_GPIO_writePin(GPIOA, GPIO_PIN_0, 0);
 
   UART_InitTypeDef UART_init_config;
-  UART_init_config.baudrate = 10000;
+  UART_init_config.baudrate = 100000;
   
 
   HAL_UART_init(UART0, &UART_init_config);
@@ -209,9 +209,8 @@ int main() {
   uint8_t counter = 0;
   uint8_t adc_i_data = 0;
   while (1) {
-    HAL_delay(1);
-    sprintf(str, "SCuM-V22 says, 'I'm alive!'\r\n");
-    HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-    //run_ble_loopback();
+    HAL_delay(50);
+    
+    print_baseband_status0();
   }
 }

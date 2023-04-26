@@ -16,7 +16,7 @@ extern "C" {
 #include "scum_hal_uart.h"
 
 
-#define SYS_CLK_FREQ  200000                    // Hz
+#define SYS_CLK_FREQ  2000000                    // Hz
 #define MTIME_FREQ    (SYS_CLK_FREQ / 20000)    // tick per milliseconds
 
 void HAL_init();
