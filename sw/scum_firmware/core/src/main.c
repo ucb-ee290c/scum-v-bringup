@@ -4,130 +4,6 @@
 volatile int done_status = 0;
 char str[512];
 
-/*
-// Command functions
-// Load and send <bytes> bytes of data from address <addr>
-void ble_send(uint32_t addr, uint32_t bytes) {
-  reg_write32(BASEBAND_ADDITIONAL_DATA, addr);
-  reg_write32(BASEBAND_INST, BASEBAND_INSTRUCTION(BASEBAND_SEND, 0, bytes));
-}
-
-// Configure baseband constant <target> (from secondary instruction set) to value <value>
-void ble_configure(uint8_t target, uint32_t value) {
-  reg_write32(BASEBAND_ADDITIONAL_DATA, value);
-  reg_write32(BASEBAND_INST, BASEBAND_INSTRUCTION(BASEBAND_CONFIG, target, 0));
-}
-
-// Try and receive data. Any found data will be stored at address <addr>
-void ble_receive(uint32_t addr) {
-  reg_write32(BASEBAND_ADDITIONAL_DATA, addr);
-  reg_write32(BASEBAND_INST, BASEBAND_INSTRUCTION(BASEBAND_RECEIVE, 0, 0));
-}
-
-// Try and receive data. Any found data will be stored at address <addr>
-void ble_receive_exit() {
-  reg_write32(BASEBAND_INST, BASEBAND_INSTRUCTION(BASEBAND_RECEIVE_EXIT, 0, 0));
-}
-
-uint32_t baseband_status0() {
-  return reg_read32(BASEBAND_STATUS0);
-}
-
-uint32_t baseband_status1() {
-  return reg_read32(BASEBAND_STATUS1);
-}
-
-uint32_t baseband_status2() {
-  return reg_read32(BASEBAND_STATUS2);
-}
-
-uint32_t baseband_status3() {
-  return reg_read32(BASEBAND_STATUS3);
-}
-
-uint32_t baseband_status4() {
-  return reg_read32(BASEBAND_STATUS4);
-}
-
-uint32_t baseband_rxerror_message() {
-  return reg_read32(BASEBAND_RXERROR_MESSAGE);
-}
-
-uint32_t baseband_txerror_message() {
-  return reg_read32(BASEBAND_TXERROR_MESSAGE);
-}
-
-uint32_t baseband_rxfinish_message() {
-  return reg_read32(BASEBAND_RXFINISH_MESSAGE);
-}
-
-// LUT Control
-#define LUT_LOFSK 0
-#define LUT_LOCT 1
-#define LUT_AGCI 2
-#define LUT_AGCQ 3
-#define LUT_DCOIFRONT 4
-#define LUT_DCOQFRONT 5
-
-#define LUT_COMMAND(lut, address, value) ((lut & 0xF) + ((address & 0x3F) << 4) + ((value & 0x3FFFFF) << 10))
-
-void baseband_set_lut(uint8_t lut, uint8_t address, uint32_t value) {
-  reg_write32(BASEBAND_LUT_CMD, LUT_COMMAND(lut, address, value));
-}
-
-// Function written for writing to tuning MMIO, but technically can be used for all MMIO although unchecked
-// For partial write (4 bits), offset is used to shift data to correct position
-void baseband_tuning_set(uint32_t addr, uint32_t data, uint32_t bit_size, uint32_t offset) {
-  // For partial writes, need to read, mask, write-back
-  if (bit_size == 4) {
-    uint8_t temp = (reg_read8(addr) & ~(15 << offset)) | (data << offset);
-    // Debug print
-    // printf("%x\n", temp);
-    reg_write8(addr, temp);
-  } else if (bit_size <= 8) {
-    reg_write8(addr, data);
-  } else {
-    reg_write16(addr, data);
-  }
-}
-
-// Function that tests (send + check) the baseband debug command
-void baseband_debug(uint32_t addr, size_t byte_size) {
-  // Sending baseband DEBUG instruction
-  reg_write32(BASEBAND_ADDITIONAL_DATA, addr);
-  
-  // INST = data, 1111 1111 
-  reg_write32(BASEBAND_INST, BASEBAND_INSTRUCTION(BASEBAND_DEBUG, -1, byte_size));
-
-  // TODO: Determine cycles to wait. Printing for now
-  sprintf(str, "Sent DEBUG instruction with data at address %.8x. Waiting...\n", addr);
-  HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-
-  // Word-aligned address (word is 4 bytes, 32 bits)
-  int mismatch = -1;
-  int fail = 0;
-  uint32_t res_addr = addr + ((byte_size & ~3) + ((byte_size % 4) > 0 ? 4 : 0)); 
-  sprintf(str, "Output bytes at address %.8x: ", res_addr);
-  HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-
-  for (int i = 0; i < byte_size; i++) {
-    sprintf(str, "%.2x ", (unsigned)*(unsigned char*)(res_addr + i));
-    HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-    // Checking match
-    if ((unsigned)*(unsigned char*)(addr + i) != (unsigned)*(unsigned char*)(res_addr + i)) {
-      fail += 1;
-      if (mismatch == -1) mismatch = i;
-    }
-  }
-  if (fail) {
-    sprintf(str, "FAILED TEST. %d bytes are mismatched in output. Index of first mismatch: %d\n", fail, mismatch);
-  } else {
-    sprintf(str, "PASSED TEST. All input bytes match output bytes.\n");
-  }
-  HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-}
-
-*/
 
 typedef struct plic_context_control
 {
@@ -165,6 +41,146 @@ void plic_complete_irq(uint32_t hart_id, uint32_t irq_id){
 }
 
 
+void print_baseband_status0()
+{
+  baseband_status0_t status;
+  baseband_get_status0(&status);
+  char status_str[512];
+  sprintf(status_str, "Assembler State: %u\r\n", status.assembler_state);
+  HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
+  sprintf(status_str, "Disassembler State: %u\r\n", status.disassembler_state);
+  HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
+  sprintf(status_str, "TX State: %u\r\n", status.tx_state);
+  HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
+  sprintf(status_str, "RX Controller State: %u\r\n", status.rx_controller_state);
+  HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
+  sprintf(status_str, "TX Controller State: %u\r\n", status.tx_controller_state);
+  HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
+  sprintf(status_str, "Controller State: %u\r\n", status.controller_state);
+  HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
+  sprintf(status_str, "ADC I data: %u\r\n", status.adc_i_data);
+  HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
+  sprintf(status_str, "ADC Q data: %u\r\n", status.adc_q_data);
+  HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
+}
+
+void run_lrwpan_loopback()
+{
+  // Switch mode to LRWPAN
+  baseband_configure(BASEBAND_CONFIG_RADIO_MODE, BASEBAND_MODE_LRWPAN);
+
+
+  // Set the SHR to 0xA700 and CRC seed to 0x0000. 
+  // The LR-WPAN channel index doesn’t matter, so perhaps start with 0.
+  baseband_configure(BASEBAND_CONFIG_SHR, 0xA700);
+  baseband_configure(BASEBAND_CONFIG_CRC_SEED, 0x0000);
+
+
+  // Generate a packet in memory. 
+  // The packet length is automatically prepended, so no worries there.
+  #define NUM_BYTES 32
+  uint8_t packet[NUM_BYTES];
+  for (int i = 0; i < NUM_BYTES; i++) {
+    packet[i] = i;
+  }
+
+  // Send the packet using a debug command.
+  baseband_debug(packet, NUM_BYTES);
+  // Note: typically locks up the core here
+  sprintf(str, "-----LRWPAN Loopback Test-----\r\n");
+  HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+  HAL_delay(1000);
+
+  // Check that an interrupt was generated and/or
+  // that the interrupt message is correct.
+  #define TIMEOUT_MS 5000
+  uint32_t ms_count = 0;
+  uint8_t loop_cont = 1;
+  uint32_t msg;
+  while (1) {
+    HAL_delay(1);
+    ms_count++;
+    if (ms_count < TIMEOUT_MS) {
+      // print TX error message
+      msg = baseband_txerror_message();
+      sprintf(str, "TXEM: %u\r\n", msg);
+      HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+      // print RX error message
+      msg = baseband_rxerror_message();
+      sprintf(str, "RXEM: %u\r\n", msg);
+      HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+      // print RX finish message
+      msg = baseband_rxfinish_message();
+      sprintf(str, "RXFM: %u\r\n", msg);
+      HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+    }
+    else {
+      break;
+    }
+  }
+}
+
+void run_ble_loopback()
+{
+  // Switch mode to LRWPAN
+  baseband_configure(BASEBAND_CONFIG_RADIO_MODE, BASEBAND_MODE_BLE);
+
+
+  // This should be correct by default, but set the Access Address to 0x8E89BED6 and 
+  // CRC seed to 0x555555 and BLE channel index to 37, 38, or 39.
+  baseband_configure(BASEBAND_CONFIG_ACCESS_ADDRESS, 0x8E89BED6);
+  baseband_configure(BASEBAND_CONFIG_CRC_SEED, 0x555555);
+  baseband_configure(BASEBAND_CONFIG_BLE_CHANNEL_INDEX, 37);
+
+
+  // Generate a packet in memory. 
+  // The packet length is automatically prepended, so no worries there.
+  #define NUM_BYTES 32
+  uint8_t packet[NUM_BYTES];
+  packet[0] = 0;
+  packet[1] = 0;
+  for (int i = 2; i < NUM_BYTES; i++) {
+    packet[i] = i;
+  }
+
+  // Send the packet using a debug command.
+  baseband_debug(packet, NUM_BYTES);
+  // Note: typically locks up the core here
+  sprintf(str, "-----BLE Loopback Test-----\r\n");
+  HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+  HAL_delay(1000);
+
+  // Check that an interrupt was generated and/or
+  // that the interrupt message is correct.
+  #define TIMEOUT_MS 5000
+  uint32_t ms_count = 0;
+  uint8_t loop_cont = 1;
+  uint32_t msg;
+  while (1) {
+    HAL_delay(1);
+    ms_count++;
+    if (ms_count < TIMEOUT_MS) {
+      /*
+      // print TX error message
+      msg = baseband_txerror_message();
+      sprintf(str, "TXEM: %u\r\n", msg);
+      HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+      // print RX error message
+      msg = baseband_rxerror_message();
+      sprintf(str, "RXEM: %u\r\n", msg);
+      HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+      // print RX finish message
+      msg = baseband_rxfinish_message();
+      sprintf(str, "RXFM: %u\r\n", msg);
+      HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+      */
+    }
+    else {
+      break;
+    }
+  }
+}
+
 
 int main() {
     
@@ -178,17 +194,24 @@ int main() {
   
 
   HAL_UART_init(UART0, &UART_init_config);
-
-  // HAL_delay(2000);
-
-  // set tuning trim G0 0th bit 1
+  print_baseband_status0();
   sprintf(str, "SCuM-V22 says, 'I'm alive!'\r\n");
-  
   HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-  *(uint32_t*)0x8000B000 = 0xdeadbeef;
+
+  // Set scum-v tuning registers
+  // rtc_tune_in<3> CPU oscillator - 1 exterior / 0 interior
+  // rtc_tune_in<2> ADC/RTC oscillator - 1 exterior / 0 interior
+  // rtc_tune_in<1:0> MUX_CLK_OUT - 00 CPU / 01 RTC / 11 ADC
+  #define SCUM_TUNING 0xA000
+  uint16_t rtc_tune_in = 0b1000;
+  reg_write16(SCUM_TUNING + 0x04, rtc_tune_in);
+  
   uint8_t counter = 0;
+  uint8_t adc_i_data = 0;
   while (1) {
-    HAL_delay(100);
+    HAL_delay(1);
+    sprintf(str, "SCuM-V22 says, 'I'm alive!'\r\n");
     HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+    //run_ble_loopback();
   }
 }
