@@ -2,7 +2,9 @@
 #include "scum_hal.h"
 
 void HAL_init() {
-  
+  // Checked by the bootloader to confirm that the firmware 
+  // is executing
+  *(uint32_t*)0x8000B000 = 0xdeadbeef;
 }
 
 uint64_t HAL_getTick() {

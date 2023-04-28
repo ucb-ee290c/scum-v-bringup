@@ -49,6 +49,7 @@ C_SOURCES += $(VENDOR_ROOT)scum/src/scum_hal_gpio.c
 C_SOURCES += $(VENDOR_ROOT)scum/src/scum_hal_plic.c
 C_SOURCES += $(VENDOR_ROOT)scum/src/scum_hal_rcc.c
 C_SOURCES += $(VENDOR_ROOT)scum/src/scum_hal_uart.c
+C_SOURCES += $(VENDOR_ROOT)scum/src/baseband.c
 
 INCLUDES  = -I$(INC_DIR)
 INCLUDES += -I$(INC_DIR)hal/
