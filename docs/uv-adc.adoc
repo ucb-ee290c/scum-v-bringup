@@ -8,9 +8,12 @@ image:2023-08-18T07-45-18-330Z.png[]
 
 Input impedance? Mins and maxs?
 
-=== Digital Signal Processing
+=== Digital Front-End
 
 The sigma-delta ADC's DSP chain is implemented as a cascaded integrator comb (CIC) decimation filter for noise shaping. The key CIC filter parameters for this design are N=4, R=8000, M=1
+
+.Digital Front-End system-level diagram
+image::2023-08-18T16-36-05-083Z.png[]
 
 The digital frontend features self-generated, software-programmable chopper clock generators for 1st and 2nd stage choppers. A digital de-chopper/mixer with configurable clock delay to match delay of the analog front-end is also implemented.
 

@@ -16,12 +16,52 @@ Ladder 3:1 Topology
  - All capacitors & switches are rated at Vout.
  - Externally Reconfigurable for 3:1, 2:1, 3:2 for exploiting full battery voltage range.
 
+.Switched capacitor converter schematic
 image::2023-08-18T05-11-42-302Z.png[] 
 
 Simulated Efficiency Variation with Load
 
+.(Left) Efficiency Variation with Load. (Right) Vout Variation with Load
+image::2023-08-18T16-16-56-451Z.png[] 
+
+.Simulated performance
+[cols="2",options="header"]
+|===
+| Simulated Performance Parameters | Details
+| Clock Frequency                 | 85MHz-120MHz
+| Peak Power Efficiency           | 75% (Pre-layout)
+| Full-load Efficiency            | 68% (Pre-layout) and <50% (Post-layout)
+| Max Vout_ripple (pk-pk)         | 50 mVpp
+| Power Density at full-load      | 65mW/mm^2^ @100MHz
+|===
+
+.Overview of High-Level Power Converter Design
+[cols="2",options="header"]
+|===
+| Parameters                  | Details
+| Total Capacitance           | 6.5nF
+| Capacitor Type              | MOM+MOS
+| Vin Range                   | 4.2 V-3V
+| Vout Range                  | 1.8V-1.1V
+| Conversion Ratios           | 3:1, 2:1
+| Load Range                  | 5mA to 30mA
+| Switched-Capacitor Area     | 450,000 um^2^ (75% of Power Block)
+| Max Output Power            | 30 mW
+|===
+
+
+
 
 === Low Dropout (LDO) Voltage Regulators 
+
+.Simulated performance
+[cols="4",options="header"]
+|===
+|                            | LDO_RF (1 V)    | LDO_Digital (0.85 V) | LDO_Analog (1 V)
+| Vin                        | 1.8 V - 1.2 V   | 1.8 V - 1.2 V        | 1.8 V - 1.2 V
+| Vout range (at full load)  | 1.08 V - 0.81 V | 0.83 V - 0.73  V     | 1.19 V - 0.978 V
+| Max Output Power           | 15 mW           | 15 mW                | 5 mW
+|===
 
 
 === Current Reference
@@ -38,6 +78,9 @@ Parasitic extraction results:
 
 
 === Utility Current DAC
+
+.Utility Current DAC schematic
+image::2023-08-18T16-31-54-728Z.png[] 
 
 [cols="2",options="header"]
 |===
