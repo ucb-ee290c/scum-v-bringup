@@ -96,3 +96,120 @@ The baseband-modem (BM) block contains a set of memory mapped registers used for
 | 0x66 | Q VGA attenuation gain increase | 8 | Q AGC gain increase step size (by LUT index)
 | 0x67 | Q VGA attenuation gain decrease | 8 | Q AGC gain decrease step size (by LUT index)
 |===
+
+In order to pass commands to the BM, two 32-bit registers at addresses 0x00 and 0x04 are utilized. The register at 0x04 contains the additional data field for a given command while the register at 0x00 contains the instruction. Writing to the register at 0x00 is the trigger for the BM to execute a given command. Accordingly, **the processor should always write to the additional data register prior to writing to the instruction register for a given command.** The format for a BM instruction and a list of available instructions are detailed below.
+
+
+[cols="1,2,2,2",options="header"]
+|===
+| Bits      | 31-8 | 7-4          | 3-0
+| Field     | Data | Instruction 2 | Instruction 1
+|===
+
+===== List of Commands
+
+**Configure Command**
+
+Configure baseband constants. The constant is selected using the instruction 2 field and set to the value specified in the additional data field. In the case that the secondary instruction is set to CONFIG_LUT, reference the LUT addresses provided in the explanations below/
+
+[cols="1,2,2,2",options="header"]
+|===
+| Field         | Data                                     | Instruction 2 | Instruction 1
+| Value         | X unless CONFIG_LUT, then LUT address    | See table     | 0
+|===
+
+[cols="1,3",options="header"]
+|===
+| Field            | Additional Data
+| Value            | Value for the constant to be set to
+|===
+
+[cols="1,3",options="header"]
+|===
+| Instruction 2 | Name                     
+| 0x0            | CONFIG_RADIO_MODE         
+| 0x1             | CONFIG_CRC_SEED           
+| 0x2             | CONFIG_ACCESS_ADDRESS     
+| 0x3             | CONFIG_SHR                
+| 0x4             | CONFIG_BLE_CHANNEL_INDEX  
+| 0x5             | CONFIG_LRWPAN_CHANNEL_INDEX 
+|===
+
+**Configuration instruction descriptions**
+
+(0x0) CONFIG_RADIO_MODE::
+Specify the following in the Additional Data register (0x04) prior to issuing the instruction
+0: Set the radio transceiver mode to Bluetooth Low Energy
+1: Set the radio transceiver mode to IEEE 802.15.4 LR-WPAN
+Valid in any radio mode.
+
+(0x1) CONFIG_CRC_SEED::
+Set the CRC (cyclic redundancy check) seed for the BLE and LR-WPAN CRC circuits to the value in the Additional Data register (0x04). This value changes for BLE and should be 0 for LR-WPAN
+
+(0x2) CONFIG_ACCESS_ADDRESS::
+Set the BLE Access Address for the BLE uncoded packet. This value must be provided by the CPU. More information may be found in the BLE Baseband section. 
+NOTE: An access address of 0xFFFFFFF6 disables whitening of transmitted BLE packets
+
+(0x3) CONFIG_SHR::
+Set the LRWPAN SHR to match with for receiving a LRWPAN packet. This value must be provided by the CPU. According to 802.15.4 spec, it should be a fixed value of 0xA700 (only 2 bytes are matched due to lower hardware cost), but is programmable for flexibility.
+
+(0x4) CONFIG_BLE_CHANNEL_INDEX::
+Values for the channel index can range from 0 to 39, corresponding to BLE channel frequencies beginning at 2402 MHz until 2480 MHz. It is critical to note that the channel index from 0 to 39 is a direct mapping to channel frequencies - NOT the BLE channel numbering scheme that considers advertising channels separately.. For example, setting CONFIG_BLE_CHANNEL_INDEX to 0 will result in a transmission with center frequency at 2402 MHz. This corresponds to BLE channel 37. More information: https://www.rfwireless-world.com/Terminology/BLE-Advertising-channels-and-Data-channels-list.html 
+
+(0x5) CONFIG_LRWPAN_CHANNEL_INDEX::
+Values for the channel index can range from 0 to 15, corresponding to LR-WPAN channel frequencies beginning at 2405 MHz until 2480 MHz.
+
+
+**Send Command**
+
+Transmit a specified number of PDU header and data bytes. Bytes are retrieved by the BM by loading them from the specified address.
+
+[cols="4",options="header"]
+|===
+| Field            | Data             | Instruction 2 | Instruction 1
+| Value            | Number of bytes  | X             | 1
+|===
+
+[cols="2",options="header"]
+|===
+| Field            | Additional Data
+| Value            | Load address
+|===
+
+
+**Receive Enter Command**
+
+Place the device into receive mode. If a message is picked up, it will be stored starting at the specified address address.
+
+[cols="4",options="header"]
+|===
+| Field            | Data | Instruction 2 | Instruction 1
+| Value            | X    | X             | 2
+|===
+
+
+[cols="2",options="header"]
+|===
+| Field            | Additional Data
+| Value            | Storage address
+|===
+
+**Receive Exit Command**
+
+Exit the device from receive mode. This command will succeed as long as the device has not yet matched an instruction preamble.
+
+[cols="4",options="header"]
+|===
+| Field            | Data | Instruction 2 | Instruction 1
+| Value            | X    | X             | 3
+|===
+
+[cols="2",options="header"]
+|===
+| Field            | Additional Data
+| Value            | X
+|===
+
+
+
+image:2023-08-18T07-37-34-540Z.png[] 

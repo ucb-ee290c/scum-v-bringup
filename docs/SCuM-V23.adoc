@@ -55,9 +55,7 @@ include::digital-baseband.adoc[]
 How does the debug architecture work here?
 Is there any digital control?
 
-
-
-
+include::uv-adc.adoc[]
 
 
 == Electrical Characteristics

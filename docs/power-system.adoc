@@ -19,3 +19,38 @@ Ladder 3:1 Topology
 image::2023-08-18T05-11-42-302Z.png[] 
 
 Simulated Efficiency Variation with Load
+
+
+=== Low Dropout (LDO) Voltage Regulators 
+
+
+=== Current Reference
+
+Distributes 2 uA current reference to other blocks, includes a start-up circuit.
+
+Parasitic extraction results:
+
+ - Typical conditions yields reference current ranging from 1.98 uA to 2.4 uA (~20% variation)
+ - Large variation with corners
+ - Worst case: ff_hot at 3.04 uA
+
+=== Bandgap Reference
+
+
+=== Utility Current DAC
+
+[cols="2",options="header"]
+|===
+| Parameter          | Spec
+| Output @ 1.6 V     | Up to 63 * IREF
+| Power @ 126 uA     | ~50 uW
+| Input Current Range| [0.1 uA, 20 uA]
+| Load Voltage       | ~ 150 mV
+| Average DNL Error  | 1.73%
+| Overall INL Error  | ~2 uA
+| Estimated Area     | 800 um^2^
+|===
+
+
+- 6-bit binary weighted current mirror scaling
+- Uses IREF input as LSB
