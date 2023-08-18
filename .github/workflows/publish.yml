@@ -27,7 +27,9 @@ jobs:
         pdf_build: true
         # asciidoctor_params: --attribute=nofooter
         # adoc_file_ext: .ascii # default is .adoc
-        # source_dir: docs/ # default is .
+        source_dir: docs/ # default is .
         # slides_build: true
-        # pre_build:
+        pre_build: |
+          cp docs/SCuM-V23.adoc README.adoc
+          rm docs/SCuM-V23.adoc
         # post_build:
