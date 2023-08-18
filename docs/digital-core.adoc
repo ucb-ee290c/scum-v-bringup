@@ -1,0 +1,10 @@
+== Digital Core
+
+image::2023-08-18T04-45-39-595Z.png[] 
+
+- Core architecture
+- How much memory
+- How do we boot
+- Where do we find simulations/programs that were run previously?
+- Where is the toolchain?
+- Is this the right memory map?

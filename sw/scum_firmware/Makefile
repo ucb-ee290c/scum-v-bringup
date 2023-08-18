@@ -78,8 +78,8 @@ TARGET_VERILOG = $(BUILD_DIR)$(TARGET).out
 #################################
 
 # MCU Settings
-ARCH = rv64imafdc_zicsr
-ABI = lp64d
+ARCH = rv32imafc_zicsr
+ABI = ilp32f
 CODEMODEL = medany
 LD_SCRIPT = $(SRC_DIR)scum.ld
 

@@ -1,0 +1,21 @@
+== Power System
+
+image::2023-08-18T04-39-38-412Z.png[] 
+
+SCuM-V23 has 3 power domains:
+
+1. VDD_A - 1V, 5mA expected
+2. VDD_RF - 1V, 15mA expected
+3. VDD_D - 0.85V, 15mA expected
+
+
+=== Switched Capacitor Converter
+
+Ladder 3:1 Topology
+
+ - All capacitors & switches are rated at Vout.
+ - Externally Reconfigurable for 3:1, 2:1, 3:2 for exploiting full battery voltage range.
+
+image::2023-08-18T05-11-42-302Z.png[] 
+
+Simulated Efficiency Variation with Load

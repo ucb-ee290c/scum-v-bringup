@@ -1,0 +1,6 @@
+== Oscillators
+
+- What clock domains are present?
+- How is the system intended to work if fully functional?
+- What tuning accessibility do we have? 
+- What are minimum/maximum frequencies?
