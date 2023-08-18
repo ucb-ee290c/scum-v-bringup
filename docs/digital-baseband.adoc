@@ -1,0 +1,98 @@
+== Digital Baseband-Modem
+
+=== Dual-Mode Baseband-Modem
+
+The Dual-Mode Baseband-Modem (BM) is responsible for handling the transmission and reception of both Bluetooth LE and IEEE 802.15.4 packets. For Bluetooth Low Energy, the BM handles Bluetooth Low Energy 1M Uncoded Link Layer Packets. For IEEE 802.15.4, the BM handles packets transmitted according to the PHY standard for the O-QPSK modulation in the 2.4 GHz band. Additionally the BM exposes an interface for the CPU to read/write various information (e.g. tuning bits) to the analog RF. 
+
+There are two primary sub-components in the Baseband-Modem, the Baseband, and the Modem. The baseband is responsible for the bit-stream processing of incoming and outgoing packets. The modem is responsible for modulation on the TX side, and digital image rejection and demodulation on the RX side.
+
+==== Architecture Overview
+
+image::2023-08-18T04-49-18-996Z.png[] 
+
+image::2023-08-18T04-50-02-990Z.png[] 
+
+==== Baseband-Modem Frontend
+
+===== Commands and MMIO Registers
+
+The baseband-modem (BM) block contains a set of memory mapped registers used for passing commands to the BM, tuning analog RF components, and making BM status visible to the CPU. The address map is shown below. Note that the addresses are relative to the BM’s base attachment address. For example, if the BM is attached at 0x8000, then the address of 0x04 corresponds to 0x8004.
+
+[cols="3*^,3", options="header", stripes="even", grid="all"]
+|===
+| ADDR | DATA | Size (bits) | Description
+| 0x00 | Instruction | 32
+| Instruction received from processor. Contains 4 bits of primary instruction, 4 bits of secondary instruction, then 24 bits of data.
+| 0x04 | Additional Data | 32
+| Additional data to write. Set data before writing instructions when applicable.
+| 0x08 | Status 0 | 32
+| [2:0] Assembler State +
+[5:3] Disassembler State +
+[7:6] TX State +
+[10:8] RX Controller State +
+[12:11] TX Controller State +
+[15:13] Controller State +
+[23:16] ADC I data +
+[31:24] ADC Q data
+| 0x0C | Status 1 | 32
+| [5:0] Modulation LUT index +
+[10:6] I AGC LUT index +
+[15:11] I DCOC LUT index +
+[20:16] Q AGC LUT index +
+[25:21] Q DCOC LUT index
+| 0x10 | Status 2 | 32 | [31:0] BLE CDR bit count
+| 0x14 | Status 3 | 32 | [31:0] LRWPAN CDR bit count
+| 0x18 | Status 4 | 32 | [31:0] LO/32 counter
+| 0x1C | General trim 0 | 8 | General trim bits (N/C)
+| 0x1D | General trim 1 | 8 | [0] LO/32 input (external, not implemented)
+| 0x1E | General trim 2 | 8 | General trim bits (N/C)
+| 0x1F | General trim 3 | 8 | General trim bits (N/C)
+| 0x20 | General trim 4 | 8 | General trim bits (N/C)
+| 0x21 | General trim 5 | 8 | General trim bits (N/C)
+| 0x22 | General trim 6 | 8 | General trim bits (N/C)
+| 0x23 | General trim 7 | 8 | Debug Enable (0 = debug enable)
+| 0x24 | I VGA gain control | 10 | Manual VGA value if not using I AGC
+| 0x26 | I VGA attenuation reset | 1 | reset the I AGC
+| 0x27 | I VGA attenuation useAGC | 1 | use I AGC (manual VGA value if not)
+| 0x28 | I VGA attenuation sample window | 8 | I AGC sample window
+| 0x29 | I VGA attenuation ideal peak to peak | 8 | I AGC ideal peak to peak
+| 0x2A | I VGA tolerance peak to peak | 8 | I AGC peak to peak tolerance
+| 0x2B | I BPF CHP 0 & 1 | 8 | I bandpass filter tuning
+| 0x2C | I BPF CHP 2 & 3 | 8 | I bandpass filter tuning
+| 0x2D | I BPF CHP 4 & 5 | 8 | I bandpass filter tuning
+| 0x2E | I BPF CLP 0 & 1 | 8 | I bandpass filter tuning
+| 0x2F | I BPF CLP 2 | 4 | I bandpass filter tuning
+| 0x30 | Q VGA gain control | 10 | Manual VGA value if not using Q AGC
+| 0x32 | Q VGA attenuation reset | 1 | reset the Q AGC
+| 0x33 | Q VGA attenuation useAGC | 1 | use Q AGC (manual VGA value if not)
+| 0x34 | Q VGA attenuation sample window | 8 | Q AGC sample window
+| 0x35 | Q VGA attenuation ideal peak to peak | 8 | Q AGC ideal peak to peak
+| 0x36 | Q VGA tolerance peak to peak | 8 | Q AGC peak to peak tolerance
+| 0x37 | Q BPF CHP 0 & 1 | 8 | Q bandpass filter tuning
+| 0x38 | Q BPF CHP 2 & 3 | 8 | Q bandpass filter tuning
+| 0x39 | Q BPF CHP 4 & 5 | 8 | Q bandpass filter tuning
+| 0x3A | Q BPF CLP 0 & 1 | 8 | Q bandpass filter tuning
+| 0x3B | Q BPF CLP 2 | 4 | Q bandpass filter tuning
+| 0x3C | I DCO use | 1 | toggle using I DCO
+| 0x3D | I DCO reset | 1 | reset the I DCO
+| 0x3E | I DCO gain | 8 | set gain for I DCO (unsigned FixedPoint w/ 2 bit binary point)
+| 0x3F | Q DCO use | 1 | toggle using Q DCO
+| 0x40 | Q DCO reset | 1 | reset the Q DCO
+| 0x41 | Q DCO gain | 8 | set gain for Q DCO (unsigned FixedPoint w/ 2 bit binary point)
+| 0x42 | DCOC tuning 1 | 6 | Manual I current DAC for stage 2 VGA value if not using I DCO
+| 0x43 | DCOC tuning 2 | 6 | Manual Q current DAC for stage 2 VGA value if not using Q DCO
+| 0x46 | MUX debug in | 10 | Debug configuration, input
+| 0x48 | MUX debug out | 10 | Debug configuration, output
+| 0x4A | Enable RX I | 5 | Manual enable RX I values {3'b0, mix, buf, vga_s1, vga_s2, bpf}
+| 0x4B | Enable RX Q | 5 | Manual enable RX Q values {3'b0, mix, buf, vga_s1, vga_s2, bpf}
+| 0x4C | Enable VCO LO | 2 | Manual enable VCO LO {6'b0, vco_lo, lna}
+| 0x50 | LUT command | 32 | LUT set instruction [3:0] LUT ID [9:4] address (index) [31:10] value
+| 0x54 | RX error message | 32 | Interrupt message, RX error message
+| 0x58 | RX finish message | 32 | Interrupt message, RX finish message
+| 0x5C | TX error message | 32 | Interrupt message, TX error message
+| 0x60 | FIR command | 32 | FIR filter reprogramming instruction, [3:0] FIR ID [9:4] coefficient (index) [31:10] value
+| 0x64 | I VGA attenuation gain increase | 8 | I AGC gain increase step size (by LUT index)
+| 0x65 | I VGA attenuation gain decrease | 8 | I AGC gain decrease step size (by LUT index)
+| 0x66 | Q VGA attenuation gain increase | 8 | Q AGC gain increase step size (by LUT index)
+| 0x67 | Q VGA attenuation gain decrease | 8 | Q AGC gain decrease step size (by LUT index)
+|===
