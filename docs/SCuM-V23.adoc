@@ -8,8 +8,14 @@
 :date: {localdate}
 :revnumber: v1.0
 :doctype: book
+ifdef::env-vscode[]
 :pdf-themesdir: ./docs/themes
 :pdf-theme: specsheet
+endif::[]
+ifndef::env-vscode[]
+:pdf-themesdir: ./themes
+:pdf-theme: specsheet
+endif::[]
 :sectnums:
 :sectlinks:
 :!chapter-signifier:
