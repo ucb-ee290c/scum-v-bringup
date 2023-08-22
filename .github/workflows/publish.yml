@@ -29,9 +29,10 @@ jobs:
         # adoc_file_ext: .ascii # default is .adoc
         source_dir: docs/ # default is .
         # slides_build: true
-        pre_build: |
-          cp SCuM-V23.adoc README.adoc
-          rm SCuM-V23.adoc
+        ebook_main_adoc_file: SCuM-V23
+        # pre_build:
         post_build: |
-          cp ebook.pdf SCuM-V23.pdf
-          rm ebook.pdf
+          ln -s "SCuM-V23.html" "index.html" # default is to add a symlink to README.html
+          mv ebook.pdf SCuM-V23.pdf
+          ln -s "SCuM-V23.pdf" "ebook.pdf" # ebook.pdf must exist because ebook.pdf is force-added to the staged files
+          git add -f "SCuM-V23.pdf" # default is to only add ebook.pdf
