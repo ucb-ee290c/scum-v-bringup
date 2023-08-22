@@ -3,7 +3,7 @@ Various files for bringing up the Single-Chip Micro Mote V (SCμM-V)
 
 ## Documentation
 
-[SCuM-V23 Specification (PDF Version)](https://github.com/ucb-ee290c/scum-v-bringup/raw/gh-pages/ebook.pdf)
+[SCuM-V23 Specification (PDF Version)](https://github.com/ucb-ee290c/scum-v-bringup/raw/gh-pages/SCuM-V23.pdf)
 
 [SCuM-V23 Specification (Web Version)](https://ucb-ee290c.github.io/scum-v-bringup/)
 
