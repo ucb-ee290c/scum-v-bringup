@@ -32,4 +32,6 @@ jobs:
         pre_build: |
           cp SCuM-V23.adoc README.adoc
           rm SCuM-V23.adoc
-        # post_build:
+        post_build: |
+          cp ebook.pdf SCuM-V23.pdf
+          rm ebook.pdf
