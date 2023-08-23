@@ -1,0 +1,16 @@
+== Encryption Modules
+
+Several accelerators that facilitate secure communication between two devices. 
+
+Example use case:
+
+1. Share key Elliptic Curve Cryptography (ECC)
+2. Sender encrypts message using Advanced Encryption Standard (AES) and shared key
+3. Receiver decrypts message using AES and shared key
+4. Receiver verifies message integrity using SHA-256
+
+=== ECC
+
+=== AES
+
+=== SHA-256

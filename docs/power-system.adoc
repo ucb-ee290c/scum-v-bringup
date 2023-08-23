@@ -54,6 +54,9 @@ image::2023-08-18T16-16-56-451Z.png[]
 
 === Low Dropout (LDO) Voltage Regulators 
 
+The design of the LDO is a 2-stage amplifier where the output of the differential amplifier drives the gate of the PMOS at the second stage and the output of the drain of this PMOS is the regulated voltage. This voltage is then passed through a resistor-feedback network to get the desired regulated voltage for different power domains. An additional capacitor is attached at the output voltage as well to stabilize the LDO. Since each domain requires different voltages, the resistors values were chosen to such that the feedback yielded the desired voltage for different domains (1V for the RF analog, and 0.85V for Digital).
+
+
 .Simulated performance
 [cols="4",options="header"]
 |===
@@ -76,12 +79,33 @@ Parasitic extraction results:
 
 === Bandgap Reference
 
+The Bandgap Reference Circuit (BGR) can be splitted into 3 parts: startup circuit, 2-stage op-amp, and the core BGR circuit. There are 2 included RDACs for the temperature coefficient and output voltage (Vref) adjustment.
+
+.Key parameters and simulated performance
+[cols="2",options="header"]
+|===
+| Parameter         | Spec
+| Output, VBAT=1.6V | ~650 mV
+| Power Consumption, T=27C | ~1.8 mW
+| PSRR, f=1 MHz     | ~58 dB
+| Layout Area     | ~ 7,500 um^2^
+|===
+
+==== Core BGR Circuit
+The temperature compensation coefficient is determined by the ratio of R3/R2, while the output voltage level is determined by the ratio of R4/R2, assuming R1=R2. R3 and R4 are ev  entually implemented as RDACS to enable tuning of temperature coefficient and output voltage shifting for LDO Vref supply.
+
+==== 2-Stage Op-Amp
+
+A two stage opamp with Miller compensation and pole cancellation was used.
+
+
 
 === Utility Current DAC
 
 .Utility Current DAC schematic
 image::2023-08-18T16-31-54-728Z.png[] 
 
+.Key parameters and simulated performance
 [cols="2",options="header"]
 |===
 | Parameter          | Spec

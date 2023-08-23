@@ -2,7 +2,7 @@
 
 image::2023-08-18T04-45-39-595Z.png[] 
 
-==== Key Features
+=== Key Features
  
 * RV32IMAFC Single Rocket Core
 * 3 clocks for CPU core and peripherals:
@@ -19,7 +19,7 @@ image::2023-08-18T04-45-39-595Z.png[]
 * RTC capture and compare peripheral
 
 
-==== Power Consumption
+=== Power Consumption
 
 .Power consumption comparison of the core running a program with baseband register read/write and ALU usage. VCC=0.85V, CPU clock=200MHz
 |===
@@ -29,8 +29,27 @@ image::2023-08-18T04-45-39-595Z.png[]
 | SCuM-V23 dynamic power simulation | 7.9 | 3.2 | 0.060 | 11.2
 |===
 
-Based on simulations, total power consumption of the core decreased by 73% from SCuM-V22 to SCuM-V23. This 
-improvement was achieved by reducing leakage power in the SRAM cells.
+Based on simulations, total power consumption of the core decreased by 73% from SCuM-V22 to SCuM-V23. This improvement was achieved by reducing leakage power in the SRAM cells.
+
+
+=== Boot Process
+
+|===
+| Method | BOOT_SEL Value | Boot Address | Interface | Boot Process Descritpion
+| Self Boot | 1 | 0x2000_0000 | SPI | SPI flash content is copied to memory
+Jump to self boot base address
+| Tethered Boot | 0 | 0x0000_0000 | TSI & JTAG | 1. Boot ROM configures a trap handler, and enters a wait for interrupt loop.
+
+2. Use JTAG, TSI, or other external debugging tools to program the on-chip memory
+
+3. Use JTAG, TSI, or other external tools to trigger a software interrupt (MSIP)
+
+4. Boot ROM handles interrupt, jumps to the program memory.
+|===
+
+
+
+
 
 - Core architecture
 - How much memory

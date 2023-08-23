@@ -1,4 +1,21 @@
-== uV-Precision Sigma-Delta ADC
+== uV-Precision Delta-Sigma ADC
+
+The uV-Precision ADC is designed to function as an EEG front-end with high-level specifications: 
+
+|===
+| Parameter | Value
+| Resolution | 18 bits
+| Noise | 1.0 uVrms
+| Input Bandwidth | 500 Hz
+| Spot Noise | 45 nV/sqrt(Hz)
+|===
+
+The ADC is implemented with a delta-sigma architecture, leveraging 
+a high oversampling ratio to achieve high resolution and low noise. The 
+input drives a current controlled oscillator, which is sampled by the 
+on-chip 32 MHz clock to generate a digital bitstream. The bitstream is 
+then processed by a digital decimation filter to generate the final
+output sample.
 
 === System-level Diagram and Description 
 
@@ -10,7 +27,7 @@ Input impedance? Mins and maxs?
 
 === Digital Front-End
 
-The sigma-delta ADC's DSP chain is implemented as a cascaded integrator comb (CIC) decimation filter for noise shaping. The key CIC filter parameters for this design are N=4, R=8000, M=1
+The delta-sigma ADC's DSP chain is implemented as a cascaded integrator comb (CIC) decimation filter for noise shaping. The key CIC filter parameters for this design are N=4, R=8000, M=1
 
 .Digital Front-End system-level diagram
 image::2023-08-18T16-36-05-083Z.png[]
