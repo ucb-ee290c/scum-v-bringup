@@ -50,8 +50,8 @@ include::digital-baseband.adoc[]
 // Encryption section
 include::encryption-modules.adoc[]
 
-
-== 2.4 GHz Transceiver Analog Frontend
+// Radio front-end section
+include::radio.adoc[]
 
 == 94 GHz FMCW Radar
 
