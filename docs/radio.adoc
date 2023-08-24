@@ -1,0 +1,107 @@
+== 2.4 GHz Tranceiver
+
+=== Radio Architecture
+The radio operates within the frequency range 2.4 to 2.4835 GHz covering 70 1MHz RF channels. The receive change should be sensitive to an input power range of -70 dBm to -10 dBm and achieve a BER of 0.1% or an SNR of 12.5 dB.
+
+=== Radio Final Block Diagram
+image:RF_block_diagram.png[]
+
+
+=== All Interface Pins
+
+[cols="1,2,2"]
+|===
+|Block
+|Analog/Signal Pins
+|Digital Pins
+
+|LNA, Mixer
+|rx, lna_p, lna_n, iref_lna*, lo_0, lo_90, lo_180, lo_270
+|N/A
+
+|TIA
+|mix_i_p, mix_i_n, mix_q_p, mix_q_n, tia_i_p, tia_i_n, tia_q_p, tia_q_n, MUXED_ANALOG_IN_P, MUXED_ANALOG_IN_N, MUXED_ANALOG_OUT_P, MUXED_ANALOG_OUT_N,
+|en_tia_i, en_tia_q, vga_gain_ctrL_i<9>, vga_can_ctrl_q<9>
+
+|BPF
+|tia_i_p, tia_i_n, tia_q_p, tia_q_n, iref_bpf_i_1, iref_bpf_i_2, iref_bpf_q_1, iref_bpf_q_2,  MUXED_ANALOG_IN_P, MUXED_ANALOG_IN_N, MUXED_ANALOG_OUT_P, MUXED_ANALOG_OUT_N
+|en_bpf_i, en_bpf_q, bpf_q_clp_0<3:0>, bpf_q_clp_1<3:0>, bpf_q_clp_2<3:0>, bpf_q_chp_0<3:0>, bpf_q_chp_1<3:0>, bpf_q_chp_2<3:0>, bpf_q_chp_3<3:0>, bpf_q_chp_4<3:0>, bpf_q_chp_5<3:0>, bpf_i_clp_0<3:0>, bpf_i_clp_1<3:0>, bpf_i_clp_2<3:0>, bpf_i_chp_0<3:0>, bpf_i_chp_1<3:0>, bpf_i_chp_2<3:0>, bpf_i_chp_3<3:0>, bpf_i_chp_4<3:0>, bpf_i_chp_5<3:0>
+
+
+|VGA  
+|iref_vga_i, iref_vga_q, vga_i_p, vga_i_n, vga_q_p, vga_q_n, MUXED_ANALOG_IN_P, MUXED_ANALOG_IN_N, MUXED_ANALOG_OUT_P, MUXED_ANALOG_OUT_N
+|en_vga_i, en_vga_q, vga_gain_ctrl_q<8:0>, vga_gain_ctrl_i<8:0>
+
+|VCO
+|LOp, LOn, iref_vco, lo_0, lo_90, lo_180, lo_270, tx_p
+|en_vco_lo, vco_freq_reset, vco_cap_mod<0:7>, vco_cap_med<0:5>, vco_cap_coarse<0:9>
+|===
+
+*iref_lna is, unfortunately, routed quickly from iref_tia_i, but provides the same current
+
+Top-Level Layout Floorplan
+TODO:  grab screenshot of final layout and identify important blocks
+
+=== Design Flow, Tradeoffs, and Decisions
+
+==== RF Frontend
+The RF receive chain consists of an input balun that converts the single ended antenna signal to a differential input signal and provides help with impedance matching. Following the balun is a fully differential low noise amplifier with inductive degeneration that produces an RF current. The RF current is mixed, in current mode, by a 4-phase differential passive mixer which is then converted to an IF voltage by the TIA. For designing these circuits taking EE 142 is a must, and solid understanding of electromagnetics is very useful.
+
+===== Balun
+
+===== LNA
+To be filled
+
+===== Mixer
+The mixer is a 4-phase differential passive mixer. Review 142/242B notes for analysis and implementation. Reused from SCuM-V22, designed by Rami Hijab.
+
+
+===== TIA*
+
+The TIA converts the mixer output current to a baseband output voltage.
+Due to time constraints, we re-used the op-amp from the baseband chain for this TIA. However this should have been its only resistively biased inverter (or other topology) for better noise performance.
+The key to the TIA (what was different from the baseband chain) was the resistive feedback. This was done last minute to meet the low and high gain requirements. The addition to make is to make sure that the system is invariant to PVT variation. This can be done by making the current source of the LNA a 1/R reference so that the LNA Gm cancels with the R in feedback with the TIA.
+
+==== Baseband
+The baseband chain consists of many individual blocks, and this means that not too much time could be spent on optimizing designs for each one. Building off of Neelesh's experiences in the Spring 2022 iteration of the class, the main goals were to decrease power consumption and area of the baseband by optimizing the BPF implementation. 
+
+===== VGA
+
+====== Stage 1
+High gain folded cascode stage. Chosen to more independently control the stage 1 gm and the stage 1 Rout. Headroom limitations on the long-channel devices makes telescopic hard to achieve. 
+Input pair is very large to minimize DC offset voltage (proortional to area of the input devices).
+Quite large intrinsic gain. Initially I wanted to support 60dB of dynamic range on the CL performance of the op-amp, which required 90dB or so of open-loop gain at the minimum. We ended up using 2 gain stages (TIA = stage 1, VGA = stage 2) so the second VGA only needed a max of 30dB dynamic gain. So, this stage can be optimized more for the new spec. BW concern is not that large since the IF of the baseband is only 2MHz.
+Design approach: I used the topology of the previous semester as a starting point before beginning to test various currents, widths, device flavors, etc. I believe that 240B HW3 of Sp22 is the kind of assignment (as Prof. Niknejad for someone’s good solutions to this, or his own, or email me for mine, etc. etc.) that teaches you how to design the main baseband op-amp block (stage 1 at last), and is a really good learning opportunity for anyone interested in this work. When it comes down to testing, you have to know why the amp behaves the way it does, and whether it does what you expect (voltage biasing, currents, VGS/VDS, etc.). The difference between systematic design and just getting something that happens to work (honestly, I was stuck in this regime for a while) is that if a testbench result is puzzling, you should have an idea of how to proceed. Of course, message on slack/Piazza/ bring it up during weekly meetings, but individual progress unhampered by others is critical to get things done on time.
+
+====== Stage 2
+Common-source class A stage. Power was not a concern for the spec of this class, and so other topologies were not considered (the CS amp stage is quite simple to bias and understand as well).
+Spent enough time to make sure this block was biased correctly and could support a large enough capacitive load. In reality, this varies; for the TIA, this cap load is the input of the BPF, which isn’t very large. But the output of the second VGA is the ADC input, which is a much larger (~pF) cap. Miller Compensation sets some limits on the relation between input/output stage gm values and the cap load you can drive (240B slides).
+
+====== CMFB Circuit
+Compares the output common-mode voltage to the desired level to set the top PMOS gate voltage.
+Does not involve sensing resistors (minimizes area).
+Fully-differential, PMOS diode loads
+In hindsight, the second CMFB loop may not be needed at all (also helps stability to only have 1 CMFB loop). The PMOS bias can be a voltage source (add a branch to the biasing network).
+
+====== Biasing
+Functional but can be optimized. The structure can be made easier to control via more independent branches (more power but again, not a concern).
+
+===== BPF
+This block was not hard to design given a good op-amp; there are many papers and sample designs available for a multiple-feedback active band-pass filter composed of individual HP/LP stages, along with design equations. In this case, a high pass filter is followed by a low pass filter to create the bandpass transfer function.
+
+A redesign of the op amp used was done to reduce area, power consumption.
+
+A 5T configuration was used, as shown below:
+image:BPF_amp_schem.png[]
+
+A current mirror set up was used, with resistive CMFB using the four resistors at the bottom. Miller componsation is also implemented to ensure stability  between the fully differential outputs as denoted by voutp, voutn.
+
+Upon simulation of the extracted view, it was found that the pass band of the BPF had shifted as the previous RC values for the high pass and low pass stages were not tuned properly. However, current simulations of the taped-out design show the passband near 12 MHz, and needs a fix.
+
+===== ADC
+This is a reused block from SCuM-V22 and developed by Zhaokai Liu.
+
+A pseudo-differential input ADC, one can specify a high and low reference voltage in which comparison should be done. By taking the lower reference voltage as "ground", and the pseudo differential input signal as the input.
+
+=== Simulation
+Refer to the "Analog RF Simulations" link in the Resource Index for information about locations of testbenches and final tapeout designs.
