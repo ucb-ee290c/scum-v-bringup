@@ -91,8 +91,7 @@ This block was not hard to design given a good op-amp; there are many papers and
 
 A redesign of the op amp used was done to reduce area, power consumption.
 
-A 5T configuration was used, as shown below:
-image:BPF_amp_schem.png[]
+A 5T configuration was used.
 
 A current mirror set up was used, with resistive CMFB using the four resistors at the bottom. Miller componsation is also implemented to ensure stability  between the fully differential outputs as denoted by voutp, voutn.
 
