@@ -53,7 +53,7 @@ include::encryption-modules.adoc[]
 // Radio front-end section
 include::radio.adoc[]
 
-== 94 GHz FMCW Radar
+== 94 GHz FMCW Radar Transmitter
 
 How does the debug architecture work here?
 Is there any digital control?
