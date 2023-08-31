@@ -35,22 +35,22 @@ endif::[]
 // Overview Section
 include::overview.adoc[]
 
-// Power System section
+// Power System section (Luke)
 include::power-system.adoc[]
 
-// Oscillators section
+// Oscillators section (Naz + Titan)
 include::oscillators.adoc[]
 
-// Digital core section
+// Digital core section (Daniel, Vihan)
 include::digital-core.adoc[]
 
-// Digital baseband section
+// Digital baseband section (Jero, Daniel)
 include::digital-baseband.adoc[]
 
-// Encryption section
+// Encryption section (Sam)
 include::encryption-modules.adoc[]
 
-// Radio front-end section
+// Radio front-end section (Kevin)
 include::radio.adoc[]
 
 == 94 GHz FMCW Radar Transmitter
