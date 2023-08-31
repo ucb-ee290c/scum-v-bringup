@@ -1,8 +1,10 @@
 == Encryption Modules
 
-Designers: Shrey Aeron, Dang Le
-Authors: Sam Xu
-Bringup: TBD
+__Designers__: Shrey Aeron, Dang Le
+
+__Authors__: Sam Xu
+
+__Bringup__: TBD
 
 Several accelerators that facilitate secure communication between two devices. 
 

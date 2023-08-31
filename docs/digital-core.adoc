@@ -1,8 +1,10 @@
 == Digital Core
 
-Designers: Joyce Lee, David He
-Authors: Daniel Endraws, Vihan Bhargava
-Bringup: Daniel Endraws, Vihan Bhargava
+__Designers__: Joyce Lee, David He
+
+__Authors__: Daniel Endraws, Vihan Bhargava
+
+__Bringup__: Daniel Endraws, Vihan Bhargava
 
 image::2023-08-18T04-45-39-595Z.png[] 
 

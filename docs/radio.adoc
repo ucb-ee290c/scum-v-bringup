@@ -1,8 +1,10 @@
 == 2.4 GHz Tranceiver
 
-Designers: Julian Maravilla (TX), Awani Khodkumbhe (LNA, mixer), Qiutong Jin (bandpass filter, VGA), Kevin Lu (ADC, RX integration)
-Authors: Naz Khairallah (TX), Titan Yuan (TX), Kevin Lu (RX)
-Bringup: Naz Khairallah (TX), Titan Yuan (TX)
+__Designers__: Julian Maravilla (TX), Awani Khodkumbhe (LNA, mixer), Qiutong Jin (bandpass filter, VGA), Kevin Lu (ADC, RX integration)
+
+__Authors__: Naz Khairallah (TX), Titan Yuan (TX), Kevin Lu (RX)
+
+__Bringup__: Naz Khairallah (TX), Titan Yuan (TX)
 
 === Radio Architecture
 The radio operates within the frequency range 2.4 to 2.4835 GHz covering 70 1MHz RF channels. The receive change should be sensitive to an input power range of -70 dBm to -10 dBm and achieve a BER of 0.1% or an SNR of 12.5 dB.
