@@ -1,5 +1,9 @@
 == uV-Precision Delta-Sigma ADC
 
+Designers: Yu-Chi Lin (analog), Daniel Lovell (digital)
+Authors: Yu-Chi Lin, Daniel Lovell
+Bringup: Yu-Chi Lin
+
 The uV-Precision ADC is designed to function as an EEG front-end with high-level specifications: 
 
 |===

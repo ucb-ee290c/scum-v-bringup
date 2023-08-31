@@ -35,29 +35,28 @@ endif::[]
 // Overview Section
 include::overview.adoc[]
 
-// Power System section (Luke)
+// Power System section
 include::power-system.adoc[]
 
-// Oscillators section (Naz + Titan)
+// Oscillators section
 include::oscillators.adoc[]
 
-// Digital core section (Daniel, Vihan)
+// Digital core section
 include::digital-core.adoc[]
 
-// Digital baseband section (Jero, Daniel)
+// Digital baseband section
 include::digital-baseband.adoc[]
 
-// Encryption section (Sam)
+// Encryption section
 include::encryption-modules.adoc[]
 
-// Radio front-end section (Kevin)
+// Radio front-end section
 include::radio.adoc[]
 
-== 94 GHz FMCW Radar Transmitter
+// 94 GHz radar section
+include::radar.adoc[]
 
-How does the debug architecture work here?
-Is there any digital control?
-
+// uV-precision ADC section
 include::uv-adc.adoc[]
 
 

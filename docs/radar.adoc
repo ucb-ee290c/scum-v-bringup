@@ -1,0 +1,8 @@
+== 94 GHz FMCW Radar Transmitter
+
+Designers: Titan Yuan
+Authors: Titan Yuan
+Bringup: Titan Yuan
+
+How does the debug architecture work here?
+Is there any digital control?
