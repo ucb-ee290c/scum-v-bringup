@@ -1,10 +1,8 @@
 == Digital Baseband-Modem
 
-__Designers__: Jero Wang, Daniel Endraws
-
-__Authors__: Jero Wang, Daniel Endraws
-
-__Bringup__: Jero Wang, Daniel Endraws
+Designers: Jero Wang, Daniel Endraws
+Authors: Jero Wang, Daniel Endraws
+Bringup: Jero Wang, Daniel Endraws
 
 === Dual-Mode Baseband-Modem
 

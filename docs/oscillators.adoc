@@ -1,10 +1,8 @@
 == Oscillators
 
-__Designers__: Stephen Chung (clocks)
-
-__Authors__: TBD
-
-__Bringup__: TBD
+Designers: Stephen Chung (clocks)
+Authors: TBD
+Bringup: TBD
 
 - What clock domains are present?
 - How is the system intended to work if fully functional?

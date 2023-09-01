@@ -1,10 +1,8 @@
 == 94 GHz FMCW Radar Transmitter
 
-__Designers__: Titan Yuan
-
-__Authors__: Titan Yuan
-
-__Bringup__: Titan Yuan
+Designers: Titan Yuan
+Authors: Titan Yuan
+Bringup: Titan Yuan
 
 How does the debug architecture work here?
 Is there any digital control?
