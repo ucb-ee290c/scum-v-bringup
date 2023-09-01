@@ -1,9 +1,5 @@
 == Oscillators
 
-Designers: Stephen Chung (clocks)
-Authors: TBD
-Bringup: TBD
-
 - What clock domains are present?
 - How is the system intended to work if fully functional?
 - What tuning accessibility do we have? 

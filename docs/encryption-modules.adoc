@@ -1,9 +1,5 @@
 == Encryption Modules
 
-Designers: Shrey Aeron, Dang Le
-Authors: Sam Xu
-Bringup: TBD
-
 Several accelerators that facilitate secure communication between two devices. 
 
 Example use case:

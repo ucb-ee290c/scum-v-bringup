@@ -1,9 +1,5 @@
 == Digital Baseband-Modem
 
-Designers: Jero Wang, Daniel Endraws
-Authors: Jero Wang, Daniel Endraws
-Bringup: Jero Wang, Daniel Endraws
-
 === Dual-Mode Baseband-Modem
 
 The Dual-Mode Baseband-Modem (BM) is responsible for handling the transmission and reception of both Bluetooth LE and IEEE 802.15.4 packets. For Bluetooth Low Energy, the BM handles Bluetooth Low Energy 1M Uncoded Link Layer Packets. For IEEE 802.15.4, the BM handles packets transmitted according to the PHY standard for the O-QPSK modulation in the 2.4 GHz band. Additionally the BM exposes an interface for the CPU to read/write various information (e.g. tuning bits) to the analog RF. 

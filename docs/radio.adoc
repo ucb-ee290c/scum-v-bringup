@@ -1,9 +1,5 @@
 == 2.4 GHz Tranceiver
 
-Designers: Julian Maravilla (TX), Awani Khodkumbhe (LNA, mixer), Qiutong Jin (bandpass filter, VGA), Kevin Lu (ADC, RX integration)
-Authors: Naz Khairallah (TX), Titan Yuan (TX), Kevin Lu (RX)
-Bringup: Naz Khairallah (TX), Titan Yuan (TX)
-
 === Radio Architecture
 The radio operates within the frequency range 2.4 to 2.4835 GHz covering 70 1MHz RF channels. The receive change should be sensitive to an input power range of -70 dBm to -10 dBm and achieve a BER of 0.1% or an SNR of 12.5 dB.
 
@@ -31,7 +27,8 @@ image:RF_block_diagram.png[]
 |tia_i_p, tia_i_n, tia_q_p, tia_q_n, iref_bpf_i_1, iref_bpf_i_2, iref_bpf_q_1, iref_bpf_q_2,  MUXED_ANALOG_IN_P, MUXED_ANALOG_IN_N, MUXED_ANALOG_OUT_P, MUXED_ANALOG_OUT_N
 |en_bpf_i, en_bpf_q, bpf_q_clp_0<3:0>, bpf_q_clp_1<3:0>, bpf_q_clp_2<3:0>, bpf_q_chp_0<3:0>, bpf_q_chp_1<3:0>, bpf_q_chp_2<3:0>, bpf_q_chp_3<3:0>, bpf_q_chp_4<3:0>, bpf_q_chp_5<3:0>, bpf_i_clp_0<3:0>, bpf_i_clp_1<3:0>, bpf_i_clp_2<3:0>, bpf_i_chp_0<3:0>, bpf_i_chp_1<3:0>, bpf_i_chp_2<3:0>, bpf_i_chp_3<3:0>, bpf_i_chp_4<3:0>, bpf_i_chp_5<3:0>
 
-|VGA
+
+|VGA  
 |iref_vga_i, iref_vga_q, vga_i_p, vga_i_n, vga_q_p, vga_q_n, MUXED_ANALOG_IN_P, MUXED_ANALOG_IN_N, MUXED_ANALOG_OUT_P, MUXED_ANALOG_OUT_N
 |en_vga_i, en_vga_q, vga_gain_ctrl_q<8:0>, vga_gain_ctrl_i<8:0>
 
@@ -66,7 +63,7 @@ Due to time constraints, we re-used the op-amp from the baseband chain for this 
 The key to the TIA (what was different from the baseband chain) was the resistive feedback. This was done last minute to meet the low and high gain requirements. The addition to make is to make sure that the system is invariant to PVT variation. This can be done by making the current source of the LNA a 1/R reference so that the LNA Gm cancels with the R in feedback with the TIA.
 
 ==== Baseband
-The baseband chain consists of many individual blocks, and this means that not too much time could be spent on optimizing designs for each one. Building off of Neelesh's experiences in the Spring 2022 iteration of the class, the main goals were to decrease power consumption and area of the baseband by optimizing the BPF implementation.
+The baseband chain consists of many individual blocks, and this means that not too much time could be spent on optimizing designs for each one. Building off of Neelesh's experiences in the Spring 2022 iteration of the class, the main goals were to decrease power consumption and area of the baseband by optimizing the BPF implementation. 
 
 ===== VGA
 
