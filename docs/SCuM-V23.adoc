@@ -25,8 +25,8 @@ endif::[]
 [cols="1,2,1", options="header"]
 |===
 | Resource | Description | Link
-| SCuM-V23 End of Semester Review | Final design review from Sp23 | link:https://docs.google.com/presentation/d/12go3DiuhL_MuZc9lrPC-D9m9Jhr7LV5_/edit#slide=id.p1[Google Slides]
-| SCuM-V23 Mid-Semester Review | Mid-semester design review from Sp23 | link:https://docs.google.com/presentation/d/1NwGTKHJewxJkg_gc0BDnHbPr_JOrNUo1XQNuW6IDmBM/edit?usp=drive_link[Google Slides]
+| SCuM-V23 End of Semester Review | Final design review from Sp23 | link:https://docs.google.com/presentation/d/12go3DiuhL_MuZc9lrPC-D9m9Jhr7LV5_/edit?usp=sharing[Google Slides]
+| SCuM-V23 Mid-Semester Review | Mid-semester design review from Sp23 | link:https://docs.google.com/presentation/d/1NwGTKHJewxJkg_gc0BDnHbPr_JOrNUo1XQNuW6IDmBM/edit?usp=sharing[Google Slides]
 | Analog RF Simulations | Locations and information on running RF analog simulations | link:https://docs.google.com/document/d/1AonYYLMqA6wxp_P3jY-1RgbcOX0xAsPm3z0Vx6l0DUo/edit?usp=sharing[Google Doc]
 | SCuM-V22 Bringup Status | Archive of SCuM-V22 bringup measurements | link:https://docs.google.com/presentation/d/1fyWcBpSb9hvuizlRUf65NovWjaN5w86_6e52kjnYkxQ/edit?usp=sharing[Google Slides]
 |===
