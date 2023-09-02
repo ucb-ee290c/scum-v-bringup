@@ -41,6 +41,31 @@ image:RF_block_diagram.png[]
 Top-Level Layout Floorplan
 TODO:  grab screenshot of final layout and identify important blocks
 
+=== Transmitter
+
+The transmitter is designed to operate in the 2.4 GHz ISM band and be standards-compliant with IEEE 802.15.4 and BLE. The tuning range of the 4.8 GHz DCO is 4.88 GHz +- 0.5 GHz with <40 ppm of resolution (<192 kHz), corresponding to 2.44 GHz +- 0.25 GHz after the divider.
+
+.Transmitter schematic. The divider divides the 4.8 GHz DCO signal down to 2.4 GHz and also generates the differential in-phase and quadrature components for the mixer.
+image::radio/transmitter_schematic.png[]
+
+==== DCO Performance
+
+Referenced to 4.8 GHz, the following table displays the specifications and the achieved performance with parasitic extraction at the typical corner.
+[options="header"]
+|===
+| Specifications | Desired | Simulated
+| Power consumption [mW] | <1 mW | 0.871 mW
+| Tuning bandwidth | 20% of center frequency (4.88 GHz) | 18.12% (4.8 GHz center)
+| Coarse step resolution | <64 MHz (1024 MHz bandwidth) | 50.2 MHz (803 MHz bandwidth)
+| Medium step resolution | <4 MHz (180 MHz bandwidth) | 2.31 MHz (74 MHz bandwidth)
+| Fine step resolution | <192 kHz (10 MHz bandwidth) | 67.2 kHz (4.3 MHz bandwidth)
+Modulation step resolution | <192 kHz (4 MHz bandwidth) | 27.3 kHz (7 MHz bandwidth)
+|===
+
+==== PA Performance
+
+The PA is a class D PA consisting of three inverter stages. In simulation across corners, it outputs between 2.2 dBm and 3 dBm with an efficiency between 33% and 35%.
+
 === Design Flow, Tradeoffs, and Decisions
 
 ==== RF Frontend
