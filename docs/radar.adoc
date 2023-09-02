@@ -1,0 +1,4 @@
+== 94 GHz FMCW Radar Transmitter
+
+How does the debug architecture work here?
+Is there any digital control?
