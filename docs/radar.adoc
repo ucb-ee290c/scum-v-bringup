@@ -96,3 +96,8 @@ Unused.
 | `0x1E` | `pa_input_mux_sel` | 1 | Initial: `1b'0`
 Unused.
 |===
+
+=== Layout
+
+.Final radar layout. The total area is 300 um x 200 um.
+image::radar/radar_layout.png[]
