@@ -15,14 +15,14 @@ image::images/encryption_modules_overview.png[]
 ECC uses Chisel implementation and calls the Accelerator through C for math operations. Muliplier sizing is optimized.
 
 
-image::images/ECC_module.png[] 
+image::images/AES_module.png[] 
 
 
 === AES
 
 AES uses Chisel implementation and AES is synthesizable on a Rocket chip. Users can call AES accelerator functions through software by utilizing software interrupts. The process involves loading the encryption key and message, initiating the encryption or decryption process, and optionally utilizing diagnostic tools to monitor cycle time for computation completion. The implementation has been thoroughly tested using C testbenches and validated with third-party online software tools. On average, it takes approximately 6 cycles per word, which equates to about 10 nanoseconds per byte for AES operations.
 
-image::images/AES_module.png[] 
+image::images/ECC_module.png[] 
 
 
 === SHA-256
