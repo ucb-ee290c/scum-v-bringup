@@ -67,6 +67,8 @@ The PA consists of a driver stage and an output stage and consumes up to 60 mA a
 
 === Register Map
 
+The radar configuration registers are part of the `Scumvtuning` block, which contains a set of memory-mapped registers for tuning analog blocks. The base address of `Scumvtuning` is `0x0000_A000`.
+
 [cols="1,2,1,3",options="header"]
 |===
 | Register | Name | Size (bits) | Function
