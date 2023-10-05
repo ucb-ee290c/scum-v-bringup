@@ -72,7 +72,7 @@ The radar configuration registers are part of the `Scumvtuning` block, which con
 [cols="1,2,1,3",options="header"]
 |===
 | Register | Name | Size (bits) | Function
-| `0x0D` | `ramp_generator_clk_mux_sel` | 1 | TODO(titan).
+| `0x0D` | `ramp_generator_clk_mux_sel` | 1 | Unused.
 | `0x0E` | `ramp_generator_enable` | 1 | Initial `1b'1`. +
 Enables the ramp output.
 | `0x0F` | `ramp_generator_frequency_step_start` | 8 | Initial: `8b'0`. +
