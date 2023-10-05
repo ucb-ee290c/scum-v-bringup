@@ -73,29 +73,29 @@ The radar configuration registers are part of the `Scumvtuning` block, which con
 |===
 | Register | Name | Size (bits) | Function
 | `0x0D` | `ramp_generator_clk_mux_sel` | 1 | TODO(titan).
-| `0x0E` | `ramp_generator_enable` | 1 | Initial `1b'1`
-Enables the ramp output
-| `0x0F` | `ramp_generator_frequency_step_start` | 8 | Initial: `8b'0`
-Sets the initial ramp output for each ramp
-| `0x10` | `ramp_generator_num_frequency_steps` | 8 | Initial: `8b'0`
-Sets the number of LSBs the ramp output should increment by for each ramp
-| `0x11` | `ramp_generator_num_cycles_per_frequency` | 24 | Initial: `24b'0`
-Sets the number of clock cycles before incrementing the ramp output
-| `0x14` | `ramp_generator_num_idle_cycles` | 32 | Initial: `32b'0`
-Sets the number of clock cycles to idle between ramps
-| `0x18` | `ramp_generator_rst` | 1 | Initial: `32b'1`
-Resets the ramp generator's counter and ramp output
-| `0x19` | `vco_cap_tuning` | 5 | Initial: `5b'0`
+| `0x0E` | `ramp_generator_enable` | 1 | Initial `1b'1`. +
+Enables the ramp output.
+| `0x0F` | `ramp_generator_frequency_step_start` | 8 | Initial: `8b'0`. +
+Sets the initial ramp output for each ramp.
+| `0x10` | `ramp_generator_num_frequency_steps` | 8 | Initial: `8b'0`. +
+Sets the number of LSBs the ramp output should increment by for each ramp.
+| `0x11` | `ramp_generator_num_cycles_per_frequency` | 24 | Initial: `24b'0`. +
+Sets the number of clock cycles before incrementing the ramp output.
+| `0x14` | `ramp_generator_num_idle_cycles` | 32 | Initial: `32b'0`. +
+Sets the number of clock cycles to idle between ramps.
+| `0x18` | `ramp_generator_rst` | 1 | Initial: `32b'1`. +
+Resets the ramp generator's counter and ramp output.
+| `0x19` | `vco_cap_tuning` | 5 | Initial: `5b'0`. +
 Tunes the 4-bit capacitive DAC of the VCO. The MSB is unused.
-| `0x1A` | `vco_enable` | 1 | Initial: `1b'1`
+| `0x1A` | `vco_enable` | 1 | Initial: `1b'1`. +
 Unused.
-| `0x1B` | `vco_div_enable` | 1 | Initial: `1b'1`
+| `0x1B` | `vco_div_enable` | 1 | Initial: `1b'1`. +
 Unused.
-| `0x1C` | `pa_enable` | 1 | Initial: `1b'1`
+| `0x1C` | `pa_enable` | 1 | Initial: `1b'1`. +
 Unused.
-| `0x1D` | `pa_bypass` | 1 | Initial: `1b'0`
+| `0x1D` | `pa_bypass` | 1 | Initial: `1b'0`. +
 Unused.
-| `0x1E` | `pa_input_mux_sel` | 1 | Initial: `1b'0`
+| `0x1E` | `pa_input_mux_sel` | 1 | Initial: `1b'0`. +
 Unused.
 |===
 
