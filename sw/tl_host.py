@@ -11,11 +11,11 @@ DEBUG_CONTROLLER_BASE   =0x00000000
 BOOT_SELECT_BASE        =0x00002000
 ERROR_DEVICE_BASE       =0x00003000
 BOOTROM_BASE            =0x00010000
-TILE_RESET_SETTER       =0x00100000
+TILE_RESET_CTRL_BASE    =0x00100000
 CLINT_BASE              =0x02000000
 PLIC_BASE               =0x0C000000
 LBWIF_RAM_BASE          =0x10000000
-UART_BASE               =0x1001a000
+UART_BASE               =0x54000000
 GPIO_BASE               =0x10012000
 QSPI_BASE               =0x10040000
 FLASH_BASE              =0x20000000
@@ -26,7 +26,6 @@ DTIM_BASE               =0x80000000
 TL_CHANID_CH_A = 0
 TL_CHANID_CH_D = 3
 TL_OPCODE_A_PUTFULLDATA = 0
-TL_OPCODE_A_PUTPARTIALDATA = 1
 TL_OPCODE_A_GET = 4
 TL_OPCODE_D_ACCESSACK = 0
 TL_OPCODE_D_ACCESSACKDATA = 1
@@ -37,33 +36,36 @@ TL_OPCODE_D_ACCESSACKDATA = 1
 
 # print(prog_hex)
 
-ser = serial.Serial("COM6", baudrate=2000000, timeout=5.0)
+ser = serial.Serial("COM3", baudrate=2000000, timeout=2.0)
 
 
 def TL_Get(addr, verbal=True):
-    buffer = struct.pack("<BBBBLQ", TL_CHANID_CH_A, TL_OPCODE_A_GET, 3, 0b11111111, addr, 0x00)
+    buffer = struct.pack("<BBBBLL", TL_CHANID_CH_A, TL_OPCODE_A_GET, 2, 0b11111111, addr, 0x00)
+    print(buffer)
+    print(len(buffer))
     ser.write(buffer)
     if verbal:
         print("[TL Get] <address: {0:08X}, size: {1}>".format(addr, 4))
     # 1s timeout
-    buffer = ser.read(16)
-    chanid, opcode, size, denied, addr, data = struct.unpack("<BBBBLQ", buffer)
+    buffer = ser.read(12)
+    print(buffer)
+    chanid, opcode, size, denied, addr, data = struct.unpack("<BBBBLL", buffer)
     if opcode == TL_OPCODE_D_ACCESSACKDATA:
         if verbal:
-            print("[TL AccessAckData] <size: {0}, data: 0x{1:016X}, denied: {2}>".format(4, data, denied))
+            print("[TL AccessAckData] <size: {0}, data: 0x{1:08X}, denied: {2}>".format(4, data, denied))
         return data
     print("<ERROR!>")
     return -1
 
 
 def TL_PutFullData(addr, data, verbal=True):
-    buffer = struct.pack("<BBBBLQ", TL_CHANID_CH_A, TL_OPCODE_A_PUTPARTIALDATA, 3, 0b11111111, addr, data)
+    buffer = struct.pack("<BBBBLL", TL_CHANID_CH_A, TL_OPCODE_A_PUTFULLDATA, 2, 0b11111111, addr, data)
     ser.write(buffer)
     if verbal:
-        print("[TL PutFullData] <address: 0x{0:08X}, size: {1}, data: 0x{2:016X}>".format(addr, 8, data))
+        print("[TL PutFullData] <address: 0x{0:08X}, size: {1}, data: 0x{2:08X}>".format(addr, 4, data))
 
-    buffer = ser.read(16)
-    chanid, opcode, size, denied, addr, data = struct.unpack("<BBBBLQ", buffer)
+    buffer = ser.read(12)
+    chanid, opcode, size, denied, addr, data = struct.unpack("<BBBBLL", buffer)
     if opcode == TL_OPCODE_D_ACCESSACK:
         if verbal:
             print("[TL AccessAck]".format())
@@ -84,23 +86,9 @@ def flash_prog():
 
     prog_int = struct.unpack("<"+"L"*n_words, prog_bin)
 
-    # TileLink forces us to be double word aligned,
-    # so we need to write two instructions at once
-    ctr = 0
-    prev_inst = 0
-    aligned_addr = 0
     for addr, inst in enumerate(prog_int):
-        if ctr == 0:
-            ctr = 1
-            prev_inst = inst
-            aligned_addr = addr
-            continue
-        else:
-            ctr = 0
-            inst = (inst << 32) | (prev_inst)
-            inst_addr = 0x80000000+aligned_addr*4
-            print("{:.2f}%\t {} / {} - {:02X}".format((addr / n_words) * 100., addr, n_words, inst_addr))
-            TL_PutFullData(inst_addr, inst, verbal=False)
+        print("{:.2f}%\t {} / {}".format((addr / n_words) * 100., addr, n_words))
+        TL_PutFullData(0x80000000+addr*4, inst, verbal=False)
 
     time.sleep(0.1)
 
@@ -154,38 +142,28 @@ def trigSoftwareInterrupt():
 def main():
 
     #getBasebandregs()
-    #getUARTregs()
+    getUARTregs()
     #enableUARTTx()
     #sendHelloWorld()
-    #getUARTregs()
-    #TL_Get(0x4000)
-    #TL_Get(0x8000A000)
-    TL_PutFullData(0x8000A000, 0x0)
-    TL_PutFullData(0x8000B000, 0x0)
+    getUARTregs()
+    time.sleep(0.1)
     flash_prog()
-    time.sleep(0.5) 
-    
-    #TL_PutFullData(CLINT_BASE, 1)
-    #time.sleep(1)
-    TL_Get(0x8020)
-    TL_Get(0x8000A000)
-    TL_Get(0x8000B000)
-    
-    #trigSoftwareInterrupt()
+    time.sleep(0.02)
+    trigSoftwareInterrupt()
 
     #time.sleep(3)
 
     #trigSoftwareInterrupt()
 
 
-    # while True:
-    #     TL_Get(0x8020)
-    #     time.sleep(1)
+    #while True:
+    #    TL_Get(0x80005000)
+    #    time.sleep(1)
     
     #memory_scan()
     #getUARTregs()
 
-    #TL_Get(0x8000B000)
+    #TL_Get(0x80000000)
 
 
 
