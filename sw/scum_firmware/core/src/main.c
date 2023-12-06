@@ -190,7 +190,7 @@ int main() {
   //HAL_GPIO_writePin(GPIOA, GPIO_PIN_0, 0);
 
   UART_InitTypeDef UART_init_config;
-  UART_init_config.baudrate = 100000;
+  UART_init_config.baudrate = 200000;
   
 
   HAL_UART_init(UART0, &UART_init_config);
