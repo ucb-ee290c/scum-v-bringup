@@ -1,11 +1,14 @@
+import argparse
+import os
 import struct
 import time
 
 import serial
 
-
-BINARY_LOCATION = r".\scum_firmware\build\firmware.bin"
-
+if os.name == "nt":
+    BINARY_LOCATION = r".\scum_firmware\build\firmware.bin"
+else:
+    BINARY_LOCATION = "./scum_firmware/build/firmware.bin"
 
 DEBUG_CONTROLLER_BASE   =0x00000000
 BOOT_SELECT_BASE        =0x00002000
@@ -36,7 +39,11 @@ TL_OPCODE_D_ACCESSACKDATA = 1
 
 # print(prog_hex)
 
-ser = serial.Serial("COM3", baudrate=2000000, timeout=2.0)
+parser = argparse.ArgumentParser(description="Script for the TileLink host.")
+parser.add_argument("-p", "--port", default="/dev/tty.usbmodem103")
+args = parser.parse_args()
+
+ser = serial.Serial(args.port, baudrate=2000000, timeout=2.0)
 
 
 def TL_Get(addr, verbal=True):
@@ -47,12 +54,12 @@ def TL_Get(addr, verbal=True):
     if verbal:
         print("[TL Get] <address: {0:08X}, size: {1}>".format(addr, 4))
     # 1s timeout
-    buffer = ser.read(12)
+    buffer = ser.read(16)
     print(buffer)
-    chanid, opcode, size, denied, addr, data = struct.unpack("<BBBBLL", buffer)
+    chanid, opcode, size, denied, addr, data = struct.unpack("<BBBBLQ", buffer)
     if opcode == TL_OPCODE_D_ACCESSACKDATA:
         if verbal:
-            print("[TL AccessAckData] <size: {0}, data: 0x{1:08X}, denied: {2}>".format(4, data, denied))
+            print("[TL AccessAckData] <size: {0}, data: 0x{1:016X}, denied: {2}>".format(4, data, denied))
         return data
     print("<ERROR!>")
     return -1
@@ -62,10 +69,10 @@ def TL_PutFullData(addr, data, verbal=True):
     buffer = struct.pack("<BBBBLL", TL_CHANID_CH_A, TL_OPCODE_A_PUTFULLDATA, 2, 0b11111111, addr, data)
     ser.write(buffer)
     if verbal:
-        print("[TL PutFullData] <address: 0x{0:08X}, size: {1}, data: 0x{2:08X}>".format(addr, 4, data))
+        print("[TL PutFullData] <address: 0x{0:08X}, size: {1}, data: 0x{2:016X}>".format(addr, 4, data))
 
-    buffer = ser.read(12)
-    chanid, opcode, size, denied, addr, data = struct.unpack("<BBBBLL", buffer)
+    buffer = ser.read(16)
+    chanid, opcode, size, denied, addr, data = struct.unpack("<BBBBLQ", buffer)
     if opcode == TL_OPCODE_D_ACCESSACK:
         if verbal:
             print("[TL AccessAck]".format())
@@ -75,7 +82,6 @@ def TL_PutFullData(addr, data, verbal=True):
 
 
 def flash_prog():
-    
     with open(BINARY_LOCATION, "rb") as f:
         prog_bin = f.read()
 
@@ -143,7 +149,7 @@ def main():
 
     #getBasebandregs()
     getUARTregs()
-    #enableUARTTx()
+    enableUARTTx()
     #sendHelloWorld()
     getUARTregs()
     time.sleep(0.1)
