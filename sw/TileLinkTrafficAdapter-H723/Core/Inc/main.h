@@ -59,18 +59,18 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define TL_MOSI_DATA_Pin GPIO_PIN_10
-#define TL_MOSI_DATA_GPIO_Port GPIOF
-#define TL_MISO_VALID_Pin GPIO_PIN_0
-#define TL_MISO_VALID_GPIO_Port GPIOC
-#define TL_MOSI_VALID_Pin GPIO_PIN_2
-#define TL_MOSI_VALID_GPIO_Port GPIOC
-#define TL_MISO_DATA_Pin GPIO_PIN_3
-#define TL_MISO_DATA_GPIO_Port GPIOC
-#define TL_MISO_READY_Pin GPIO_PIN_3
-#define TL_MISO_READY_GPIO_Port GPIOA
-#define TL_MOSI_READY_Pin GPIO_PIN_1
-#define TL_MOSI_READY_GPIO_Port GPIOB
+#define TL_IN_DATA_Pin GPIO_PIN_10
+#define TL_IN_DATA_GPIO_Port GPIOF
+#define TL_OUT_VALID_Pin GPIO_PIN_0
+#define TL_OUT_VALID_GPIO_Port GPIOC
+#define TL_IN_VALID_Pin GPIO_PIN_2
+#define TL_IN_VALID_GPIO_Port GPIOC
+#define TL_OUT_DATA_Pin GPIO_PIN_3
+#define TL_OUT_DATA_GPIO_Port GPIOC
+#define TL_OUT_READY_Pin GPIO_PIN_3
+#define TL_OUT_READY_GPIO_Port GPIOA
+#define TL_IN_READY_Pin GPIO_PIN_1
+#define TL_IN_READY_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

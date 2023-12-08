@@ -37,11 +37,11 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING, OCTETS
  16 .debug_line   00017f65  00000000  00000000  0006f07e  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 17 .debug_str    0014cfdd  00000000  00000000  00086fe3  2**0
+ 17 .debug_str    0014cfcb  00000000  00000000  00086fe3  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_frame  000048b0  00000000  00000000  001d3fc0  2**2
+ 18 .debug_frame  000048b0  00000000  00000000  001d3fb0  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .debug_line_str 00000073  00000000  00000000  001d8870  2**0
+ 19 .debug_line_str 00000073  00000000  00000000  001d8860  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:
@@ -1396,21 +1396,21 @@ static void MX_GPIO_Init(void)
  8000c68:	687b      	ldr	r3, [r7, #4]
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(TL_MOSI_DATA_GPIO_Port, TL_MOSI_DATA_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(TL_IN_DATA_GPIO_Port, TL_IN_DATA_Pin, GPIO_PIN_RESET);
  8000c6a:	2200      	movs	r2, #0
  8000c6c:	f44f 6180 	mov.w	r1, #1024	; 0x400
  8000c70:	4834      	ldr	r0, [pc, #208]	; (8000d44 <MX_GPIO_Init+0x1a4>)
  8000c72:	f003 ffad 	bl	8004bd0 <HAL_GPIO_WritePin>
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(TL_MOSI_VALID_GPIO_Port, TL_MOSI_VALID_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(TL_IN_VALID_GPIO_Port, TL_IN_VALID_Pin, GPIO_PIN_RESET);
  8000c76:	2200      	movs	r2, #0
  8000c78:	2104      	movs	r1, #4
  8000c7a:	4833      	ldr	r0, [pc, #204]	; (8000d48 <MX_GPIO_Init+0x1a8>)
  8000c7c:	f003 ffa8 	bl	8004bd0 <HAL_GPIO_WritePin>
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(TL_MISO_READY_GPIO_Port, TL_MISO_READY_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(TL_OUT_READY_GPIO_Port, TL_OUT_READY_Pin, GPIO_PIN_RESET);
  8000c80:	2200      	movs	r2, #0
  8000c82:	2108      	movs	r1, #8
  8000c84:	4831      	ldr	r0, [pc, #196]	; (8000d4c <MX_GPIO_Init+0x1ac>)
@@ -1423,8 +1423,8 @@ static void MX_GPIO_Init(void)
  8000c8e:	4830      	ldr	r0, [pc, #192]	; (8000d50 <MX_GPIO_Init+0x1b0>)
  8000c90:	f003 ff9e 	bl	8004bd0 <HAL_GPIO_WritePin>
 
-  /*Configure GPIO pins : PC13 TL_MISO_VALID_Pin TL_MISO_DATA_Pin */
-  GPIO_InitStruct.Pin = GPIO_PIN_13|TL_MISO_VALID_Pin|TL_MISO_DATA_Pin;
+  /*Configure GPIO pins : PC13 TL_OUT_VALID_Pin TL_OUT_DATA_Pin */
+  GPIO_InitStruct.Pin = GPIO_PIN_13|TL_OUT_VALID_Pin|TL_OUT_DATA_Pin;
  8000c94:	f242 0309 	movw	r3, #8201	; 0x2009
  8000c98:	61fb      	str	r3, [r7, #28]
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
@@ -1439,8 +1439,8 @@ static void MX_GPIO_Init(void)
  8000ca8:	4827      	ldr	r0, [pc, #156]	; (8000d48 <MX_GPIO_Init+0x1a8>)
  8000caa:	f003 fdd1 	bl	8004850 <HAL_GPIO_Init>
 
-  /*Configure GPIO pin : TL_MOSI_DATA_Pin */
-  GPIO_InitStruct.Pin = TL_MOSI_DATA_Pin;
+  /*Configure GPIO pin : TL_IN_DATA_Pin */
+  GPIO_InitStruct.Pin = TL_IN_DATA_Pin;
  8000cae:	f44f 6380 	mov.w	r3, #1024	; 0x400
  8000cb2:	61fb      	str	r3, [r7, #28]
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -1452,14 +1452,14 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
  8000cbc:	2300      	movs	r3, #0
  8000cbe:	62bb      	str	r3, [r7, #40]	; 0x28
-  HAL_GPIO_Init(TL_MOSI_DATA_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(TL_IN_DATA_GPIO_Port, &GPIO_InitStruct);
  8000cc0:	f107 031c 	add.w	r3, r7, #28
  8000cc4:	4619      	mov	r1, r3
  8000cc6:	481f      	ldr	r0, [pc, #124]	; (8000d44 <MX_GPIO_Init+0x1a4>)
  8000cc8:	f003 fdc2 	bl	8004850 <HAL_GPIO_Init>
 
-  /*Configure GPIO pin : TL_MOSI_VALID_Pin */
-  GPIO_InitStruct.Pin = TL_MOSI_VALID_Pin;
+  /*Configure GPIO pin : TL_IN_VALID_Pin */
+  GPIO_InitStruct.Pin = TL_IN_VALID_Pin;
  8000ccc:	2304      	movs	r3, #4
  8000cce:	61fb      	str	r3, [r7, #28]
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -1471,14 +1471,14 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
  8000cd8:	2300      	movs	r3, #0
  8000cda:	62bb      	str	r3, [r7, #40]	; 0x28
-  HAL_GPIO_Init(TL_MOSI_VALID_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(TL_IN_VALID_GPIO_Port, &GPIO_InitStruct);
  8000cdc:	f107 031c 	add.w	r3, r7, #28
  8000ce0:	4619      	mov	r1, r3
  8000ce2:	4819      	ldr	r0, [pc, #100]	; (8000d48 <MX_GPIO_Init+0x1a8>)
  8000ce4:	f003 fdb4 	bl	8004850 <HAL_GPIO_Init>
 
-  /*Configure GPIO pin : TL_MISO_READY_Pin */
-  GPIO_InitStruct.Pin = TL_MISO_READY_Pin;
+  /*Configure GPIO pin : TL_OUT_READY_Pin */
+  GPIO_InitStruct.Pin = TL_OUT_READY_Pin;
  8000ce8:	2308      	movs	r3, #8
  8000cea:	61fb      	str	r3, [r7, #28]
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -1490,7 +1490,7 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
  8000cf4:	2300      	movs	r3, #0
  8000cf6:	62bb      	str	r3, [r7, #40]	; 0x28
-  HAL_GPIO_Init(TL_MISO_READY_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(TL_OUT_READY_GPIO_Port, &GPIO_InitStruct);
  8000cf8:	f107 031c 	add.w	r3, r7, #28
  8000cfc:	4619      	mov	r1, r3
  8000cfe:	4813      	ldr	r0, [pc, #76]	; (8000d4c <MX_GPIO_Init+0x1ac>)
@@ -1515,8 +1515,8 @@ static void MX_GPIO_Init(void)
  8000d1a:	480d      	ldr	r0, [pc, #52]	; (8000d50 <MX_GPIO_Init+0x1b0>)
  8000d1c:	f003 fd98 	bl	8004850 <HAL_GPIO_Init>
 
-  /*Configure GPIO pin : TL_MOSI_READY_Pin */
-  GPIO_InitStruct.Pin = TL_MOSI_READY_Pin;
+  /*Configure GPIO pin : TL_IN_READY_Pin */
+  GPIO_InitStruct.Pin = TL_IN_READY_Pin;
  8000d20:	2302      	movs	r3, #2
  8000d22:	61fb      	str	r3, [r7, #28]
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
@@ -1525,7 +1525,7 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
  8000d28:	2300      	movs	r3, #0
  8000d2a:	627b      	str	r3, [r7, #36]	; 0x24
-  HAL_GPIO_Init(TL_MOSI_READY_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(TL_IN_READY_GPIO_Port, &GPIO_InitStruct);
  8000d2c:	f107 031c 	add.w	r3, r7, #28
  8000d30:	4619      	mov	r1, r3
  8000d32:	4807      	ldr	r0, [pc, #28]	; (8000d50 <MX_GPIO_Init+0x1b0>)
@@ -2543,7 +2543,7 @@ void TL_update(TileLinkController *tl) {
  800123e:	f8b3 3244 	ldrh.w	r3, [r3, #580]	; 0x244
  8001242:	2b00      	cmp	r3, #0
  8001244:	d036      	beq.n	80012b4 <TL_update+0x80>
-    HAL_GPIO_WritePin(TL_MOSI_DATA_GPIO_Port, TL_MOSI_DATA_Pin, tl->tx_frame.buffer[tl->tx_bit_offset]);
+    HAL_GPIO_WritePin(TL_IN_DATA_GPIO_Port, TL_IN_DATA_Pin, tl->tx_frame.buffer[tl->tx_bit_offset]);
  8001246:	687b      	ldr	r3, [r7, #4]
  8001248:	f8b3 3240 	ldrh.w	r3, [r3, #576]	; 0x240
  800124c:	461a      	mov	r2, r3
@@ -2560,12 +2560,12 @@ void TL_update(TileLinkController *tl) {
  8001262:	f8b3 3240 	ldrh.w	r3, [r3, #576]	; 0x240
  8001266:	2b00      	cmp	r3, #0
  8001268:	d109      	bne.n	800127e <TL_update+0x4a>
-      HAL_GPIO_WritePin(TL_MISO_READY_GPIO_Port, TL_MISO_READY_Pin, 1);
+      HAL_GPIO_WritePin(TL_OUT_READY_GPIO_Port, TL_OUT_READY_Pin, 1);
  800126a:	2201      	movs	r2, #1
  800126c:	2108      	movs	r1, #8
  800126e:	4831      	ldr	r0, [pc, #196]	; (8001334 <TL_update+0x100>)
  8001270:	f003 fcae 	bl	8004bd0 <HAL_GPIO_WritePin>
-      HAL_GPIO_WritePin(TL_MOSI_VALID_GPIO_Port, TL_MOSI_VALID_Pin, 1);
+      HAL_GPIO_WritePin(TL_IN_VALID_GPIO_Port, TL_IN_VALID_Pin, 1);
  8001274:	2201      	movs	r2, #1
  8001276:	2104      	movs	r1, #4
  8001278:	482f      	ldr	r0, [pc, #188]	; (8001338 <TL_update+0x104>)
@@ -2578,7 +2578,7 @@ void TL_update(TileLinkController *tl) {
  8001280:	f8b3 3240 	ldrh.w	r3, [r3, #576]	; 0x240
  8001284:	2b7b      	cmp	r3, #123	; 0x7b
  8001286:	d10c      	bne.n	80012a2 <TL_update+0x6e>
-      HAL_GPIO_WritePin(TL_MOSI_VALID_GPIO_Port, TL_MOSI_VALID_Pin, 0);
+      HAL_GPIO_WritePin(TL_IN_VALID_GPIO_Port, TL_IN_VALID_Pin, 0);
  8001288:	2200      	movs	r2, #0
  800128a:	2104      	movs	r1, #4
  800128c:	482a      	ldr	r0, [pc, #168]	; (8001338 <TL_update+0x104>)
@@ -2617,7 +2617,7 @@ void TL_update(TileLinkController *tl) {
  80012c0:	f8b3 3248 	ldrh.w	r3, [r3, #584]	; 0x248
  80012c4:	2b00      	cmp	r3, #0
  80012c6:	d008      	beq.n	80012da <TL_update+0xa6>
-      HAL_GPIO_WritePin(TL_MISO_READY_GPIO_Port, TL_MISO_READY_Pin, 0);
+      HAL_GPIO_WritePin(TL_OUT_READY_GPIO_Port, TL_OUT_READY_Pin, 0);
  80012c8:	2200      	movs	r2, #0
  80012ca:	2108      	movs	r1, #8
  80012cc:	4819      	ldr	r0, [pc, #100]	; (8001334 <TL_update+0x100>)
@@ -2626,14 +2626,14 @@ void TL_update(TileLinkController *tl) {
  80012d2:	687b      	ldr	r3, [r7, #4]
  80012d4:	2200      	movs	r2, #0
  80012d6:	f8a3 224a 	strh.w	r2, [r3, #586]	; 0x24a
-    if (HAL_GPIO_ReadPin(TL_MISO_VALID_GPIO_Port, TL_MISO_VALID_Pin) == GPIO_PIN_SET) {
+    if (HAL_GPIO_ReadPin(TL_OUT_VALID_GPIO_Port, TL_OUT_VALID_Pin) == GPIO_PIN_SET) {
  80012da:	2101      	movs	r1, #1
  80012dc:	4816      	ldr	r0, [pc, #88]	; (8001338 <TL_update+0x104>)
  80012de:	f003 fc5f 	bl	8004ba0 <HAL_GPIO_ReadPin>
  80012e2:	4603      	mov	r3, r0
  80012e4:	2b01      	cmp	r3, #1
  80012e6:	d11e      	bne.n	8001326 <TL_update+0xf2>
-      tl->rx_frame.buffer[tl->rx_bit_offset] = HAL_GPIO_ReadPin(TL_MISO_DATA_GPIO_Port, TL_MISO_DATA_Pin);
+      tl->rx_frame.buffer[tl->rx_bit_offset] = HAL_GPIO_ReadPin(TL_OUT_DATA_GPIO_Port, TL_OUT_DATA_Pin);
  80012e8:	687b      	ldr	r3, [r7, #4]
  80012ea:	f8b3 3246 	ldrh.w	r3, [r3, #582]	; 0x246
  80012ee:	461c      	mov	r4, r3

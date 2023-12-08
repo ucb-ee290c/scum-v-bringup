@@ -10,16 +10,16 @@
 
 void TL_update(TileLinkController *tl) {
   if (tl->tx_pending) {
-    HAL_GPIO_WritePin(TL_MOSI_DATA_GPIO_Port, TL_MOSI_DATA_Pin, tl->tx_frame.buffer[tl->tx_bit_offset]);
+    HAL_GPIO_WritePin(TL_IN_DATA_GPIO_Port, TL_IN_DATA_Pin, tl->tx_frame.buffer[tl->tx_bit_offset]);
 
     if (tl->tx_bit_offset == 0) {
-      HAL_GPIO_WritePin(TL_MISO_READY_GPIO_Port, TL_MISO_READY_Pin, 1);
-      HAL_GPIO_WritePin(TL_MOSI_VALID_GPIO_Port, TL_MOSI_VALID_Pin, 1);
+      HAL_GPIO_WritePin(TL_OUT_READY_GPIO_Port, TL_OUT_READY_Pin, 1);
+      HAL_GPIO_WritePin(TL_IN_VALID_GPIO_Port, TL_IN_VALID_Pin, 1);
     }
 
 
     if (tl->tx_bit_offset == TL_SERDES_TOTAL_SIZE) {
-      HAL_GPIO_WritePin(TL_MOSI_VALID_GPIO_Port, TL_MOSI_VALID_Pin, 0);
+      HAL_GPIO_WritePin(TL_IN_VALID_GPIO_Port, TL_IN_VALID_Pin, 0);
       tl->tx_pending = 0;
       tl->tx_finished = 1;
     }
@@ -29,11 +29,11 @@ void TL_update(TileLinkController *tl) {
 
   else if (tl->rx_pending) {
     if (tl->rx_finished) {
-      HAL_GPIO_WritePin(TL_MISO_READY_GPIO_Port, TL_MISO_READY_Pin, 0);
+      HAL_GPIO_WritePin(TL_OUT_READY_GPIO_Port, TL_OUT_READY_Pin, 0);
       tl->rx_pending = 0;
     }
-    if (HAL_GPIO_ReadPin(TL_MISO_VALID_GPIO_Port, TL_MISO_VALID_Pin) == GPIO_PIN_SET) {
-      tl->rx_frame.buffer[tl->rx_bit_offset] = HAL_GPIO_ReadPin(TL_MISO_DATA_GPIO_Port, TL_MISO_DATA_Pin);
+    if (HAL_GPIO_ReadPin(TL_OUT_VALID_GPIO_Port, TL_OUT_VALID_Pin) == GPIO_PIN_SET) {
+      tl->rx_frame.buffer[tl->rx_bit_offset] = HAL_GPIO_ReadPin(TL_OUT_DATA_GPIO_Port, TL_OUT_DATA_Pin);
 
       tl->rx_bit_offset += 1;
 

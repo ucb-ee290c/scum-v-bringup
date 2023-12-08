@@ -391,43 +391,43 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(TL_MOSI_DATA_GPIO_Port, TL_MOSI_DATA_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(TL_IN_DATA_GPIO_Port, TL_IN_DATA_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(TL_MOSI_VALID_GPIO_Port, TL_MOSI_VALID_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(TL_IN_VALID_GPIO_Port, TL_IN_VALID_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(TL_MISO_READY_GPIO_Port, TL_MISO_READY_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(TL_OUT_READY_GPIO_Port, TL_OUT_READY_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : PC13 TL_MISO_VALID_Pin TL_MISO_DATA_Pin */
-  GPIO_InitStruct.Pin = GPIO_PIN_13|TL_MISO_VALID_Pin|TL_MISO_DATA_Pin;
+  /*Configure GPIO pins : PC13 TL_OUT_VALID_Pin TL_OUT_DATA_Pin */
+  GPIO_InitStruct.Pin = GPIO_PIN_13|TL_OUT_VALID_Pin|TL_OUT_DATA_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : TL_MOSI_DATA_Pin */
-  GPIO_InitStruct.Pin = TL_MOSI_DATA_Pin;
+  /*Configure GPIO pin : TL_IN_DATA_Pin */
+  GPIO_InitStruct.Pin = TL_IN_DATA_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(TL_MOSI_DATA_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(TL_IN_DATA_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : TL_MOSI_VALID_Pin */
-  GPIO_InitStruct.Pin = TL_MOSI_VALID_Pin;
+  /*Configure GPIO pin : TL_IN_VALID_Pin */
+  GPIO_InitStruct.Pin = TL_IN_VALID_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(TL_MOSI_VALID_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(TL_IN_VALID_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : TL_MISO_READY_Pin */
-  GPIO_InitStruct.Pin = TL_MISO_READY_Pin;
+  /*Configure GPIO pin : TL_OUT_READY_Pin */
+  GPIO_InitStruct.Pin = TL_OUT_READY_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(TL_MISO_READY_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(TL_OUT_READY_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PB0 */
   GPIO_InitStruct.Pin = GPIO_PIN_0;
@@ -436,11 +436,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : TL_MOSI_READY_Pin */
-  GPIO_InitStruct.Pin = TL_MOSI_READY_Pin;
+  /*Configure GPIO pin : TL_IN_READY_Pin */
+  GPIO_InitStruct.Pin = TL_IN_READY_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(TL_MOSI_READY_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(TL_IN_READY_GPIO_Port, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
