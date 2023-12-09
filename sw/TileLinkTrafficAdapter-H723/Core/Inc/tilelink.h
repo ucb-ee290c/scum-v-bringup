@@ -20,7 +20,7 @@
 #define TL_SERDES_MASK_OFFSET     (TL_SERDES_LAST_OFFSET + TL_SERDES_MASK_SIZE)
 #define TL_SERDES_CORRUPT_SIZE    1
 #define TL_SERDES_CORRUPT_OFFSET  (TL_SERDES_MASK_OFFSET + TL_SERDES_CORRUPT_SIZE)
-#define TL_SERDES_DATA_SIZE       64
+#define TL_SERDES_DATA_SIZE       32
 #define TL_SERDES_DATA_OFFSET     (TL_SERDES_CORRUPT_OFFSET + TL_SERDES_DATA_SIZE)
 #define TL_SERDES_ADDRESS_SIZE    32
 #define TL_SERDES_ADDRESS_OFFSET  (TL_SERDES_DATA_OFFSET + TL_SERDES_ADDRESS_SIZE)
@@ -44,7 +44,7 @@ typedef struct {
   uint8_t size;
   uint8_t source;
   uint32_t address;
-  uint64_t data;
+  uint32_t data;
   uint8_t corrupt;
   uint8_t mask;
   uint8_t last;
@@ -74,6 +74,6 @@ void TL_transmit(TileLinkController *tl);
 
 void TL_GET(TileLinkController *tl, uint32_t address);
 
-void TL_PUTFULLDATA(TileLinkController *tl, uint32_t address, uint64_t data);
+void TL_PUTFULLDATA(TileLinkController *tl, uint32_t address, uint32_t data);
 
 #endif /* INC_TILELINK_H_ */
