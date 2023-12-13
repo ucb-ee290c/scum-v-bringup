@@ -51,13 +51,13 @@ def TL_Get(addr, verbal=True):
     if verbal:
         print("[TL Get] <address: {0:08X}, size: {1}>".format(addr, 4))
     # 1s timeout
-    buffer = ser.read(12)
+    buffer = ser.read(16)
     print(buffer)
-    chanid, opcode, size, denied, addr, data = struct.unpack("<BBBBLL", buffer)
+    chanid, opcode, size, denied, addr, data = struct.unpack("<BBBBLQ", buffer)
     if opcode == TL_OPCODE_D_ACCESSACKDATA:
         if verbal:
             print(
-                "[TL AccessAckData] <size: {0}, data: 0x{1:08X}, denied: {2}>"
+                "[TL AccessAckData] <size: {0}, data: 0x{1:016X}, denied: {2}>"
                 .format(4, data, denied))
         return data
     print("<ERROR!>")
@@ -70,11 +70,11 @@ def TL_PutFullData(addr, data, verbal=True):
     ser.write(buffer)
     if verbal:
         print(
-            "[TL PutFullData] <address: 0x{0:08X}, size: {1}, data: 0x{2:08X}>"
+            "[TL PutFullData] <address: 0x{0:08X}, size: {1}, data: 0x{2:016X}>"
             .format(addr, 4, data))
 
-    buffer = ser.read(12)
-    chanid, opcode, size, denied, addr, data = struct.unpack("<BBBBLL", buffer)
+    buffer = ser.read(16)
+    chanid, opcode, size, denied, addr, data = struct.unpack("<BBBBLQ", buffer)
     if opcode == TL_OPCODE_D_ACCESSACK:
         if verbal:
             print("[TL AccessAck]".format())

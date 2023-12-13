@@ -99,7 +99,7 @@ void TL_deserialize(TileLinkFrame *frame) {
     frame->corrupt |= ((frame->buffer[i+TL_SERDES_MASK_OFFSET] & 0b1) << i);
   }
   for (uint16_t i=0; i<TL_SERDES_DATA_SIZE; i+=1) {
-    frame->data |= ((uint32_t)(frame->buffer[i+TL_SERDES_CORRUPT_OFFSET] & 0b1) << i);
+    frame->data |= ((uint64_t)(frame->buffer[i+TL_SERDES_CORRUPT_OFFSET] & 0b1) << i);
   }
   for (uint16_t i=0; i<TL_SERDES_ADDRESS_SIZE; i+=1) {
     frame->address |= ((frame->buffer[i+TL_SERDES_DATA_OFFSET] & 0b1) << i);
@@ -143,13 +143,13 @@ void TL_GET(TileLinkController *tl, uint32_t address) {
   tl->tx_frame.size    = 2;
   tl->tx_frame.source  = 0;
   tl->tx_frame.address = address;
-  tl->tx_frame.data    = 0x0;
+  tl->tx_frame.data    = 0x0000000000000000;
   tl->tx_frame.corrupt = 0;
   tl->tx_frame.mask    = 0b00001111;
   tl->tx_frame.last    = 1;
 }
 
-void TL_PUTFULLDATA(TileLinkController *tl, uint32_t address, uint32_t data) {
+void TL_PUTFULLDATA(TileLinkController *tl, uint32_t address, uint64_t data) {
   tl->tx_frame.chanid  = 0;
   tl->tx_frame.opcode  = TL_CH_A_OPCODE_PULFULLDATA;  // putfulldata
   tl->tx_frame.param   = 0;
