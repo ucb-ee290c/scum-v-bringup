@@ -1,4 +1,4 @@
-TARGETS = power_test lrwpan_loopback ble_loopback
+TARGETS = power_test lrwpan_loopback ble_loopback template
 
 #################################
 # RISCV Toolchain
