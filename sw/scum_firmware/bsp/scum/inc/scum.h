@@ -78,6 +78,27 @@ typedef struct {
 } UART_TypeDef;
 
 /* ================ memory map ================ */
+/*
+       0 -     1000 ARWX  debug-controller@0
+    3000 -     4000 ARWX  error-device@3000
+    4000 -     5000 ARW   boot-address-reg@4000
+    8000 -     9000 ARW   baseband@8000
+    9000 -     a000 ARW   timer@9000
+    a000 -     b000 ARW   scumvtuning@a000
+    b000 -     c000 ARW   sensoradc@b000
+   10000 -    20000  R X  rom@10000
+   20000 -    30000  R XC lbwif-rom@20000
+  100000 -   101000 ARW   clock-gater@100000
+  110000 -   111000 ARW   tile-reset-setter@110000
+ 2000000 -  2010000 ARW   clint@2000000
+ c000000 - 10000000 ARW   interrupt-controller@c000000
+10000000 - 10001000  RWXC lbwif-ram@10000000
+10012000 - 10013000 ARW   gpio@10012000
+10040000 - 10041000 ARW   spi@10040000
+20000000 - 30000000  R X  spi@10040000
+54000000 - 54001000 ARW   serial@54000000
+80000000 - 80040000  RWXC backing-scratchpad@80000000
+*/
 #define DEBUG_CONTROLLER_BASE   0x00000000
 #define BOOT_SELECT_BASE        0x00002000
 #define ERROR_DEVICE_BASE       0x00003000
@@ -107,13 +128,17 @@ typedef struct {
 #define UART_RXCTRL_RXEN_POS                    (0U)
 #define UART_RXCTRL_RXEN_MSK                    (0x1UL << UART_RXCTRL_RXEN_POS)
 #define UART_RXCTRL_RXCNT_POS                   (16U)
-#define UART_RXCTRL_RXCNT_MSK                   (0x7UL << UART_RXCTRL_RXCNT_POS)
+#define UART_RXCTRL_RXCNT_MSK                   (0x9UL << UART_RXCTRL_RXCNT_POS)
 #define UART_TXCTRL_TXEN_POS                    (0U)
 #define UART_TXCTRL_TXEN_MSK                    (0x1UL << UART_TXCTRL_TXEN_POS)
 #define UART_TXCTRL_NSTOP_POS                   (1U)
 #define UART_TXCTRL_NSTOP_MSK                   (0x1UL << UART_TXCTRL_NSTOP_POS)
 #define UART_TXCTRL_TXCNT_POS                   (16U)
-#define UART_TXCTRL_TXCNT_MSK                   (0x7UL << UART_RXCTRL_RXCNT_POS)
+#define UART_TXCTRL_TXCNT_MSK                   (0x9UL << UART_RXCTRL_RXCNT_POS)
+#define UART_IP_TXWM_POS                        (0U)
+#define UART_IP_TXWM_MSK                        (0x1UL << UART_IP_TXWM_POS)
+#define UART_IP_RXWM_POS                        (1U)
+#define UART_IP_RXWM_MSK                        (0x1UL << UART_IP_RXWM_POS)
 
 
 #define MIE_USIE_POS                  0x00U

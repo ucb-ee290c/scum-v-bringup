@@ -11,15 +11,15 @@ extern "C" {
 
 typedef struct {
   uint32_t baudrate;
+  uint32_t tx_wm;
+  uint32_t rx_wm;
 } UART_InitTypeDef;
 
 // the default baudrate divisor is 0xAD, 173
 
 void HAL_UART_init(UART_TypeDef *UARTx, UART_InitTypeDef *UART_init);
 
-uint8_t HAL_UART_getRXFIFODepth(UART_TypeDef *UARTx);
-
-uint8_t HAL_UART_getTXFIFODepth(UART_TypeDef *UARTx);
+void wait_for_tx(UART_TypeDef *UARTx);
 
 Status HAL_UART_receive(UART_TypeDef *UARTx, uint8_t *data, uint16_t size, uint32_t timeout);
 

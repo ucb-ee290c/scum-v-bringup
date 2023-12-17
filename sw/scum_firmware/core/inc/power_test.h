@@ -1,6 +1,6 @@
 
-#ifndef __MAIN_H
-#define __MAIN_H
+#ifndef __POWER_TEST_H
+#define __POWER_TEST_H
 
 #ifdef __cplusplus
 extern "C" {

@@ -1,7 +1,44 @@
 
 #include "scum_system.h"
 #include "scum_hal.h"
-#include "main.h"
+
+volatile enum DEBUG_STATUS debug_status = NONE;
+
+typedef struct plic_context_control
+{
+  uint32_t priority_threshold;
+  uint32_t claim_complete;
+} plic_context_control_t __attribute__ ((aligned (0x1000)));
+
+
+uint32_t *const plic_enables      =               (uint32_t* const) 0xc002000; // Context [0..15871], sources bitmap registers [0..31]
+uint32_t *const plic_priorities   =               (uint32_t* const) 0xc000000; // priorities [0..1023]
+plic_context_control_t *const plic_ctx_controls = (plic_context_control_t* const) 0xc200000; // Priority threshold & claim / complete for context [0..15871]
+
+void plic_set_bit(uint32_t* const target, uint32_t index)
+{
+  uint32_t reg_index = index >> 5;
+  uint32_t bit_index = index & 0x1F;
+  *target |= (1 << bit_index);
+}
+
+void plic_enable_for_hart(uint32_t hart_id, uint32_t irq_id) {
+  uint32_t* base = plic_enables + 32 * hart_id;
+  plic_set_bit(base, irq_id);
+}
+
+void plic_set_priority(uint32_t irq_id, uint32_t priority) {
+  plic_priorities[irq_id] = priority;
+}
+
+uint32_t plic_claim_irq(uint32_t hart_id) {
+  return plic_ctx_controls[hart_id].claim_complete;
+}
+
+void plic_complete_irq(uint32_t hart_id, uint32_t irq_id){
+  plic_ctx_controls[hart_id].claim_complete = irq_id;
+}
+
 
 inline void print_fcsr()
 {
@@ -68,6 +105,12 @@ void system_init(void) {
   asm("li t0, 0x1");
   asm("sw t0, 0(t1)");
   enable_fpu();
+
+  plic_set_bit(plic_enables, 5);
+  plic_set_bit(plic_enables, 6);
+  plic_set_bit(plic_enables, 7);
+  plic_set_bit(plic_enables, 8);
+  plic_set_bit(plic_enables, 9);
 }
 
 
@@ -92,10 +135,13 @@ void MachineExternal_IRQn_Handler() {
 }
 
 
-// void __attribute__ ((interrupt)) trap_handler(void) {  
-void trap_handler() {
+void trap_handler(void) {  
   uint32_t m_cause;
   asm volatile("csrr %0, mcause" : "=r"(m_cause));
+
+  char str[128];
+  sprintf(str, "\nintr mcause: %x\n", m_cause);
+  HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
 
   uint8_t is_interrupt = READ_BITS(m_cause, 0x80000000) ? 1 : 0;
 
@@ -115,33 +161,31 @@ void trap_handler() {
     
     uint32_t irqSource = plic_claim_irq(0);
   
-    char str[128];
-    /*
-    sprintf(str, "intr %d\n", irqSource);
+    sprintf(str, "src: %d\n", irqSource);
     HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
   
-    if (irqSource == 6) {
-      sprintf(str, "** RX Error Message: %u\n", baseband_rxerror_message());
+    if (irqSource == TX_FINISH) {
+      sprintf(str, "TX Finished\n");
+      debug_status = DEBUG_TX_FINISH;
     }
-    if (irqSource == 7) {
+    if (irqSource == TX_ERROR) {
+      sprintf(str, "TX Error: %u\n", baseband_txerror_message());
+      debug_status = DEBUG_TX_FAIL;
+    }
+    if (irqSource == RX_FINISH) {
+      sprintf(str, "** RX Finish\n");
+      debug_status = DEBUG_RX_FINISH;
+    }
+    if (irqSource == RX_START) {
       sprintf(str, "** RX Start\n");
     }
-    if (irqSource == 8) {
-      sprintf(str, "** Bytes Read: %u\n", baseband_rxfinish_message());
-    }
-    if (irqSource == 9) {
-      sprintf(str, "TX Operation Failed. Error message: %u\n", baseband_txerror_message());
-    }
-    if (irqSource == 10) {
-      sprintf(str, "TX Operation Finished. Check above for any errors.\n");
+    if (irqSource == RX_ERROR) {
+      sprintf(str, "** RX Error: %u\n", baseband_rxerror_message());
+      debug_status = DEBUG_RX_FAIL;
     }
 
     HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-    */
     plic_complete_irq(0, irqSource);
-
-    // HAL_GPIO_writePin(GPIOA, GPIO_PIN_0, 1);
-    // sprintf(str, "mcause: %x\n", m_cause);
   }
 }
 

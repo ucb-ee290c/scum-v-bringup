@@ -1,5 +1,4 @@
-
-TARGET ?= firmware
+TARGETS = power_test lrwpan_loopback ble_loopback
 
 #################################
 # RISCV Toolchain
@@ -31,6 +30,7 @@ USR_DIR = core/
 SRC_DIR = $(USR_DIR)src/
 INC_DIR = $(USR_DIR)inc/
 BUILD_DIR = build/
+SCRIPT_DIR = ../scripts/
 
 
 #################################
@@ -38,10 +38,11 @@ BUILD_DIR = build/
 #################################
 A_SOURCES  = $(wildcard $(SRC_DIR)*.S) $(wildcard $(SRC_DIR)*/*.S)
 
-C_SOURCES  = $(wildcard $(SRC_DIR)*.c) $(wildcard $(SRC_DIR)*/*.c)
+TARGET_SRC = $(foreach target, $(TARGETS), $(SRC_DIR)$(target).c)
 
 A_SOURCES += $(USR_DIR)startup/startup.S
 
+C_SOURCES = $(VENDOR_ROOT)scum/src/scum_system.c
 C_SOURCES += $(VENDOR_ROOT)scum/src/scum_hal.c
 C_SOURCES += $(VENDOR_ROOT)scum/src/scum_hal_core.c
 C_SOURCES += $(VENDOR_ROOT)scum/src/scum_hal_clint.c
@@ -61,24 +62,24 @@ INCLUDES += -I$(VENDOR_ROOT)scum/inc
 #################################
 A_OBJECTS = $(addsuffix .o,$(addprefix $(BUILD_DIR),$(basename $(A_SOURCES))))
 C_OBJECTS = $(addsuffix .o,$(addprefix $(BUILD_DIR),$(basename $(C_SOURCES))))
+TARGET_OBJS = $(addsuffix .o,$(addprefix $(BUILD_DIR),$(basename $(TARGET_SRC))))
 
 OBJECTS = $(A_OBJECTS) $(C_OBJECTS)
 
 #################################
 # Target Output Files
 #################################
-TARGET_ELF = $(BUILD_DIR)$(TARGET).elf
-TARGET_BIN = $(BUILD_DIR)$(TARGET).bin
-TARGET_HEX = $(BUILD_DIR)$(TARGET).hex
-TARGET_VERILOG = $(BUILD_DIR)$(TARGET).out
-
+TARGET_ELF = $(foreach target, $(TARGETS), $(BUILD_DIR)$(target).elf)
+TARGET_DUMP = $(foreach target, $(TARGETS), $(BUILD_DIR)$(target).dump)
+TARGET_HEX = $(foreach target, $(TARGETS), $(BUILD_DIR)$(target).hex)
+TARGET_BIN = $(foreach target, $(TARGETS), $(BUILD_DIR)$(target).bin)
 
 #################################
 # Flags
 #################################
 
 # MCU Settings
-ARCH = rv32imafc_zicsr
+ARCH = rv32imafc
 ABI = ilp32f
 CODEMODEL = medany
 LD_SCRIPT = $(SRC_DIR)scum.ld
@@ -105,32 +106,34 @@ LFLAGS += -T $(LD_SCRIPT)
 #################################
 
 # default target
-all: $(TARGET_ELF)
+all: $(TARGET_ELF) $(TARGET_HEX) $(TARGET_DUMP) $(TARGET_BIN)
 
-$(TARGET_BIN): $(TARGET_ELF)
-	$(CP) -O binary $< $@
-
-$(TARGET_HEX): $(TARGET_ELF)
-	$(CP) -O ihex $< $@
-
-$(TARGET_VERILOG): $(TARGET_ELF)
-	$(CP) -O verilog $< $@
-
-$(TARGET_ELF): $(OBJECTS)
+$(TARGET_ELF): $(BUILD_DIR)%.elf: $(BUILD_DIR)$(SRC_DIR)%.o $(OBJECTS)
 	@echo "[LD] linking $@"
 	@$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
-	$(SIZE) $(TARGET_ELF)
+	$(SIZE) $@
+
+$(TARGET_DUMP): %.dump: %.elf
+	@echo "[OD] dumping $@"
+	@$(OD) -D -S -M numeric $< > $@
+	
+$(TARGET_HEX): %.hex: %.elf
+	@echo "Converting ELF to HEX $@"
+	@$(SCRIPT_DIR)smartelf2hex.sh $< > $@
+
+$(TARGET_BIN): %.bin: %.elf
+	@echo "Converting ELF to BIN $@"
+	@$(CP) -O binary $< $@
 
 $(A_OBJECTS): $(BUILD_DIR)%.o: %.S
 	@echo "[CC] compiling $@"
 	@mkdir -p $(@D)
 	@$(CC) $(CFLAGS) -c $< -o $@
 
-$(C_OBJECTS): $(BUILD_DIR)%.o: %.c
+$(C_OBJECTS) $(TARGET_OBJS): $(BUILD_DIR)%.o: %.c
 	@echo "[CC] compiling $@"
 	@mkdir -p $(@D)
 	@$(CC) $(CFLAGS) -c $< -o $@
-
 
 #################################
 # Recipes
@@ -139,11 +142,9 @@ $(C_OBJECTS): $(BUILD_DIR)%.o: %.c
 clean:
 	@rm -rf $(BUILD_DIR)
 
-bin: $(TARGET_BIN)
-
 hex: $(TARGET_HEX)
 
-verilog: $(TARGET_VERILOG)
+bin: $(TARGET_BIN)
 
 # for debugging Makefile
 list:

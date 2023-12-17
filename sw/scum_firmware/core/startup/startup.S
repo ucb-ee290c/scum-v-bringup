@@ -13,9 +13,9 @@
 #endif
 */
 
-.align 4
 .section .text.isr_vector
 .globl isr_vector
+.align 2
 isr_vector:
   addi sp, sp, -32*REGBYTES
 
@@ -147,3 +147,11 @@ _start:
 
 infinite_loop:
   j infinite_loop
+
+.section ".tohost","aw",@progbits
+.align 6
+.globl tohost
+tohost: .dword 0
+.align 6
+.globl fromhost
+fromhost: .dword 0

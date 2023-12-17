@@ -66,6 +66,7 @@ uint32_t baseband_status4() {
 }
 
 
+// TODO: Find a way to check valid flags to avoid hanging
 uint32_t baseband_rxerror_message() {
   return reg_read32(BASEBAND_RXERROR_MESSAGE);
 }
