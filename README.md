@@ -26,12 +26,14 @@ Want to contribute to the documentation? Start here: [Contributing to the specif
         - RISC-V firmware to be loaded onto the SCuM-V.
     - TileLinkTrafficAdapter-F446/
         - STM32F446RE firmware for translating UART to the TSI bus.
+    - TileLinkTrafficAdapter-H723/
+        - STM32H723ZG firmware for translating UART to the TSI bus.
     - scanchain/
         - **Not functional**. STM32F446RE firmware for translating UART to the analog scan chain bus. 
     - proxyFESVR/
         - **Not functional**. Fork of Franklin Huang's proxyFESVR library, modified to support SCuM-V. See the [README](sw/proxyFESVR/README.md) for more details.
     - tl_host.py
-        - Python script for use with the STM32F446RE to translate UART to SCuM's TSI bus.
+        - Python script for use with the STM32F446RE or STM32H723ZG to translate UART to SCuM's TSI bus.
 
 ## Hardware Setup
 
@@ -46,10 +48,9 @@ Want to contribute to the documentation? Start here: [Contributing to the specif
 3. 2x 3.3V to 1.8V Level Shifter (1x for Analog Scan Chain 1x for TSI)
     - A breadboarded voltage divider circuit for level shifting will work
     - [Digilent PMOD Level Shifter](https://digilent.com/shop/pmod-lvlshft-logic-level-shifter/)
-4. STM32 Nucleo-64 development board with STM32F446RE MCU
+4. STM32 Nucleo-64 development board with STM32F446RE MCU _or_ Nucleo-144 development board with STM32H723ZG MCU
     - The STM32 board is used as a UART to TSI adapter to communicate with the digital portion of SCuM
-    - [NUCLEO-F446RE](https://www.st.com/en/evaluation-tools/nucleo-f446re.html)
-    
+    - [NUCLEO-F446RE](https://www.st.com/en/evaluation-tools/nucleo-f446re.html) _or_ [NUCLEO-H723ZG](https://www.st.com/en/evaluation-tools/nucleo-h723zg.html)
 
 ### Connections
 
@@ -88,15 +89,26 @@ A level shifter from 3.3V to 1.8V is needed for each signal here.
 
 Serial TL connection between STM32 and SCuM-V. SCuM-V generates the clock in STL connection.
 
-- PA0 <> TL_OUT_RDY [after shift down 3.3V to 1.8V]
+STM32F446RE:
+- PA0 <> TL_OUT_READY [after shift down 3.3V to 1.8V]
 - PA1 <> TL_OUT_VALID
 - PA4 <> TL_OUT_DATA
-- PB0 <> TL_IN_RDY
+- PB0 <> TL_IN_READY
 - PC1 <> TL_IN_VALID [after shift down 3.3V to 1.8V]
 - PC0 <> TL_IN_DATA [after shift down 3.3V to 1.8V]
 - D10 <> TL_CLK
-- boot_sel <> ground (tsi-boot)
- 
+- BOOT_SEL <> Ground (tsi-boot)
+
+STM32H723ZG:
+- PA3 <>TL_OUT_READY
+- PC0 <> TL_OUT_VALID
+- PC3 <> TL_OUT_DATA
+- PB1 <> TL_IN_READY
+- PC2 <> TL_IN_VALID
+- PF10 <>.TL_IN_DATA
+- PD12 <> TL_CLK
+- BOOT_SEL <> Ground (tsi-boot)
+
 The level shifter from 3.3V TTL to 1.8V most commonly used is a simple voltage divider. When using the STM32 board as a TSI adapter, it is not necessary to shift up from 1.8V to 3.3V.
 
 If using another level shifter, bandwidth should be >1 MHz and unidirectional shifting is acceptable.
