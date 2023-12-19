@@ -71,6 +71,8 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 #define TL_OUT_READY_GPIO_Port GPIOA
 #define TL_IN_READY_Pin GPIO_PIN_1
 #define TL_IN_READY_GPIO_Port GPIOB
+#define TL_CLK_Pin GPIO_PIN_12
+#define TL_CLK_GPIO_Port GPIOD
 
 /* USER CODE BEGIN Private defines */
 

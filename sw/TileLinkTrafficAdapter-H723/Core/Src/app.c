@@ -27,27 +27,34 @@
 
 
 extern TIM_HandleTypeDef htim1;
-extern TIM_HandleTypeDef htim4;
 extern UART_HandleTypeDef huart3;
 
 TileLinkController tl;
 
 char str[128];
 
-void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
-  TL_update(&tl);
-}
-
-#define SERIAL_BUFFER_SIZE    64
+#define SERIAL_BUFFER_SIZE 64
 
 uint8_t serial_rx_buffer[SERIAL_BUFFER_SIZE];
 uint8_t serial_tx_buffer[SERIAL_BUFFER_SIZE];
 
-uint8_t frame_pending = 0;
+GPIO_PinState tl_clk_prev_state = GPIO_PIN_RESET;
+
+typedef enum {
+  APP_STATE_INVALID = -1,
+  APP_STATE_IDLE = 0,
+  APP_STATE_FRAME_PENDING = 1,
+  APP_STATE_WAITING_FOR_RX = 2,
+} AppState;
+
+AppState app_state = APP_STATE_INVALID;
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
-  if (huart == &huart3) {
+  if (app_state != APP_STATE_IDLE) {
+    return;
+  }
 
+  if (huart == &huart3) {
     tl.tx_frame.chanid  = *(serial_rx_buffer);
     tl.tx_frame.opcode  = (*(serial_rx_buffer + 1)) & 0b111;
     tl.tx_frame.param   = (*(serial_rx_buffer + 1)) >> 4;
@@ -59,12 +66,11 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
     tl.tx_frame.mask    = *(serial_rx_buffer + 3);
     tl.tx_frame.last    = 1;
 
-    frame_pending = 1;
+    app_state = APP_STATE_FRAME_PENDING;
   }
 
   HAL_UARTEx_ReceiveToIdle_DMA(&huart3, serial_rx_buffer, 32);
 }
-
 
 uint8_t APP_getUsrButton() {
   return HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) ? 0 : 1;
@@ -76,26 +82,50 @@ void APP_setLED(uint8_t state) {
 
 void APP_init() {
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-  HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_1);
+  app_state = APP_STATE_IDLE;
 
   HAL_UARTEx_ReceiveToIdle_DMA(&huart3, serial_rx_buffer, 32);
 }
 
 
 void APP_main() {
-  if (frame_pending) {
-    TL_transmit(&tl);
-    while (!tl.rx_finished) {}
-    TL_deserialize(&tl.rx_frame);
-    frame_pending = 0;
+  // Poll the TL clock.
+  GPIO_PinState tl_clk_state = HAL_GPIO_ReadPin(TL_CLK_GPIO_Port, TL_CLK_Pin);
 
-    *(serial_tx_buffer) = tl.rx_frame.chanid;
-    *(serial_tx_buffer + 1) = (tl.rx_frame.corrupt << 7) | (tl.rx_frame.param << 4) | tl.rx_frame.opcode;
-    *(serial_tx_buffer + 2) = tl.rx_frame.size;
-    *(serial_tx_buffer + 3) = tl.rx_frame.mask;
-    *(uint32_t *)(serial_tx_buffer + 4) = tl.rx_frame.address;
-    *(uint64_t *)(serial_tx_buffer + 8) = tl.rx_frame.data;
+  // Process TL transactions on the positive clock edge.
+  if (tl_clk_state == GPIO_PIN_SET && tl_clk_prev_state == GPIO_PIN_RESET) {
+    TL_update(&tl);
+  }
 
-    HAL_UART_Transmit(&huart3, serial_tx_buffer, 16, 1000);
+  if (tl_clk_state != tl_clk_prev_state) {
+    tl_clk_prev_state = tl_clk_state;
+  }
+
+  // Process any pending TL frames.
+  switch (app_state) {
+    case APP_STATE_FRAME_PENDING: {
+      TL_transmit(&tl);
+      app_state = APP_STATE_WAITING_FOR_RX;
+      break;
+    }
+    case APP_STATE_WAITING_FOR_RX: {
+      if (tl.rx_finished) {
+        TL_deserialize(&tl.rx_frame);
+        *(serial_tx_buffer) = tl.rx_frame.chanid;
+        *(serial_tx_buffer + 1) = (tl.rx_frame.corrupt << 7) | (tl.rx_frame.param << 4) | tl.rx_frame.opcode;
+        *(serial_tx_buffer + 2) = tl.rx_frame.size;
+        *(serial_tx_buffer + 3) = tl.rx_frame.mask;
+        *(uint32_t *)(serial_tx_buffer + 4) = tl.rx_frame.address;
+        *(uint64_t *)(serial_tx_buffer + 8) = tl.rx_frame.data;
+
+        HAL_UART_Transmit(&huart3, serial_tx_buffer, 16, 1000);
+        app_state = APP_STATE_IDLE;
+      }
+      break;
+    }
+    case APP_STATE_IDLE:
+    default: {
+      break;
+    }
   }
 }
