@@ -37,6 +37,8 @@ The digital frontend features self-generated, software-programmable chopper cloc
 
 === Register Map
 
+The base address of the sensor ADC DSP block is 0xB000. All registers in the table below are specified as offsets from the base address 0xB000.
+
 [cols="1,2,1,3",options="header"]
 |===
 | Register | Name               | Size | Function
