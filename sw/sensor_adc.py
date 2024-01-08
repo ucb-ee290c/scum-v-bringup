@@ -63,6 +63,12 @@ def config_sensor_adc(host: TileLinkHost) -> None:
     return None
 
 if __name__ == "__main__":
+    '''
+    Example usage:
+    python sensor_adc.py -p /dev/tty.usbmodem103 -t template
+    or, for Windows
+    python sensor_adc.py -p COM4 -t power_test
+    '''
     parser = argparse.ArgumentParser(
         description="Script for the TileLink host.")
     parser.add_argument("-p", "--port", default="/dev/tty.usbmodem103")
