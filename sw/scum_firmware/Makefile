@@ -1,4 +1,4 @@
-TARGETS = power_test lrwpan_loopback ble_loopback template
+TARGETS = power_test lrwpan_loopback ble_loopback template sensor_adc_test
 
 #################################
 # RISCV Toolchain
@@ -51,6 +51,7 @@ C_SOURCES += $(VENDOR_ROOT)scum/src/scum_hal_plic.c
 C_SOURCES += $(VENDOR_ROOT)scum/src/scum_hal_rcc.c
 C_SOURCES += $(VENDOR_ROOT)scum/src/scum_hal_uart.c
 C_SOURCES += $(VENDOR_ROOT)scum/src/baseband.c
+C_SOURCES += $(VENDOR_ROOT)scum/src/sensor_adc.c
 
 INCLUDES  = -I$(INC_DIR)
 INCLUDES += -I$(INC_DIR)hal/

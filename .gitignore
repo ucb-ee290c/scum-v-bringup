@@ -53,3 +53,5 @@ build/
 *.fst
 *.tbi
 .vscode
+
+**/__pycache__/
