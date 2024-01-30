@@ -1,13 +1,14 @@
-# Ignore all Xilinx Vivado project files and directories
-# users should use the build.tcl to generate the Vivado project
+# Ignore all Xilinx Vivado project files and directories.
+# Users should use the create_project.tcl to generate the Vivado project.
 scanchain.xpr
 scanchain.hw/
+scanchain.gen/
 scanchain.ip_user_files/
 scanchain.runs/
 scanchain.srcs/
 scanchain.sim/
 scanchain.cache/
 
-# Ignore logs and journal files
+# Ignore logs and journal files.
 *.log
 *.jou
