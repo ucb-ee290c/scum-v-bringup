@@ -1,4 +1,5 @@
 # scum-v-bringup
+
 Various files for bringing up the Single-Chip Micro Mote V (SCμM-V)
 
 ## Documentation
@@ -113,7 +114,6 @@ The level shifter from 3.3V TTL to 1.8V most commonly used is a simple voltage d
 
 If using another level shifter, bandwidth should be >1 MHz and unidirectional shifting is acceptable.
 
-
 **Clock Configuration**
 - Clock input 0.85Vpp
     * Square Wave, 50% duty cycle
@@ -133,12 +133,12 @@ If you do run this on a different version of Vivado, please let us know if there
 1. Open Vivado
 2. In the TCL console and change the working directory to the `scum-v-bringup/hw/scanchain` directory. For example, if you cloned this repo to `C:\Projects\Repositories\scum-v-bringup`, then you would run the following command in the TCL console:
 
-    ```
+    ```bash
     cd C:/Projects/Repositories/scum-v-bringup/hw/scanchain
     ```
 3. Generate the Vivado project by running the following command in the TCL console:
 
-    ```
+    ```bash
     source create_project.tcl
     ```
 
@@ -152,7 +152,7 @@ If you do run this on a different version of Vivado, please let us know if there
 
 This section is for downloading a program to the Arty A7-100T's QSPI flash device, which results in an FPGA bitstream configuration that persists between power-up/power-down cycles. It assumes you've setup the FPGA and built the bitstream as described in the previous section.
 
-The following guide was used to configure the Vivado project to generate a .bin file that can be downloaded to the QSPI flash device on the Arty A7-100T:
+The following guide was used to configure the Vivado project to generate a `.bin` file that can be downloaded to the QSPI flash device on the Arty A7-100T:
 https://digilent.com/reference/learn/programmable-logic/tutorials/arty-programming-guide/start
 
 **Important**
@@ -172,9 +172,7 @@ https://www.fpgadeveloper.com/2014/08/version-control-for-vivado-projects.html/
 2. In the dialog, ensure `Copy sources to new project` is NOT checked. Then, click `OK`.
 3. The Tcl script that is generated will be named `scanchain.tcl`, several edits need to be made.
     - Remove all lines related to of `*.dcp` files and the `utils_1` folder. Why would anyone want to track checkpoints?
-    - Change all file links from ``${origin_dir}/../../[path to file]` to `${origin_dir}/[path to file]`. 
-    
-
+    - Change all file links from `${origin_dir}/../../[path to file]` to `${origin_dir}/[path to file]`. 
 
 ## Writing to SCuM-V's ASC
 
@@ -182,10 +180,10 @@ Ensure **every** connection listed in the `Connections` section above was made c
 
 1. Make any modifications to the `client.py` script in the `hw/` folder then run:
 
-    ```
+    ```bash
     python client.py
     ```
-    
+
 ## STM32 Setup
 
 ### Flashing the firmware
@@ -193,12 +191,10 @@ Ensure **every** connection listed in the `Connections` section above was made c
 The STM32CubeIDE is needed to build and flash the firmware to the STM32 board. The IDE can be downloaded here: 
 https://www.st.com/en/development-tools/stm32cubeide.html
 
-
-
 ## Building SCuM-V's firmware
 
-### Sofware setup
+### Software setup
 
-```
+```bash
 export PATH="C:\path\to\xpack-riscv-none-elf-gcc-12.1.0-2\bin:$PATH"
 ```
