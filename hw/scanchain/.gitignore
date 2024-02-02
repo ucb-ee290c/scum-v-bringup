@@ -9,6 +9,7 @@ scanchain.srcs/
 scanchain.sim/
 scanchain.cache/
 
-# Ignore logs and journal files.
+# Ignore logs, journal files, and steps to reproduce files.
 *.log
 *.jou
+*.str
