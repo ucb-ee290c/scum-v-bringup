@@ -6,7 +6,7 @@
     parameter CLKS_PER_SCAN_CLK = CLOCK_FREQ / SCAN_CLK_FREQ,
 
     parameter ADDR_BITS = 12,
-    parameter PAYLOAD_BITS = 169,
+    parameter PAYLOAD_BITS = 160,
 
     parameter BAUD_RATE = 115_200,
     

@@ -2,7 +2,7 @@ module scanchain_writer #(
     parameter CLOCK_FREQ = 100_000_000,
     parameter CLOCKS_PER_SCAN_CLK = 1_000, /* produces a scan_clk of 100KHz */
     parameter ADDR_BITS = 12,
-    parameter PAYLOAD_BITS = 169
+    parameter PAYLOAD_BITS = 160
 ) (
     input clk,
     input reset,
