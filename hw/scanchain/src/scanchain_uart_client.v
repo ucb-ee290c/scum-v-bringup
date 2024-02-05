@@ -9,7 +9,7 @@ module scanchain_uart_client #(
     parameter CLOCK_FREQ = 100_000_000,
     parameter BAUD_RATE = 115_200,
     parameter ADDR_BITS = 12,
-    parameter PAYLOAD_BITS = 169
+    parameter PAYLOAD_BITS = 160
 ) (
     input clk,
     input reset,

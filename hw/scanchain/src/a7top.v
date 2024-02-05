@@ -6,7 +6,7 @@
     parameter CLKS_PER_SCAN_CLK = CLOCK_FREQ / SCAN_CLK_FREQ,
 
     parameter ADDR_BITS = 12,
-    parameter PAYLOAD_BITS = 169,
+    parameter PAYLOAD_BITS = 160,
 
     parameter BAUD_RATE = 115_200,
     
@@ -18,7 +18,6 @@
     input CLK100MHZ,
     input RESET,
     input BUTTON_0,
-    input CLK_SWITCH,
 
     output UART_RXD_IN,
     input UART_TXD_IN,
@@ -28,7 +27,6 @@
     output SCAN_IN,
     output SCAN_RESET,
     output CHIP_RESET,
-    output CPU_CLK,
 
     output [3 : 0] led
 );
@@ -104,23 +102,4 @@
     assign led[1] = SCAN_EN;
     assign led[2] = SCAN_CLK;
     assign led[3] = SCAN_IN;
-    wire cg_clk;
-    clock_gen #(
-        .CLOCK_FREQ(100_000_000),
-        .CLOCKS_PER_CPU_CLK(500) // 200 kHz CPU clock
-    ) cg (
-        .clk(FPGA_CLK),
-        .reset(n_reset),
-        .gen_clk(cg_clk)
-    );
-    
-    wire cw_clk;
-    clk_wiz_0 cw (
-        .clk_out1(cw_clk),
-        .reset(n_reset),
-        .clk_in1(FPGA_CLK)
-    );
-    
-    assign CPU_CLK = CLK_SWITCH ? cw_clk : cg_clk;
-    
 endmodule
