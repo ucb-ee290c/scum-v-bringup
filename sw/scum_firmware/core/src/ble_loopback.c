@@ -27,6 +27,20 @@ void print_baseband_status0()
   HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
 }
 
+void print_baseband_status2()
+{
+  char status_str[512];
+  sprintf(status_str, "BLE CDR bit count: %d\r\n", baseband_status2());
+  HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
+}
+
+void print_baseband_status3()
+{
+  char status_str[512];
+  sprintf(status_str, "LRWPAN CDR bit count: %d\r\n", baseband_status3());
+  HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
+}
+
 void run_ble_loopback()
 {
   int i;
@@ -47,12 +61,15 @@ void run_ble_loopback()
   for (i = 2; i < NUM_BYTES; i++) {
     packet[i] = i;
   }
-
+begin_test:
   // Send the packet using a debug command.
   baseband_debug(packet, NUM_BYTES);
   // Note: typically locks up the core here
   sprintf(str, "-----BLE Loopback Test-----\r\n");
   HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+
+  print_baseband_status2();
+  print_baseband_status3();
 
   // Check that an interrupt was generated and/or
   // that the interrupt message is correct.
@@ -61,19 +78,21 @@ void run_ble_loopback()
   uint8_t *rx_packet = packet + NUM_BYTES;
 
   while (1) {
-    HAL_delay(1);
+    HAL_delay(10000);
     ms_count++;
     if (ms_count > TIMEOUT_MS) {
       sprintf(str, "Timeout!\r\n");
       HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-      sim_finish();
+      print_baseband_status0();
+      //sim_finish();
+      goto begin_test;
       return;
     }
     switch (debug_status) {
       case DEBUG_TX_FAIL:
       case DEBUG_RX_FAIL:
         // TODO: Exit with error code
-        sim_finish();
+        //sim_finish();
         return;
 
       case DEBUG_RX_FINISH:
@@ -84,7 +103,7 @@ void run_ble_loopback()
         }
         sprintf(str, "\r\n");
         HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-        sim_finish();
+        //sim_finish();
         return;
       
       default:
@@ -111,8 +130,17 @@ int main() {
   sprintf(str, "SCuM-V22 says, 'I'm alive!'\r\n");
   HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
 
-  // print_baseband_status0();
+  uint16_t idle_count = 0;
+  for(idle_count = 0; idle_count < 1000; idle_count++)
+  {
+    sprintf(str, "Idling on startup: %d\r\n", idle_count);
+    HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+    HAL_delay(10);
+  }
 
+  print_baseband_status0();
+
+ 
   // Set scum-v tuning registers
   // rtc_tune_in<3> CPU oscillator - 1 exterior / 0 interior
   // rtc_tune_in<2> ADC/RTC oscillator - 1 exterior / 0 interior
