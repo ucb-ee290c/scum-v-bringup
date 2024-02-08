@@ -57,7 +57,7 @@ class ScanChainPayload(ABC):
     @property
     @abstractmethod
     def registers(self) -> list[tuple[str, int]]:
-        """Returns a list of tuples of reigster names and their widths in the
+        """Returns a list of tuples of register names and their widths in the
         order that they appear in the payload (first sent to last sent).
 
         Example:
@@ -94,7 +94,7 @@ class OscillatorPayload(ScanChainPayload):
     """
     @property
     def registers(self) -> list[tuple[str, int]]:
-        """Returns a list of tuples of reigster names and their widths in the
+        """Returns a list of tuples of register names and their widths in the
         order that they appear in the payload (first sent to last sent).
         """
         return [
@@ -156,7 +156,7 @@ class RfAnalogPayload(ScanChainPayload):
     """
     @property
     def registers(self) -> list[tuple[str, int]]:
-        """Returns a list of tuples of reigster names and their widths in the
+        """Returns a list of tuples of register names and their widths in the
         order that they appear in the payload (first sent to last sent).
         """
         return [
@@ -214,7 +214,7 @@ class SupplyPayload(ScanChainPayload):
     """
     @property
     def registers(self) -> list[tuple[str, int]]:
-        """Returns a list of tuples of reigster names and their widths in the
+        """Returns a list of tuples of register names and their widths in the
         order that they appear in the payload (first sent to last sent).
         """
         return [
@@ -245,7 +245,7 @@ class RadarPayload(ScanChainPayload):
     """
     @property
     def registers(self) -> list[tuple[str, int]]:
-        """Returns a list of tuples of reigster names and their widths in the
+        """Returns a list of tuples of register names and their widths in the
         order that they appear in the payload (first sent to last sent).
         """
         return [
@@ -272,7 +272,7 @@ class SensorAdcPayload(ScanChainPayload):
     """
     @property
     def registers(self) -> list[tuple[str, int]]:
-        """Returns a list of tuples of reigster names and their widths in the
+        """Returns a list of tuples of register names and their widths in the
         order that they appear in the payload (first sent to last sent).
         """
         return [
