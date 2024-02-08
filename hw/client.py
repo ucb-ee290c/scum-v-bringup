@@ -317,17 +317,28 @@ supply_packet = ScanChainPacket(Address.SUPPLY_ADDRESS,
                                 supply_payload.create())
 
 # Scan chain RF packet.
-rf_high_payload = RfAnalogPayload({
-    "vco_cap_coarse": 0,
-    "vco_cap_med": 0,
-    "vco_cap_mod": 0,
+rf_high_payload_reset = RfAnalogPayload({
+    "vco_cap_coarse": 0,  # 10 bits
+    "vco_cap_med": 0,  # 6 bits
+    "vco_cap_mod": 0,  # 8 bits
     "en_vco_lo": 1,
+    "vco_freq_reset": 1
 })
+
+# Scan chain RF packet.
+rf_high_payload = RfAnalogPayload({
+    "vco_cap_coarse": 0,  # 10 bits
+    "vco_cap_med": 0,  # 6 bits
+    "vco_cap_mod": 0,  # 8 bits
+    "en_vco_lo": 0,
+    "vco_freq_reset": 0
+})
+
 rf_low_payload = RfAnalogPayload({
     "vco_cap_coarse": 2**10 - 1,
     "vco_cap_med": 2**6 - 1,
     "vco_cap_mod": 2**8 - 1,
-    "en_vco_lo": 1,
+    "en_vco_lo": 0,
 })
 rf_post_tia_payload = RfAnalogPayload({
     "mux_dbg_in": 0,
@@ -337,7 +348,7 @@ rf_post_tia_payload = RfAnalogPayload({
     "vco_cap_coarse": 760,
     "vco_cap_med": 2**6 // 2,
     "vco_cap_mod": 2**8 // 2,
-    "en_vco_lo": 1,
+    "en_vco_lo": 0,
 })
 # mux_dbg_in:
 #   Bit 0: After TIA I
@@ -369,6 +380,8 @@ rf_post_tia_packet = ScanChainPacket(Address.RF_ADDRESS,
                                      rf_post_tia_payload.create())
 rf_debug_adc_packet = ScanChainPacket(Address.RF_ADDRESS,
                                       rf_debug_adc_payload.create())
+rf_high_packet_reset = ScanChainPacket(Address.RF_ADDRESS,
+                                       rf_high_payload_reset.create())
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -386,6 +399,30 @@ if __name__ == "__main__":
     serial_interface.send_packet(oscillator_packet)
     sleep(2)
     serial_interface.send_packet(supply_packet)
+
+    # input("Press Enter to enable LO at highest frequency")
+    # serial_interface.send_packet(rf_high_packet_reset)
+
+    # sleep(2)
+    # rf_high_payload.set_register("vco_cap_coarse", 300)
+    # pkt = ScanChainPacket(Address.RF_ADDRESS, rf_high_payload.create())
+    # serial_interface.send_packet(pkt)
+
+    # input("Press enter to begin sweep.")
+
+    # for i in range(300, 1024, 50):
+    #     for j in range(0, 64, 10):
+    #         print(i)
+    #         print(j)
+    #         rf_high_payload.set_register("vco_cap_coarse", i)
+    #         rf_high_payload.set_register("vco_cap_med", j)
+    #         pkt = ScanChainPacket(Address.RF_ADDRESS, rf_high_payload.create())
+    #         serial_interface.send_packet(pkt)
+    #         input("Go")
+
+    # input("Press Enter to set LO to lowest frequency.")
+    # serial_interface.send_packet(rf_low_packet)
+
     # sleep(2)
     # serial_interface.send_packet(rf_debug_adc_packet)
 

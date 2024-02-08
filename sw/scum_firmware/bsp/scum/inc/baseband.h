@@ -142,6 +142,7 @@ typedef struct {
     uint8_t adc_i_data;
     uint8_t adc_q_data;
 } baseband_status0_t;
+
 void baseband_get_status0(baseband_status0_t* status);
 
 uint32_t baseband_status0();

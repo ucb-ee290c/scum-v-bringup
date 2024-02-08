@@ -89,7 +89,7 @@ void run_lrwpan_loopback()
       case DEBUG_TX_FAIL:
       case DEBUG_RX_FAIL:
         // TODO: Exit with error code
-        sim_finish();
+        //sim_finish();
         return;
 
       case DEBUG_RX_FINISH:
@@ -102,7 +102,7 @@ void run_lrwpan_loopback()
         }
         sprintf(str, "\r\n");
         HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-        sim_finish();
+        //sim_finish();
         return;
       
       default:

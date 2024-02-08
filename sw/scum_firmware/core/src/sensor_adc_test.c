@@ -2,6 +2,8 @@
 #include "sensor_adc.h"
 
 char str[512];
+uint8_t buffer_p[2048];
+uint8_t buffer_n[2048];
 
 void print_sensor_adc_status0()
 {
@@ -19,6 +21,36 @@ void print_sensor_adc_data()
   char data_str[512];
   sprintf(data_str, "DATA: %d\r\n", data);
   HAL_UART_transmit(UART0, (uint8_t *)data_str, strlen(data_str), 0);
+}
+
+void log_counters()
+{
+  uint8_t idac_val = 0b001010;
+  uint8_t bias_p = 1;
+  uint8_t bias_n = 1;
+  uint8_t adc_tuning_0 = (bias_p << 7) | (bias_n << 6) | idac_val;
+  sensor_adc_set_tuning0(adc_tuning_0);
+  // Verify status registers after new IDAC config
+  print_sensor_adc_status0();
+
+  while(1) {
+    sprintf(str, "Logging counters...\r\n");
+    HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+
+    for(int i = 0; i < 2048; i++)
+    {
+      uint32_t status0 = sensor_adc_get_status0();
+      buffer_p[i] = (uint8_t)(status0 & 0x3F);
+      buffer_n[i] = (uint8_t)((status0 >> 6) & 0x3F);
+    }
+
+    for(int i = 0; i < 2048; i++)
+    {
+      char counter_str[512];
+      sprintf(counter_str, "CNT_N: %u\tCNT_P: %u\r\n", buffer_n[i], buffer_p[i]);
+      HAL_UART_transmit(UART0, (uint8_t *)counter_str, strlen(counter_str), 0);
+    }
+  }
 }
 
 void kick_oscillator()
@@ -70,6 +102,16 @@ int main()
   HAL_UART_init(UART0, &UART_init_config);
   sprintf(str, "SCuM-V22 says, 'I'm alive!'\r\n");
   HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+
+  uint16_t idle_count = 0;
+  for(idle_count = 0; idle_count < 1000; idle_count++)
+  {
+    sprintf(str, "Idling on startup: %d\r\n", idle_count);
+    HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+    HAL_delay(10);
+  }
+
   kick_oscillator();
-  run_sensor_adc_test();
+  log_counters();
+  //run_sensor_adc_test();
 }

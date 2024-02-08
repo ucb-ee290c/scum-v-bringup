@@ -112,5 +112,5 @@ void baseband_debug(uint32_t addr, uint8_t byte_size) {
   // Sending baseband DEBUG instruction
   reg_write32(BASEBAND_ADDITIONAL_DATA, addr);
   
-  reg_write32(BASEBAND_INST, BASEBAND_INSTRUCTION(BASEBAND_DEBUG, 0b11, byte_size));
+  reg_write32(BASEBAND_INST, BASEBAND_INSTRUCTION(BASEBAND_DEBUG, 0b0010, byte_size));
 }
