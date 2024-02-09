@@ -98,10 +98,10 @@ class OscillatorPayload(ScanChainPayload):
         order that they appear in the payload (first sent to last sent).
         """
         return [
+            ("analog_tune_unused", 10),
             ("analog_coarse_dac", 12),
             ("analog_fine_dac", 4),
             ("analog_reset", 1),
-            ("dig_tune_unused", 10),
             ("dig_current_dac", 6),
             ("dig_reset", 1),
             ("clk_mux_sel_1", 1),
