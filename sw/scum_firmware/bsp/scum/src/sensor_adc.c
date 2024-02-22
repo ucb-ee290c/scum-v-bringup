@@ -1,12 +1,12 @@
 #include "sensor_adc.h"
 
-int32_t sensor_adc_get_data()
+inline int32_t sensor_adc_get_data()
 {
-    int32_t data = (int32_t)(reg_read16(SENSOR_ADC_DATA));
+    int32_t data = (int32_t)(reg_read32(SENSOR_ADC_DATA));
     return data;
 }
 
-uint32_t sensor_adc_get_status0()
+inline uint32_t sensor_adc_get_status0()
 {
     uint32_t status0 = reg_read32(SENSOR_ADC_STATUS0);
     return status0;

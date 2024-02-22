@@ -1,9 +1,9 @@
 #include "sensor_adc_test.h"
 #include "sensor_adc.h"
 
+#define BUF_SIZE 2049
 char str[512];
-uint8_t buffer_p[2048];
-uint8_t buffer_n[2048];
+uint32_t status0[BUF_SIZE];
 
 void print_sensor_adc_status0()
 {
@@ -25,30 +25,34 @@ void print_sensor_adc_data()
 
 void log_counters()
 {
-  uint8_t idac_val = 0b001010;
-  uint8_t bias_p = 1;
-  uint8_t bias_n = 1;
+  uint8_t idac_val = 69;
+  uint8_t bias_p = 0;
+  uint8_t bias_n = 0;
   uint8_t adc_tuning_0 = (bias_p << 7) | (bias_n << 6) | idac_val;
   sensor_adc_set_tuning0(adc_tuning_0);
   // Verify status registers after new IDAC config
   print_sensor_adc_status0();
 
   while(1) {
-    sprintf(str, "Logging counters...\r\n");
+    idac_val = (idac_val + 1) % 64;
+    adc_tuning_0 = (bias_p << 7) | (bias_n << 6) | idac_val;
+    sensor_adc_set_tuning0(adc_tuning_0);
+    sprintf(str, "Logging counters, IDAC: %u\r\n", idac_val);
+    //kick_oscillator();
     HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
 
-    for(int i = 0; i < 2048; i++)
+    for(int i = 0; i < BUF_SIZE; i++)
     {
-      uint32_t status0 = sensor_adc_get_status0();
-      buffer_p[i] = (uint8_t)(status0 & 0x3F);
-      buffer_n[i] = (uint8_t)((status0 >> 6) & 0x3F);
+      status0[i] = sensor_adc_get_status0();
     }
 
-    for(int i = 0; i < 2048; i++)
+    for(int i = 0; i < BUF_SIZE; i++)
     {
       char counter_str[512];
-      sprintf(counter_str, "CNT_N: %u\tCNT_P: %u\r\n", buffer_n[i], buffer_p[i]);
-      HAL_UART_transmit(UART0, (uint8_t *)counter_str, strlen(counter_str), 0);
+      uint8_t buffer_p = (uint8_t)(status0[i] & 0x3F);
+      uint8_t buffer_n = (uint8_t)((status0[i] >> 6) & 0x3F);
+      sprintf(str, "CNT_N: %u\tCNT_P: %u\r\n", buffer_n, buffer_p);
+      HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
     }
   }
 }
@@ -100,7 +104,7 @@ int main()
   UART_init_config.tx_wm = 1;
   
   HAL_UART_init(UART0, &UART_init_config);
-  sprintf(str, "SCuM-V22 says, 'I'm alive!'\r\n");
+  sprintf(str, "SCuM-V23 says, 'I'm alive!'\r\n");
   HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
 
   uint16_t idle_count = 0;
