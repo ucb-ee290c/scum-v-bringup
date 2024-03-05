@@ -89,7 +89,7 @@ ARCHFLAGS = -march=$(ARCH) -mabi=$(ABI) -mcmodel=$(CODEMODEL) -fno-pie
 SPECFLAGS = --specs="nano.specs"
 
 # compiler Flags
-CFLAGS  = -g -std=gnu11 -Os -Wall -Wextra -Warray-bounds -Wno-unused-parameter
+CFLAGS  = -g -std=gnu11 -O3 -Wall -Wextra -Warray-bounds -Wno-unused-parameter
 CFLAGS += -fno-common -fno-builtin-printf
 CFLAGS += $(ARCHFLAGS)
 CFLAGS += $(SPECFLAGS)
@@ -146,6 +146,8 @@ clean:
 hex: $(TARGET_HEX)
 
 bin: $(TARGET_BIN)
+
+dump: $(TARGET_DUMP)
 
 # for debugging Makefile
 list:

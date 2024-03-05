@@ -43,7 +43,7 @@ void log_counters()
 
     for(int i = 0; i < BUF_SIZE; i++)
     {
-      status0[i] = sensor_adc_get_status0();
+      status0[i] = reg_read32(SENSOR_ADC_STATUS0);
     }
 
     for(int i = 0; i < BUF_SIZE; i++)
