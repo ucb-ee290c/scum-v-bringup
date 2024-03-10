@@ -92,27 +92,27 @@ def config_sensor_adc(host: TileLinkHost) -> None:
     """Configure the Sensor ADC."""
 
     # Kick the IDAC for oscillator startup
-    print("Kicking the IDAC for oscillator startup")
-    host.write_address(ADC_TUNING0, 0b00000000, True)
-    host.write_address(ADC_TUNING0, 0b11111111, True)
-    host.write_address(ADC_TUNING0, 0b00000000, True)
-    host.write_address(ADC_TUNING0, 0b11111111, True)
-    host.write_address(ADC_TUNING0, 0b00000000, True)
-    host.write_address(ADC_TUNING0, 0b11111111, True)
-    host.write_address(ADC_TUNING0, 0b00000000, True)
-    host.write_address(ADC_TUNING0, 0b11111111, True)
-    host.write_address(ADC_TUNING0, 0b00000000, True)
-    host.write_address(ADC_TUNING0, 0b11111111, True)
-    host.write_address(ADC_TUNING0, 0b00000000, True)
-    host.write_address(ADC_TUNING0, 0b11111111, True)
-    host.write_address(ADC_TUNING0, 0b00000000, True)
-    host.write_address(ADC_TUNING0, 0b11111111, True)
-    host.write_address(ADC_TUNING0, 0b00000000, True)
-    host.write_address(ADC_TUNING0, 0b11111111, True)
-    host.write_address(ADC_TUNING0, 0b00000000, True)
-    host.write_address(ADC_TUNING0, 0b11111111, True)
-    host.write_address(ADC_TUNING0, 0b00000000, True)
-    host.write_address(ADC_TUNING0, 0b11111111, True)
+    # print("Kicking the IDAC for oscillator startup")
+    # host.write_address(ADC_TUNING0, 0b00000000, True)
+    # host.write_address(ADC_TUNING0, 0b11111111, True)
+    # host.write_address(ADC_TUNING0, 0b00000000, True)
+    # host.write_address(ADC_TUNING0, 0b11111111, True)
+    # host.write_address(ADC_TUNING0, 0b00000000, True)
+    # host.write_address(ADC_TUNING0, 0b11111111, True)
+    # host.write_address(ADC_TUNING0, 0b00000000, True)
+    # host.write_address(ADC_TUNING0, 0b11111111, True)
+    # host.write_address(ADC_TUNING0, 0b00000000, True)
+    # host.write_address(ADC_TUNING0, 0b11111111, True)
+    # host.write_address(ADC_TUNING0, 0b00000000, True)
+    # host.write_address(ADC_TUNING0, 0b11111111, True)
+    # host.write_address(ADC_TUNING0, 0b00000000, True)
+    # host.write_address(ADC_TUNING0, 0b11111111, True)
+    # host.write_address(ADC_TUNING0, 0b00000000, True)
+    # host.write_address(ADC_TUNING0, 0b11111111, True)
+    # host.write_address(ADC_TUNING0, 0b00000000, True)
+    # host.write_address(ADC_TUNING0, 0b11111111, True)
+    # host.write_address(ADC_TUNING0, 0b00000000, True)
+    # host.write_address(ADC_TUNING0, 0b11111111, True)
 
     # Read the status0 registers to make sure the IDAC is running
     print("Verify status registers show oscillator activity")
@@ -122,7 +122,7 @@ def config_sensor_adc(host: TileLinkHost) -> None:
 
     # sim based idac 
     #idac_val = 0b001010
-    idac_val = 0b001010
+    idac_val = 0b010000
     bias_p = 0
     bias_n = 0
     adc_tuning = bias_p << 7 | bias_n << 6 | idac_val
