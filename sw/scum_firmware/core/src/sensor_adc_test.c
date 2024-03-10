@@ -1,7 +1,7 @@
 #include "sensor_adc_test.h"
 #include "sensor_adc.h"
 
-#define BUF_SIZE 2049
+#define BUF_SIZE 512
 char str[512];
 uint32_t status0[BUF_SIZE];
 
@@ -25,7 +25,7 @@ void print_sensor_adc_data()
 
 void log_counters()
 {
-  uint8_t idac_val = 69;
+  uint8_t idac_val = 16;
   uint8_t bias_p = 0;
   uint8_t bias_n = 0;
   uint8_t adc_tuning_0 = (bias_p << 7) | (bias_n << 6) | idac_val;
@@ -34,7 +34,7 @@ void log_counters()
   print_sensor_adc_status0();
 
   while(1) {
-    idac_val = (idac_val + 1) % 64;
+    //idac_val = (idac_val + 1) % 64;
     adc_tuning_0 = (bias_p << 7) | (bias_n << 6) | idac_val;
     sensor_adc_set_tuning0(adc_tuning_0);
     sprintf(str, "Logging counters, IDAC: %u\r\n", idac_val);
