@@ -24,7 +24,8 @@ module a7top #(
 
     // We need to buffer the ADC_CLOCK signal to drive the DSPClockDomainWrapper
     wire adc_clock_ibuf;
-    wire adc_clock_bufg;
+    wire adc_clock_bufr;
+
 
     IBUF #(
         .IBUF_LOW_PWR("TRUE"),
@@ -34,11 +35,16 @@ module a7top #(
         .I(ADC_CLOCK)
     );
 
-    BUFG adc_clock_bufg_inst (
-        .O(adc_clock_bufg),
-        .I(adc_clock_ibuf)
-    );
 
+    BUFR #(
+        .BUFR_DIVIDE("BYPASS"),
+        .SIM_DEVICE("7SERIES")
+    ) adc_clock_bufr_inst (
+        .O(adc_clock_bufr),
+        .I(adc_clock_ibuf),
+        .CE(1'b1),
+        .CLR(1'b0)
+    );
     
     /* 
     The A7's reset button is high when not pressed. We use active high reset.
@@ -55,7 +61,7 @@ module a7top #(
     wire [5:0] counter_n;
 
     ddr_splitter ddr_splitter (
-        .clk(adc_clock_bufg),
+        .clk(adc_clock_bufr),
         .ddr_counter(ADC_COUNTER),
         .counter_p(counter_p),
         .counter_n(counter_n)
@@ -64,7 +70,7 @@ module a7top #(
     // Instantiate the DSPClockDomainWrapper, which contains the CIC filter and decimator
     // Connect the counter_p and counter_n outputs of the DDR splitter to the DSPClockDomainWrapper
     DSPClockDomainWrapper dspClockDomainWrapper (
-        .clock      (adc_clock_bufg),
+        .clock      (adc_clock_bufr),
         .reset      (n_reset),
         .io_adc_counter_p(counter_p),
         .io_adc_counter_n(counter_n),
