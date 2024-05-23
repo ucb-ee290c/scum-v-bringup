@@ -80,7 +80,4 @@ module a7top #(
 
 
     assign led[0] = n_reset;
-    assign led[1] = SCAN_EN;
-    assign led[2] = SCAN_CLK;
-    assign led[3] = SCAN_IN;
 endmodule

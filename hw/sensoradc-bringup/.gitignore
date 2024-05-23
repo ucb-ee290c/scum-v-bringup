@@ -3,6 +3,7 @@
 sensoradc-bringup.cache/
 sensoradc-bringup.hw/
 sensoradc-bringup.ip_user_files/
+sensoradc-bringup.runs/
 
 # Ignore behavioral simulation files.
 **behav**
