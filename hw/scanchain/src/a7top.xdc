@@ -20,7 +20,7 @@ set_property -dict { PACKAGE_PIN B11   IOSTANDARD LVCMOS33 } [get_ports { SCAN_E
 set_property -dict { PACKAGE_PIN A11   IOSTANDARD LVCMOS33 } [get_ports { SCAN_IN }]; #IO_L4N_T0_15 Sch=ja[3]
 set_property -dict { PACKAGE_PIN D12   IOSTANDARD LVCMOS33 } [get_ports { SCAN_RESET }]; #IO_L6P_T0_15 Sch=ja[4]
 set_property -dict { PACKAGE_PIN D13   IOSTANDARD LVCMOS33 } [get_ports { CHIP_RESET }]; #IO_L6N_T0_VREF_15 Sch=ja[7]
-set_property -dict { PACKAGE_PIN B18   IOSTANDARD LVCMOS33 } [get_ports { CPU_CLK }]; #IO_L10P_T1_AD11P_15 Sch=ja[8]
+#set_property -dict { PACKAGE_PIN B18   IOSTANDARD LVCMOS33 } [get_ports { CPU_CLK }]; #IO_L10P_T1_AD11P_15 Sch=ja[8]
 
 # LEDS
 set_property -dict {PACKAGE_PIN H5 IOSTANDARD LVCMOS33} [get_ports {led[0]}]

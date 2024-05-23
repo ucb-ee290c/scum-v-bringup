@@ -155,7 +155,7 @@ if { $validate_required } {
 }
 
 # Create project
-create_project ${_xil_proj_name_} ./${_xil_proj_name_} -part xc7a100tcsg324-1
+create_project ${_xil_proj_name_} ./${_xil_proj_name_} -part xc7a100tcsg324-1 -force
 
 # Set the directory path for the new project
 set proj_dir [get_property directory [current_project]]

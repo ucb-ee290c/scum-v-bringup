@@ -104,23 +104,5 @@
     assign led[1] = SCAN_EN;
     assign led[2] = SCAN_CLK;
     assign led[3] = SCAN_IN;
-    wire cg_clk;
-    clock_gen #(
-        .CLOCK_FREQ(100_000_000),
-        .CLOCKS_PER_CPU_CLK(500) // 200 kHz CPU clock
-    ) cg (
-        .clk(FPGA_CLK),
-        .reset(n_reset),
-        .gen_clk(cg_clk)
-    );
-    
-    wire cw_clk;
-    clk_wiz_0 cw (
-        .clk_out1(cw_clk),
-        .reset(n_reset),
-        .clk_in1(FPGA_CLK)
-    );
-    
-    assign CPU_CLK = CLK_SWITCH ? cw_clk : cg_clk;
     
 endmodule
