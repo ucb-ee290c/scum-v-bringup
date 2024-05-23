@@ -1,0 +1,16 @@
+# Ignore all Xilinx Vivado project files and directories.
+# Users should use the create_project.tcl to generate the Vivado project.
+sensoradc-bringup.cache/
+sensoradc-bringup.hw/
+sensoradc-bringup.ip_user_files/
+
+# Ignore behavioral simulation files.
+**behav**
+
+# Ignore logs, journal files, and steps to reproduce files.
+*.log
+*.jou
+*.str
+*.sdb
+*.exe
+*.xpr
