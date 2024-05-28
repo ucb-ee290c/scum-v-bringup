@@ -19,6 +19,8 @@ module a7top #(
     input [5 : 0] ADC_COUNTER,
     input ADC_CLOCK,
 
+    output SENSOR_OUT,
+
     output [3 : 0] led
 );
 
@@ -74,7 +76,7 @@ module a7top #(
         .reset      (n_reset),
         .io_adc_counter_p(counter_p),
         .io_adc_counter_n(counter_n),
-        .io_adc_sensor_out(UART_RXD_IN),
+        .io_adc_sensor_out(SENSOR_OUT),
         .io_adc_data_out_valid(uart_valid),
         .io_adc_data_out_bits(8'h00),
         .io_chopper_clock_1(),

@@ -49,7 +49,7 @@ set_property -dict {PACKAGE_PIN D12 IOSTANDARD LVCMOS33} [get_ports {ADC_COUNTER
 set_property -dict {PACKAGE_PIN D13 IOSTANDARD LVCMOS33} [get_ports {ADC_COUNTER[4]}]
 set_property -dict {PACKAGE_PIN B18 IOSTANDARD LVCMOS33} [get_ports {ADC_COUNTER[5]}]
 set_property -dict {PACKAGE_PIN A18 IOSTANDARD LVCMOS33} [get_ports ADC_CLOCK]
-#set_property -dict { PACKAGE_PIN K16   IOSTANDARD LVCMOS33 } [get_ports { ja[7] }]; #IO_25_15 Sch=ja[10]
+set_property -dict { PACKAGE_PIN K16   IOSTANDARD LVCMOS33 } [get_ports { SENSOR_OUT }]; #IO_25_15 Sch=ja[10]
 
 ## Pmod Header JB
 #set_property -dict { PACKAGE_PIN E15   IOSTANDARD LVCMOS33 } [get_ports { jb[0] }]; #IO_L11P_T1_SRCC_15 Sch=jb_p[1]
