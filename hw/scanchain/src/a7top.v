@@ -28,7 +28,6 @@
     output SCAN_IN,
     output SCAN_RESET,
     output CHIP_RESET,
-    output CPU_CLK,
 
     output [3 : 0] led
 );
