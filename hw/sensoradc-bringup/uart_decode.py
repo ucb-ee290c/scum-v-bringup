@@ -3,10 +3,11 @@ import struct
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import deque
+import time
 
 # Configuration
 serial_port = 'COM4'  # Replace with your serial port
-baud_rate = 115200
+baud_rate = 1000000
 buffer_size = 500
 
 # Open the serial port
@@ -27,18 +28,27 @@ ax.set_title('Live Plot')
 # Update the plot
 def update_plot():
     line.set_data(range(len(data_buffer)), data_buffer)
+    ax.relim()
+    ax.autoscale_view()
     fig.canvas.draw()
     fig.canvas.flush_events()
+    plt.pause(0.001)  # Add a short pause to allow plot update
 
 # Read and process the data
 while True:
-    # Read 4 bytes from the serial port
-    data = ser.read(4)
+    # Read bytes until the marker byte (0xAA) is found
+    marker_found = False
+    while not marker_found:
+        byte = ser.read(1)
+        if byte == b'\xAA':
+            marker_found = True
     
-    # Check if the marker byte is received
-    if data[3] == 0xAA:
-        # Combine the first three bytes to form a 20-bit value
-        value_20bit = (data[0] << 12) | (data[1] << 4) | (data[2] >> 4)
+    # Read the next 3 bytes
+    data = ser.read(3)
+    
+    if len(data) == 3:
+        # Combine the three bytes to form a 20-bit value
+        value_20bit = (data[0] << 16) | (data[1] << 8) | data[2]
         
         # Convert the 20-bit value to a signed integer
         if value_20bit & (1 << 19):
@@ -52,6 +62,8 @@ while True:
         
         # Update the plot
         update_plot()
+    else:
+        print("Incomplete data received. Skipping.")
 
 # Close the serial port
 ser.close()
