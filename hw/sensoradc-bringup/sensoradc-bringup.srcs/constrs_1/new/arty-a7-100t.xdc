@@ -8,6 +8,12 @@ set_property -dict {PACKAGE_PIN E3 IOSTANDARD LVCMOS33} [get_ports CLK100MHZ]
 create_clock -period 10.000 -name sys_clk_pin -waveform {0.000 5.000} -add [get_ports CLK100MHZ]
 create_clock -period 31.250 -name adc_clock -waveform {0.000 15.625} [get_ports ADC_CLOCK]
 
+## Clock group and false path constraints
+set_clock_groups -asynchronous -group {adc_clock} -group {sys_clk_pin}
+set_false_path -from [get_clocks adc_clock] -to [get_clocks sys_clk_pin]
+set_false_path -from [get_clocks sys_clk_pin] -to [get_clocks adc_clock]
+
+
 
 ## Switches
 #set_property -dict { PACKAGE_PIN A8    IOSTANDARD LVCMOS33 } [get_ports { sw[0] }]; #IO_L12N_T1_MRCC_16 Sch=sw[0]

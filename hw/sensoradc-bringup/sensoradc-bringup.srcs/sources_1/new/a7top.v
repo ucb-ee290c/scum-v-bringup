@@ -1,11 +1,6 @@
 module a7top #(
     parameter CLOCK_FREQ = 100_000_000,
     parameter CLOCK_PERIOD = 1_000_000_000 / CLOCK_FREQ,
-    parameter SCAN_CLK_FREQ    = 1000,
-    parameter SCAN_CLK_PERIOD  = 1_000_000_000 / SCAN_CLK_FREQ,
-    parameter CLKS_PER_SCAN_CLK = CLOCK_FREQ / SCAN_CLK_FREQ,
-
-
     parameter BAUD_RATE = 115_200
 
 )(
@@ -69,6 +64,45 @@ module a7top #(
         .counter_n(counter_n)
     );
 
+    wire translator_data_in_ready;
+    wire [7:0] translator_data_out;
+    wire translator_data_out_valid;
+    wire [19:0] adc_data_out_bits;
+
+
+    data_translator #(
+        .INPUT_WIDTH(20),
+        .OUTPUT_WIDTH(8),
+        .FIFO_DEPTH(32)
+    ) data_translator_inst (
+        .clk(CLK100MHZ),
+        .rst(n_reset),
+        .data_in(adc_data_out_bits),
+        .data_in_valid(uart_valid),
+        .data_in_ready(translator_data_in_ready),
+        .data_out(translator_data_out),
+        .data_out_valid(translator_data_out_valid),
+        .data_out_ready(uart_data_in_ready)
+    );
+
+    // Instantiate the UART module
+    uart #(
+        .CLOCK_FREQ(CLOCK_FREQ),
+        .BAUD_RATE(BAUD_RATE)
+    ) uart_inst (
+        .clk(CLK100MHZ),
+        .reset(n_reset),
+        .data_in(translator_data_out),
+        .data_in_valid(translator_data_out_valid),
+        .data_in_ready(uart_data_in_ready),
+        .data_out(),
+        .data_out_valid(),
+        .data_out_ready(1'b1),
+        .serial_in(UART_TXD_IN),
+        .serial_out(UART_RXD_IN)
+    );
+
+
     // Instantiate the DSPClockDomainWrapper, which contains the CIC filter and decimator
     // Connect the counter_p and counter_n outputs of the DDR splitter to the DSPClockDomainWrapper
     DSPClockDomainWrapper dspClockDomainWrapper (
@@ -78,7 +112,7 @@ module a7top #(
         .io_adc_counter_n(counter_n),
         .io_adc_sensor_out(SENSOR_OUT),
         .io_adc_data_out_valid(uart_valid),
-        .io_adc_data_out_bits(8'h00),
+        .io_adc_data_out_bits(adc_data_out_bits),
         .io_chopper_clock_1(),
         .io_chopper_clock_2(),
         .io_adc_counter_diff(),
