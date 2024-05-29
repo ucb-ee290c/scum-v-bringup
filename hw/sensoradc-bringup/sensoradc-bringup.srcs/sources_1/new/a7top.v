@@ -1,7 +1,7 @@
 module a7top #(
     parameter CLOCK_FREQ = 100_000_000,
     parameter CLOCK_PERIOD = 1_000_000_000 / CLOCK_FREQ,
-    parameter BAUD_RATE = 115_200
+    parameter BAUD_RATE = 1_000_000
 
 )(
     input CLK100MHZ,
@@ -68,6 +68,7 @@ module a7top #(
     wire [7:0] translator_data_out;
     wire translator_data_out_valid;
     wire [19:0] adc_data_out_bits;
+    wire adc_data_out_valid;
 
 
     data_translator #(
@@ -78,7 +79,7 @@ module a7top #(
         .clk(CLK100MHZ),
         .rst(n_reset),
         .data_in(adc_data_out_bits),
-        .data_in_valid(uart_valid),
+        .data_in_valid(adc_data_out_valid),
         .data_in_ready(translator_data_in_ready),
         .data_out(translator_data_out),
         .data_out_valid(translator_data_out_valid),
@@ -111,13 +112,26 @@ module a7top #(
         .io_adc_counter_p(counter_p),
         .io_adc_counter_n(counter_n),
         .io_adc_sensor_out(SENSOR_OUT),
-        .io_adc_data_out_valid(uart_valid),
+        .io_adc_data_out_valid(adc_data_out_valid),
         .io_adc_data_out_bits(adc_data_out_bits),
         .io_chopper_clock_1(),
         .io_chopper_clock_2(),
         .io_adc_counter_diff(),
         .io_adc_counter_p_diff(),
         .io_adc_counter_n_diff()
+    );
+    
+    ila_0 ila(
+        .clk(CLK100MHZ),
+        
+        .probe0(counter_p),
+        .probe1(counter_n),
+        .probe2(adc_data_out_bits),
+        .probe3(translator_data_out),
+        .probe4(adc_data_out_valid),
+        .probe5(translator_data_out_valid),
+        .probe6(UART_RXD_IN),
+        .probe7(SENSOR_OUT)
     );
 
 
