@@ -1,7 +1,6 @@
 module a7top #(
     parameter CLOCK_FREQ = 100_000_000,
-    parameter CLOCK_PERIOD = 1_000_000_000 / CLOCK_FREQ,
-    parameter BAUD_RATE = 1_000_000
+    parameter BAUD_RATE = 921_600
 
 )(
     input CLK100MHZ,

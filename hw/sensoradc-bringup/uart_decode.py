@@ -7,7 +7,7 @@ import time
 
 # Configuration
 serial_port = 'COM4'  # Replace with your serial port
-baud_rate = 1000000
+baud_rate = 921600
 buffer_size = 500
 
 # Open the serial port
@@ -20,7 +20,7 @@ data_buffer = deque(maxlen=buffer_size)
 fig, ax = plt.subplots()
 line, = ax.plot([], [])
 ax.set_xlim(0, buffer_size)
-ax.set_ylim(-2**19, 2**19 - 1)  # Adjust the limits based on your data range
+ax.set_ylim(0, 2**20 - 1)  # Adjust the limits based on your data range
 ax.set_xlabel('Sample')
 ax.set_ylabel('Value')
 ax.set_title('Live Plot')
@@ -47,12 +47,11 @@ while True:
     data = ser.read(3)
     
     if len(data) == 3:
-        # Combine the three bytes to form a 20-bit value
-        value_20bit = (data[0] << 16) | (data[1] << 8) | data[2]
-        
-        # Convert the 20-bit value to a signed integer
-        if value_20bit & (1 << 19):
-            value_20bit = value_20bit - (1 << 20)
+        # Combine the three bytes to form a 20-bit unsigned value
+        # The data will arrive lowest byte first
+        value_20bit = data[0] + (data[1] << 8) + (data[2] << 16)
+        # Make sure we mask the value to 20 bits
+        value_20bit &= 0xFFFFF
         
         # Print the value to the console
         print("Received value:", value_20bit)
