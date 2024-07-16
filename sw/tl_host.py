@@ -178,10 +178,10 @@ if __name__ == "__main__":
         binary_path = f"./scum_firmware/build/{args.target}.bin"
 
     tl_host = TileLinkHost(serial)
-    tl_host.read_uart_registers()
-    tl_host.enable_uart_tx()
-    # tl_host.send_hello_world()
-    tl_host.read_uart_registers()
+    #tl_host.read_uart_registers()
+    #tl_host.enable_uart_tx()
+    #tl_host.send_hello_world()
+    #tl_host.read_uart_registers()
     time.sleep(0.1)
     tl_host.flash_binary(binary_path)
     time.sleep(0.02)

@@ -16,7 +16,7 @@ extern "C" {
 #include "scum_hal_uart.h"
 
 
-#define SYS_CLK_FREQ  96000000                 // Hz
+#define SYS_CLK_FREQ  50000000                 // Hz
 // Division of 100
 #define MTIME_FREQ    (SYS_CLK_FREQ / 100)
 #define MTIME_PER_US  (MTIME_FREQ / 1000000)

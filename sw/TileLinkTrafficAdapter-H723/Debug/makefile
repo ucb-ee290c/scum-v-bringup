@@ -60,8 +60,8 @@ all: main-build
 main-build: TileLinkTrafficAdapter-H723.elf secondary-outputs
 
 # Tool invocations
-TileLinkTrafficAdapter-H723.elf TileLinkTrafficAdapter-H723.map: $(OBJS) $(USER_OBJS) /Users/titan/Documents/scum-v-bringup/sw/TileLinkTrafficAdapter-H723/STM32H723ZGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "TileLinkTrafficAdapter-H723.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m7 -T"/Users/titan/Documents/scum-v-bringup/sw/TileLinkTrafficAdapter-H723/STM32H723ZGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="TileLinkTrafficAdapter-H723.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv5-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+TileLinkTrafficAdapter-H723.elf TileLinkTrafficAdapter-H723.map: $(OBJS) $(USER_OBJS) C:\Projects\Repositories\scum-v-bringup\sw\TileLinkTrafficAdapter-H723\STM32H723ZGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "TileLinkTrafficAdapter-H723.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m7 -T"C:\Projects\Repositories\scum-v-bringup\sw\TileLinkTrafficAdapter-H723\STM32H723ZGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="TileLinkTrafficAdapter-H723.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv5-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

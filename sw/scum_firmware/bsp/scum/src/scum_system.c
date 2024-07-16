@@ -104,7 +104,7 @@ void system_init(void) {
   asm("li t1, 0x8020");
   asm("li t0, 0x1");
   asm("sw t0, 0(t1)");
-  enable_fpu();
+  //enable_fpu();
 
   plic_set_bit(plic_enables, 5);
   plic_set_bit(plic_enables, 6);

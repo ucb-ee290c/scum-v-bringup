@@ -31,6 +31,8 @@ void print_baseband_status0()
 int main() {
     
   HAL_init();
+  HAL_CORE_enableInterrupt();
+  HAL_CORE_enableIRQ(MachineExternal_IRQn);
   
   //HAL_GPIO_init(GPIOA, GPIO_PIN_0);
   //HAL_GPIO_writePin(GPIOA, GPIO_PIN_0, 0);
@@ -41,18 +43,9 @@ int main() {
 
   HAL_UART_init(UART0, &UART_init_config);
   print_baseband_status0();
-  sprintf(str, "SCuM-V22 says, 'I'm alive!'\r\n");
+  sprintf(str, "SCuM-V23 says, 'I'm alive!'\r\n");
   HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-
-  // Set scum-v tuning registers
-  // rtc_tune_in<3> CPU oscillator - 1 exterior / 0 interior
-  // rtc_tune_in<2> ADC/RTC oscillator - 1 exterior / 0 interior
-  // rtc_tune_in<1:0> MUX_CLK_OUT - 00 CPU / 01 RTC / 11 ADC
-  #define SCUM_TUNING 0xA000
-  uint16_t rtc_tune_in = 0b1000;
-  reg_write16(SCUM_TUNING + 0x04, rtc_tune_in);
   
-  uint8_t counter = 0;
   uint8_t adc_i_data = 0;
   while (1) {
     HAL_delay(100);
