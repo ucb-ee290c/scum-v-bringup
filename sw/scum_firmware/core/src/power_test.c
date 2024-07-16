@@ -38,12 +38,12 @@ int main() {
   //HAL_GPIO_writePin(GPIOA, GPIO_PIN_0, 0);
 
   UART_InitTypeDef UART_init_config;
-  UART_init_config.baudrate = 100000;
+  UART_init_config.baudrate = 10000;
   
 
   HAL_UART_init(UART0, &UART_init_config);
   print_baseband_status0();
-  sprintf(str, "SCuM-V23 says, 'I'm alive!'\r\n");
+  sprintf(str, "SCuM-V23B says, 'I'm alive!'\r\n");
   HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
   
   uint8_t adc_i_data = 0;

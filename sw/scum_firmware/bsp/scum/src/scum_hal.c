@@ -14,6 +14,6 @@ uint64_t HAL_getTick() {
 void HAL_delay(uint64_t time) {
   uint64_t target_tick = HAL_getTick() + (time * MTIME_PER_US);
   while (HAL_getTick() < target_tick) {
-    // asm("nop");
+    asm("nop");
   }
 }

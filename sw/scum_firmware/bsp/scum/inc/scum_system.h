@@ -15,7 +15,8 @@ enum IRQ_SOURCE {
   RX_START = 6,
   RX_FINISH = 7,
   TX_ERROR = 8,
-  TX_FINISH = 9
+  TX_FINISH = 9,
+  IF_THRESHOLD = 10
 };
 
 enum DEBUG_STATUS {

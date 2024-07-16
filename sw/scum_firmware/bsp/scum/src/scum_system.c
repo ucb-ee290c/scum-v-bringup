@@ -106,11 +106,10 @@ void system_init(void) {
   asm("sw t0, 0(t1)");
   //enable_fpu();
 
-  plic_set_bit(plic_enables, 5);
-  plic_set_bit(plic_enables, 6);
-  plic_set_bit(plic_enables, 7);
-  plic_set_bit(plic_enables, 8);
-  plic_set_bit(plic_enables, 9);
+  // Enable PLIC interrupts 7 through 16
+  for (int i = 1; i <= 16; i++) {
+    plic_set_bit(plic_enables, i);
+  }
 }
 
 
@@ -140,15 +139,18 @@ void trap_handler(void) {
   asm volatile("csrr %0, mcause" : "=r"(m_cause));
 
   char str[128];
-  sprintf(str, "\nintr mcause: %x\n", m_cause);
-  HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+  //sprintf(str, "\nintr mcause: %x\n", m_cause);
+  //HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
 
   uint8_t is_interrupt = READ_BITS(m_cause, 0x80000000) ? 1 : 0;
 
   if (is_interrupt) {
+    uint32_t irqSource = plic_claim_irq(0);
     if (m_cause == 0x80000003) {
       // machine software interrupt
       CLINT->MSIP = 0;
+      //plic_complete_irq(0, irqSource);
+      //return;
     }
     if (m_cause == 0x80000007) {
       // machine timer interrupt
@@ -159,7 +161,7 @@ void trap_handler(void) {
       
     }
     
-    uint32_t irqSource = plic_claim_irq(0);
+    
   
     sprintf(str, "src: %d\n", irqSource);
     HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
@@ -183,8 +185,11 @@ void trap_handler(void) {
       sprintf(str, "** RX Error: %u\n", baseband_rxerror_message());
       debug_status = DEBUG_RX_FAIL;
     }
+    if (irqSource == IF_THRESHOLD) {
+      sprintf(str, "** IF Threshold\n");
+    }
 
-    HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+    //HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
     plic_complete_irq(0, irqSource);
   }
 }

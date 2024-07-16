@@ -1,14 +1,14 @@
 
 #include "ble_loopback.h"
-#include "sim_utils.h"
+//#include "sim_utils.h"
 
 char str[512];
+char status_str[512];
 
 void print_baseband_status0()
 {
   baseband_status0_t status;
   baseband_get_status0(&status);
-  char status_str[512];
   sprintf(status_str, "Assembler State: %u\r\n", status.assembler_state);
   HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
   sprintf(status_str, "Disassembler State: %u\r\n", status.disassembler_state);
@@ -27,19 +27,22 @@ void print_baseband_status0()
   HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
 }
 
-void print_baseband_status2()
+void print_baseband_status1()
 {
-  char status_str[512];
-  sprintf(status_str, "BLE CDR bit count: %d\r\n", baseband_status2());
+  baseband_status1_t status;
+  baseband_get_status1(&status);
+  sprintf(status_str, "Modulation LUT index: %u\r\n", status.modulation_lut_index);
+  HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
+  sprintf(status_str, "I AGC LUT index: %u\r\n", status.i_agc_lut_index);
+  HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
+  sprintf(status_str, "I DCOC LUT index: %u\r\n", status.i_dcoc_lut_index);
+  HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
+  sprintf(status_str, "Q AGC LUT index: %u\r\n", status.q_agc_lut_index);
+  HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
+  sprintf(status_str, "Q DCOC LUT index: %u\r\n", status.q_dcoc_lut_index);
   HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
 }
 
-void print_baseband_status3()
-{
-  char status_str[512];
-  sprintf(status_str, "LRWPAN CDR bit count: %d\r\n", baseband_status3());
-  HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
-}
 
 void run_ble_loopback()
 {
@@ -55,37 +58,36 @@ void run_ble_loopback()
   // Generate a packet in memory. 
   // The packet length is automatically prepended, so no worries there.
   #define NUM_BYTES 32
-  uint8_t packet[NUM_BYTES];
-  packet[0] = 0;
-  packet[1] = 0;
+  volatile uint8_t packet[NUM_BYTES*3];
+  packet[0] = 30;
+  packet[1] = 30;
   for (i = 2; i < NUM_BYTES; i++) {
     packet[i] = i;
   }
-begin_test:
+
   // Send the packet using a debug command.
   baseband_debug(packet, NUM_BYTES);
+  //baseband_send(packet, NUM_BYTES);
   // Note: typically locks up the core here
   sprintf(str, "-----BLE Loopback Test-----\r\n");
   HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
 
-  print_baseband_status2();
-  print_baseband_status3();
-
   // Check that an interrupt was generated and/or
   // that the interrupt message is correct.
-  #define TIMEOUT_MS 5000
-  uint32_t ms_count = 0, bytes_read;
-  uint8_t *rx_packet = packet + NUM_BYTES;
+  #define TIMEOUT_US 5000000
+  uint32_t us_count = 0, bytes_read;
+  uint8_t *rx_packet = packet + NUM_BYTES + 4;
 
   while (1) {
-    HAL_delay(10000);
-    ms_count++;
-    if (ms_count > TIMEOUT_MS) {
+
+    HAL_delay(10);
+    //print_baseband_status0();
+    //print_baseband_status1();
+    us_count++;
+    if (us_count > TIMEOUT_US) {
       sprintf(str, "Timeout!\r\n");
       HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-      print_baseband_status0();
       //sim_finish();
-      goto begin_test;
       return;
     }
     switch (debug_status) {
@@ -97,8 +99,10 @@ begin_test:
 
       case DEBUG_RX_FINISH:
         bytes_read = baseband_rxfinish_message();
+        sprintf(str, "Received %u bytes: ", bytes_read);
+        HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
         for (i = 0; i < bytes_read; i++) {
-          sprintf(str, "%u ", rx_packet[i]);
+          sprintf(str, "%x ", rx_packet[i]);
           HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
         }
         sprintf(str, "\r\n");
@@ -124,32 +128,14 @@ int main() {
   //HAL_GPIO_writePin(GPIOA, GPIO_PIN_0, 0);
 
   UART_InitTypeDef UART_init_config;
-  UART_init_config.baudrate = 115200;
+  UART_init_config.baudrate = 10000;
+  UART_init_config.tx_wm = 1;
 
   HAL_UART_init(UART0, &UART_init_config);
-  sprintf(str, "SCuM-V22 says, 'I'm alive!'\r\n");
+  sprintf(str, "SCuM-V23B says, 'I'm alive!'\r\n");
   HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-
-  uint16_t idle_count = 0;
-  for(idle_count = 0; idle_count < 1000; idle_count++)
-  {
-    sprintf(str, "Idling on startup: %d\r\n", idle_count);
-    HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-    HAL_delay(10);
-  }
 
   print_baseband_status0();
 
- 
-  // Set scum-v tuning registers
-  // rtc_tune_in<3> CPU oscillator - 1 exterior / 0 interior
-  // rtc_tune_in<2> ADC/RTC oscillator - 1 exterior / 0 interior
-  // rtc_tune_in<1:0> MUX_CLK_OUT - 00 CPU / 01 RTC / 11 ADC
-  #define SCUM_TUNING 0xA000
-  uint16_t rtc_tune_in = 0b1000;
-  reg_write16(SCUM_TUNING + 0x04, rtc_tune_in);
-  
-  uint8_t counter = 0;
-  uint8_t adc_i_data = 0;
   run_ble_loopback();
 }

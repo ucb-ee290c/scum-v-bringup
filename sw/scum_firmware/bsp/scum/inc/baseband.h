@@ -143,7 +143,27 @@ typedef struct {
     uint8_t adc_q_data;
 } baseband_status0_t;
 
+
+/*
+    STATUS 1
+    [5:0] Modulation LUT index
+    [10:6] I AGC LUT index
+    [15:11] I DCOC LUT index
+    [20:16] Q AGC LUT index
+    [25:21] Q DCOC LUT index
+*/
+typedef struct {
+    uint8_t modulation_lut_index : 6;
+    uint8_t i_agc_lut_index : 5;
+    uint8_t i_dcoc_lut_index : 5;
+    uint8_t q_agc_lut_index : 5;
+    uint8_t q_dcoc_lut_index : 5;
+} baseband_status1_t;
+
+
+
 void baseband_get_status0(baseband_status0_t* status);
+void baseband_get_status1(baseband_status1_t* status);
 
 uint32_t baseband_status0();
 uint32_t baseband_status1();

@@ -41,6 +41,16 @@ void baseband_get_status0(baseband_status0_t* status) {
     status->adc_q_data = (status0 >> 24) & 0xFF;
 }
 
+void baseband_get_status1(baseband_status1_t* status) {
+    uint32_t status1 = baseband_status1();
+    status->modulation_lut_index = status1 & 0x3F;
+    status->i_agc_lut_index = (status1 >> 6) & 0x1F;
+    status->i_dcoc_lut_index = (status1 >> 11) & 0x1F;
+    status->q_agc_lut_index = (status1 >> 16) & 0x1F;
+    status->q_dcoc_lut_index = (status1 >> 21) & 0x1F;
+}
+
+
 uint8_t baseband_read_adc_i() {
     return (baseband_status0() >> 16) & 0xFF;
 }
@@ -112,5 +122,5 @@ void baseband_debug(uint32_t addr, uint8_t byte_size) {
   // Sending baseband DEBUG instruction
   reg_write32(BASEBAND_ADDITIONAL_DATA, addr);
   
-  reg_write32(BASEBAND_INST, BASEBAND_INSTRUCTION(BASEBAND_DEBUG, 0b0010, byte_size));
+  reg_write32(BASEBAND_INST, BASEBAND_INSTRUCTION(BASEBAND_DEBUG, 0b11, byte_size));
 }
