@@ -193,8 +193,14 @@ https://www.st.com/en/development-tools/stm32cubeide.html
 
 ## Building SCuM-V's firmware
 
-### Software setup
+### RISC-V Toolchain Setup - Windows
 
-```bash
-export PATH="C:\path\to\xpack-riscv-none-elf-gcc-12.1.0-2\bin:$PATH"
-```
+1. Install MSYS2 from https://www.msys2.org/
+
+2. Install your choice distribution of RISC-V tools. This guide uses xpack from 
+
+https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/
+
+3. Set your path in the MSYS2 terminal to include the riscv toolchain
+`export PATH=/c/riscv/xpack-riscv-none-elf-gcc-13.2.0-2/bin:$PATH`
+
