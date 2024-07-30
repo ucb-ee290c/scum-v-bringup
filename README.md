@@ -204,3 +204,8 @@ https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/
 3. Set your path in the MSYS2 terminal to include the riscv toolchain
 `export PATH=/c/riscv/xpack-riscv-none-elf-gcc-13.2.0-2/bin:$PATH`
 
+### RISC-V Toolchain Setup - All other platforms
+
+Reference the guide for the Baremetal-IDE here: https://ucb-bar.gitbook.io/chipyard/quickstart/setting-up-risc-v-toolchain
+
+
