@@ -2,9 +2,9 @@
 
 module DSPClockDomainWrapper(
     input         clock,
-    reset,
+    input         reset,
     input  [5:0]  io_adc_counter_p,
-    io_adc_counter_n,
+    input  [5:0]  io_adc_counter_n,
     input         io_chopper_control_chopper_div_1_valid,
     input  [24:0] io_chopper_control_chopper_div_1_bits,
     input         io_chopper_control_chopper_div_2_valid,
@@ -14,16 +14,16 @@ module DSPClockDomainWrapper(
     input         io_dsp_control_valid,
     input  [7:0]  io_dsp_control_bits,
     output        io_adc_sensor_out,
-    io_adc_data_out_valid,
+    output        io_adc_data_out_valid,
     output [19:0] io_adc_data_out_bits,
     output        io_chopper_clock_1,
-    io_chopper_clock_2,
+    output        io_chopper_clock_2,
     output [6:0]  io_adc_counter_diff,
     output [5:0]  io_adc_counter_p_diff,
-    io_adc_counter_n_diff
+    output [5:0]  io_adc_counter_n_diff
 );
     wire        _cic_decim_io_output_valid;
-    wire [58:0] _cic_decim_io_output_bits;
+    wire [66:0] _cic_decim_io_output_bits;
     wire [6:0]  _dechopper_io_output;
     wire        _secondStageGen_io_clock_gen;
     wire        _firstStageGen_io_clock_gen;
@@ -42,8 +42,7 @@ module DSPClockDomainWrapper(
     wire [5:0]  _adc_counter_n_sub_T = adc_counter_n_reg - adc_counter_n_reg_z;
     wire [6:0]  _adc_counter_diff_T_2 = {1'h0, _adc_counter_p_sub_T} - {1'h0, _adc_counter_n_sub_T};
     reg         cic_decim_output_valid;
-    reg  [58:0] cic_decim_output_bits;
-    wire        _GEN = rCtr == 13'h1F3F;
+    reg  [66:0] cic_decim_output_bits;
     always @(posedge clock) begin
         adc_counter_p_reg <= io_adc_counter_p;
         adc_counter_n_reg <= io_adc_counter_n;
@@ -59,20 +58,16 @@ module DSPClockDomainWrapper(
             secondStageDivider <= 25'h0;
         end
         else begin
-            if (_GEN)
-                rCtr <= 13'h0;
-            else
-                rCtr <= rCtr + 13'h1;
+            rCtr <= rCtr + 13'h1;
             if (io_dsp_control_valid) 
                 dsp_control_buf <= io_dsp_control_bits;
-            if (io_chopper_control_chopper_clock_en_valid)
+            if (io_chopper_control_chopper_clock_en_valid) 
                 chopper_clk_en_buf <= io_chopper_control_chopper_clock_en_bits;
-            if (io_chopper_control_chopper_div_1_valid)
+            if (io_chopper_control_chopper_div_1_valid) 
                 firstStageDivider <= io_chopper_control_chopper_div_1_bits;
             if (io_chopper_control_chopper_div_2_valid) 
                 secondStageDivider <= io_chopper_control_chopper_div_2_bits;
         end
-
     end
     ClockGen firstStageGen (
         .clock        (clock),

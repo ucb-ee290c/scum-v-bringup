@@ -1,31 +1,31 @@
 `timescale 1ns / 1ps
 
-module Integrator_6(
+module Integrator(
     input         clock,
-    reset,
+    input         reset,
     input  [6:0]  io_input,
-    output [58:0] io_output
+    output [66:0] io_output
 );
-    reg [58:0] accum;
+    reg [66:0] accum;
     always @(posedge clock) begin
         if (reset)
-            accum <= 59'h0;
+            accum <= 67'h0;
         else
-            accum <= accum + {{52{io_input[6]}}, io_input};
+            accum <= accum + {{60{io_input[6]}}, io_input};
     end
     assign io_output = accum;
 endmodule
 
 module Integrator_7(
     input         clock,
-    reset,
-    input  [58:0] io_input,
-    output [58:0] io_output
+    input         reset,
+    input  [66:0] io_input,
+    output [66:0] io_output
 );
-    reg [58:0] accum;
+    reg [66:0] accum;
     always @(posedge clock) begin
         if (reset)
-            accum <= 59'h0;
+            accum <= 67'h0;
         else
             accum <= accum + io_input;
     end
