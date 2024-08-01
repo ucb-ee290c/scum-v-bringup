@@ -1,0 +1,9 @@
+Comment,Designator,Footprint,LCSC
+50K,R1,R_0603_1608Metric,C23184
+Conn_01x12,J2,PinHeader_2x06_P2.54mm_Horizontal,C2935938
+0.1 uF,"C1,C2",C_0603_1608Metric,C342825
+TXB0108DQSR,U1,USON-20_2x4mm_P0.4mm,C427057
+Conn_01x02,"J4,J5",PinHeader_1x02_P2.54mm_Vertical,C492401
+Conn_01x08,"J6,J7",PinHeader_1x08_P2.54mm_Vertical,C492407
+Conn_02x02_Odd_Even,J3,PinHeader_2x02_P2.54mm_Vertical,C492419
+Conn_02x04_Counter_Clockwise,J1,PinHeader_2x04_P2.54mm_Vertical,C492421
