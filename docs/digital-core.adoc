@@ -1,6 +1,12 @@
 == Digital Core
 
-image::2023-08-18T04-45-39-595Z.png[] 
+image::digital_core.png[] 
+
+
+image::digital_layout.png[block, align="center", width="50%"] 
+
+
+// Source: https://drive.google.com/file/d/1k8sNaNlUNQnOKplDZEyBrxJ6P66d9gSC/view?usp=sharing
 
 === Key Features
  
@@ -9,51 +15,94 @@ image::2023-08-18T04-45-39-595Z.png[]
 ** 200 MHz CPU clock
 ** 32 MHz ADC clock for BLE/IEEE 802.15.4 baseband-modem and precision sigma-delta ADC
 ** 1MHz RTC clock
+** Decimated 32 MHz Clock for AFE peripherals
 * On-chip SRAM
 ** 256kB scratchpad (“L2”)
 ** 8kB 2 way I$ & D$
-* JTAG, UART, QSPI Flash, GPIO
+* JTAG, UART-TSI, QSPI Self Boot
+* 8 x GPIO
 * Interrupt controller
 ** PLIC (platform level)
 ** CLINT (core level)
 * RTC capture and compare peripheral
-
+* ECC Peripherals (SHA256, AES, ECC)
+* Memory Mapped IO (MMIO) Analog tuning Interface
+* Independent scan chain to control tuning bits
+* Analog Frontend Peripheral
+* Radar Ramp Generator, Sensor ADC DSP
 
 === Power Consumption
 
-.Power consumption comparison of the core running a program with baseband register read/write and ALU usage. VCC=0.85V, CPU clock=200MHz
+.Power consumption comparison of the core running a program with baseband register read/write and ALU usage. VCC=0.80V, CPU clock=200MHz
 |===
 | | Internal Power (mW) | Switching Power (mW) | Leakage Power (mW) | Total Power (mW)
 
 | SCuM-V22 in Lab | 11.9 | | 36 | 42.5
 | SCuM-V23 dynamic power simulation | 7.9 | 3.2 | 0.060 | 11.2
+| SCuM-V24  power simulation | - | - | 0.421736 | -
+
 |===
 
-Based on simulations, total power consumption of the core decreased by 73% from SCuM-V22 to SCuM-V23. This improvement was achieved by reducing leakage power in the SRAM cells.
+RTL Power simulations for SCuM-V24 were run but the results are not super conducive to the table above since the optimizations from synthesis were not included in the power simulations. More details for that can be found here: xref:digital-core-debug.asciidoc[Digital Core Debugging]
 
 
 === Boot Process
 
 |===
-| Method | BOOT_SEL Value | Boot Address | Interface | Boot Process Descritpion
+| Method | BOOT_SEL Value | Boot Address | Interface | Boot Process Description
 | Self Boot | 1 | 0x2000_0000 | SPI | SPI flash content is copied to memory
 Jump to self boot base address
-| Tethered Boot | 0 | 0x0000_0000 | TSI & JTAG | 1. Boot ROM configures a trap handler, and enters a wait for interrupt loop.
+| Tethered Boot | 0 | 0x8000_0000 | TSI & JTAG | 1. Boot ROM configures a trap handler, and enters a wait for interrupt loop.
 
 2. Use JTAG, TSI, or other external debugging tools to program the on-chip memory
 
 3. Use JTAG, TSI, or other external tools to trigger a software interrupt (MSIP)
 
 4. Boot ROM handles interrupt, jumps to the program memory.
+|=== 
+// TODO: Add images of post P&R simulations for boot processes over JTAG, QSPI, and SerializedTileLink 
+
+=== Digital Core Simulation Setup
+|===
+| Emulation Method | High Level Overview 
+| TSI | image:tsi_boot_overview.png[]
+| JTAG | image:jtag_boot_overview.png[]
 |===
 
+=== Simulation and Verification
 
 
+The table shows tests done in sp-24. Most of them are chipyard in-built tests to check the functionality of core. RTL simulations were completed sucessfully, but we had issues getting further sims to run.
+image:Simulation_Verification.png[]
 
+More details about the status of sims and debugging can be found here: xref:digital-core-debug.asciidoc[Digital Core Debugging]
 
-- Core architecture
-- How much memory
-- How do we boot
-- Where do we find simulations/programs that were run previously?
-- Where is the toolchain?
-- Is this the right memory map?
+=== On-Chip Memory System
+The Rocket core has a 8kB I$ and D$ and a 256kB scratchpad acting as L2 memory.
+
+=== MMIO Address Map
+|===
+|   Address Range   | Permissions |          Name 
+|    0 - 1000         |ARWX| debug-controller@0
+| 1000 - 2000         |ARW | boot-address-reg@1000
+| 3000 - 4000         |ARWX| error-device@3000
+| 5000 - 6000         |ARW | scumv-rtc-timer@5000
+| 6000 - 7000         |ARW | scumv-afe@6000
+| 8000 - 9000         |ARW | baseband@8000
+| a000 - b000         |ARW | scumvtuning@a000
+| b000 - c000         |ARW | sensoradc@b000
+| 10000 - 20000       |RX  | rom@10000
+| 100000 - 101000     |ARW | clock-gater@100000
+| 110000 - 111000     |ARW | tile-reset-setter@110000
+| 2000000 - 2010000   |ARW | clint@2000000
+| c000000 - 10000000  |ARW | interrupt-controller@c000000
+| 10010000 - 10011000 |ARW | gpio@10010000
+| 10020000 - 10021000 |ARW | serial@10020000
+| 10030000 - 10031000 |ARW | spi@10030000
+| 80000000 - 80040000 |RWXC| memory@80000000
+|===
+
+=== Scope of Improvements
+* Muxing IO ports can be implemented to increase the GPIO count. It is obstructed by the chipyard's inability to punchthrough some of the IO ports.
+* ECC RTL needs timing improvement (has quite a few setup critical paths)
+
