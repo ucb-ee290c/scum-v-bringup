@@ -28,19 +28,20 @@ module decimator_tb;
     #10 reset = 0;
 
     // Test case: Output values at correct decimation factor
-    integer inputVals[11:0];
-    inputVals[0] = 1;
-    inputVals[1] = 2;
-    inputVals[2] = 3;
-    inputVals[3] = 4;
-    inputVals[4] = 5;
-    inputVals[5] = 6;
-    inputVals[6] = 7;
-    inputVals[7] = 8;
-    inputVals[8] = 9;
-    inputVals[9] = 10;
-    inputVals[10] = 11;
-    inputVals[11] = 12;
+    reg [31:0] inputVals[11:0];
+    initial begin
+      inputVals[0] = 1;
+      inputVals[1] = 2;
+      inputVals[2] = 3;
+      inputVals[3] = 4;
+      inputVals[4] = 5;
+      inputVals[5] = 6;
+      inputVals[6] = 7;
+      inputVals[7] = 8;
+      inputVals[8] = 9;
+      inputVals[9] = 10;
+      inputVals[10] = 11;
+      inputVals[11] = 12;
 
     for (integer i = 0; i < 12; i = i + 1) begin
       io_input = inputVals[i];
