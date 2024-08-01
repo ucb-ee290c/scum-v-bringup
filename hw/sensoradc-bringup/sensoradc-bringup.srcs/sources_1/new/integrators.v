@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-module Integrator(
+module Integrator_6(
     input         clock,
     input         reset,
     input  [6:0]  io_input,

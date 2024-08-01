@@ -4,14 +4,14 @@ module Comb(
     input         clock,
     input         reset,
     input         io_input_valid,
-    input  [58:0] io_input_bits,
+    input  [66:0] io_input_bits,
     output        io_output_valid,
-    output [58:0] io_output_bits
+    output [66:0] io_output_bits
 );
-    reg [58:0] shiftReg;
+    reg [66:0] shiftReg;
     always @(posedge clock) begin
         if (reset)
-            shiftReg <= 59'h0;
+            shiftReg <= 67'h0;
         else if (io_input_valid)
             shiftReg <= io_input_bits;
     end

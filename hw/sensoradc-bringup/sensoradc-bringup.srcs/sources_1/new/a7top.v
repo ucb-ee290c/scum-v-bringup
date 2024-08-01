@@ -120,18 +120,18 @@ module a7top #(
         .io_adc_counter_n_diff()
     );
     
-    ila_0 ila(
-        .clk(CLK100MHZ),
+//    ila_0 ila(
+//        .clk(CLK100MHZ),
         
-        .probe0(counter_p),
-        .probe1(counter_n),
-        .probe2(adc_data_out_bits),
-        .probe3(translator_data_out),
-        .probe4(adc_data_out_valid),
-        .probe5(translator_data_out_valid),
-        .probe6(UART_RXD_IN),
-        .probe7(SENSOR_OUT)
-    );
+//        .probe0(counter_p),
+//        .probe1(counter_n),
+//        .probe2(adc_data_out_bits),
+//        .probe3(translator_data_out),
+//        .probe4(adc_data_out_valid),
+//        .probe5(translator_data_out_valid),
+//        .probe6(UART_RXD_IN),
+//        .probe7(SENSOR_OUT)
+//    );
 
 
     assign led[0] = n_reset;

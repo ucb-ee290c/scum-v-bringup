@@ -100,11 +100,11 @@ module DSPClockDomainWrapper(
         .clock                 (clock),
         .reset                 (reset),
         .io_adc_data_out_valid (cic_decim_output_valid),
-        .io_adc_data_out_bits  (cic_decim_output_bits[57:38]),
+        .io_adc_data_out_bits  (cic_decim_output_bits[66:47]),
         .io_adc_sensor_out     (io_adc_sensor_out)
     );
     assign io_adc_data_out_valid = cic_decim_output_valid;
-    assign io_adc_data_out_bits = cic_decim_output_bits[57:38];
+    assign io_adc_data_out_bits = cic_decim_output_bits[66:47];
     assign io_chopper_clock_1 = _io_chopper_clock_1_output;
     assign io_chopper_clock_2 = _io_chopper_clock_2_output;
     assign io_adc_counter_diff = _adc_counter_diff_T_2;
