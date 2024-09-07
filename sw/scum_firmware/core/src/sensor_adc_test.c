@@ -105,7 +105,7 @@ int main()
   system_init();
   
   UART_InitTypeDef UART_init_config;
-  UART_init_config.baudrate = 100000;
+  UART_init_config.baudrate = 1000;
   UART_init_config.tx_wm = 1;
   
   HAL_UART_init(UART0, &UART_init_config);
@@ -123,11 +123,14 @@ int main()
   }
 
   // Lower 6 bits are IDAC, upper 2 bits are P/N protection FET shorted
-  sensor_adc_set_tuning0(0b001010); 
+  sensor_adc_set_tuning0(0b001000); 
 
   //log_counters();
-  sensor_adc_set_chop_clk_div_1(12000);
-  sensor_adc_set_chop_clk_div_2(12000);
+  sensor_adc_set_chop_clk_div_1(1);
+  sensor_adc_set_chop_clk_div_2(1);
+  HAL_delay(100);
+  sensor_adc_set_chop_clk_div_1(1200);
+  sensor_adc_set_chop_clk_div_2(1200);
   sensor_adc_set_chop_clk_en(0b11);
 
 
