@@ -21,3 +21,8 @@ void sensor_adc_set_chop_clk_en(uint8_t chop_clk_en)
 {
     reg_write8(SENSOR_ADC_CHOP_CLK_EN, chop_clk_en);
 }
+
+void sensor_adc_set_dsp_control(uint32_t dsp_control)
+{
+    reg_write8(SENSOR_ADC_DSP_CONTROL, dsp_control);
+}

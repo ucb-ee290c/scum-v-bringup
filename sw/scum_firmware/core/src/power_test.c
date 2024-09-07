@@ -48,7 +48,7 @@ int main() {
   
   uint8_t adc_i_data = 0;
   while (1) {
-    HAL_delay(100);
+    HAL_delay(1000);
     
     print_baseband_status0();
   }

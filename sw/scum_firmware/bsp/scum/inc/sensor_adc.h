@@ -32,8 +32,20 @@ static inline uint32_t sensor_adc_get_status0()
 
 
 void sensor_adc_set_tuning0(uint32_t tuning0);
+
+// 1st stage chopper clock divider
 void sensor_adc_set_chop_clk_div_1(uint32_t chop_clk_div_1);
+
+// 2nd stage chopper clock divider
 void sensor_adc_set_chop_clk_div_2(uint32_t chop_clk_div_2);
+
+// ADC_CHOP_CLK_EN<0> - Enable 1st stage chopper
+// ADC_CHOP_CLK_EN<1> - Enable 2nd stage chopper
 void sensor_adc_set_chop_clk_en(uint8_t chop_clk_en);
+
+// ADC_DSP_CTRL<0> - Enable dechopper in DSP chain
+// ADC_DSP_CTRL<1> - Select chopper clock used in the
+// dechopper ADC_DSP_CTRL<5:2> - Dechopping clock
+// delay, from 0 to 15 cycles
 void sensor_adc_set_dsp_control(uint32_t dsp_control);
 

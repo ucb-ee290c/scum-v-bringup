@@ -72,6 +72,11 @@ void kick_oscillator()
 
 }
 
+void set_idac(uint8_t idac_val)
+{
+  sensor_adc_set_tuning0(idac_val);
+}
+
 void run_sensor_adc_test()
 {
   uint8_t idac_val = 0b001010;
@@ -107,15 +112,34 @@ int main()
   sprintf(str, "SCuM-V23 says, 'I'm alive!'\r\n");
   HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
 
-  uint16_t idle_count = 0;
-  for(idle_count = 0; idle_count < 1000; idle_count++)
+  uint32_t idle_count = 0;
+  sprintf(str, "Idling on startup: %d\r\n", idle_count);
+  HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+  
+  uint32_t CLOCKS_TO_WAIT = 2000000;
+  for(idle_count = 0; idle_count < CLOCKS_TO_WAIT; idle_count++)
   {
-    sprintf(str, "Idling on startup: %d\r\n", idle_count);
-    HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-    HAL_delay(10);
+    asm("nop");
   }
 
-  kick_oscillator();
-  log_counters();
+  // Lower 6 bits are IDAC, upper 2 bits are P/N protection FET shorted
+  sensor_adc_set_tuning0(0b001010); 
+
+  //log_counters();
+  sensor_adc_set_chop_clk_div_1(12000);
+  sensor_adc_set_chop_clk_div_2(12000);
+  sensor_adc_set_chop_clk_en(0b11);
+
+
+  // ADC_DSP_CTRL<0> - Enable dechopper in DSP chain
+  // ADC_DSP_CTRL<1> - Select chopper clock used in the
+  // dechopper ADC_DSP_CTRL<5:2> - Dechopping clock
+  // delay, from 0 to 15 cycles
+  uint8_t digital_dechop_enable = 0;
+  uint8_t dechop_clock_select = 0;
+  uint8_t dechop_delay = 0;
+  uint8_t dsp_control = (digital_dechop_enable << 1) | (dechop_clock_select << 2) | dechop_delay;
+  sensor_adc_set_dsp_control(dsp_control);
+
   //run_sensor_adc_test();
 }
