@@ -1,17 +1,17 @@
-TARGETS = power_test lrwpan_loopback ble_loopback template sensor_adc_test
+TARGETS = power_test lrwpan_loopback ble_loopback template simple afe_test baseband_test nfc_test rtc_timer_test scumvtuning_test sensor_adc_test 
 
 #################################
 # RISCV Toolchain
 #################################
 
 # SiFive Toolchain
-#PREFIX = riscv64-unknown-elf-
+PREFIX = riscv64-unknown-elf-
 
 # Nuclei Toolchain
 #PREFIX = riscv-nuclei-elf-
 
 # xPack Toolchain
-PREFIX = riscv-none-elf-
+#PREFIX = riscv-none-elf-
 
 
 CC = $(PREFIX)gcc
@@ -31,11 +31,20 @@ SRC_DIR = $(USR_DIR)src/
 INC_DIR = $(USR_DIR)inc/
 BUILD_DIR = build/
 SCRIPT_DIR = ../scripts/
+LIB_DIR = lib/
 
 
 #################################
 # Source Files
 #################################
+
+
+USE_HTIF = 1
+ifeq ($(USE_HTIF), 1)
+LIBRARIES += htif
+endif
+
+
 A_SOURCES  = $(wildcard $(SRC_DIR)*.S) $(wildcard $(SRC_DIR)*/*.S)
 
 TARGET_SRC = $(foreach target, $(TARGETS), $(SRC_DIR)$(target).c)
@@ -50,12 +59,22 @@ C_SOURCES += $(VENDOR_ROOT)scum/src/scum_hal_gpio.c
 C_SOURCES += $(VENDOR_ROOT)scum/src/scum_hal_plic.c
 C_SOURCES += $(VENDOR_ROOT)scum/src/scum_hal_rcc.c
 C_SOURCES += $(VENDOR_ROOT)scum/src/scum_hal_uart.c
+C_SOURCES += $(VENDOR_ROOT)scum/src/afe.c
 C_SOURCES += $(VENDOR_ROOT)scum/src/baseband.c
+C_SOURCES += $(VENDOR_ROOT)scum/src/nfc.c
+C_SOURCES += $(VENDOR_ROOT)scum/src/rtc_timer.c
 C_SOURCES += $(VENDOR_ROOT)scum/src/sensor_adc.c
+C_SOURCES += $(VENDOR_ROOT)scum/src/scumvtuning.c
 
 INCLUDES  = -I$(INC_DIR)
 INCLUDES += -I$(INC_DIR)hal/
 INCLUDES += -I$(VENDOR_ROOT)scum/inc
+
+# LIB sources
+INCLUDES  += $(foreach LIBRARY_NAME,$(LIBRARIES),-I$(LIB_DIR)$(LIBRARY_NAME)/inc)
+A_SOURCES += $(foreach LIBRARY_NAME,$(LIBRARIES),$(wildcard $(LIB_DIR)$(LIBRARY_NAME)/src/*.S))
+C_SOURCES += $(foreach LIBRARY_NAME,$(LIBRARIES),$(wildcard $(LIB_DIR)$(LIBRARY_NAME)/src/*.c))
+
 
 
 #################################
@@ -72,7 +91,7 @@ OBJECTS = $(A_OBJECTS) $(C_OBJECTS)
 #################################
 TARGET_ELF = $(foreach target, $(TARGETS), $(BUILD_DIR)$(target).elf)
 TARGET_DUMP = $(foreach target, $(TARGETS), $(BUILD_DIR)$(target).dump)
-TARGET_HEX = $(foreach target, $(TARGETS), $(BUILD_DIR)$(target).hex)
+# TARGET_HEX = $(foreach target, $(TARGETS), $(BUILD_DIR)$(target).hex)
 TARGET_BIN = $(foreach target, $(TARGETS), $(BUILD_DIR)$(target).bin)
 
 #################################
@@ -80,8 +99,8 @@ TARGET_BIN = $(foreach target, $(TARGETS), $(BUILD_DIR)$(target).bin)
 #################################
 
 # MCU Settings
-ARCH = rv32imafc
-ABI = ilp32f
+ARCH = rv64imafdc
+ABI = lp64d
 CODEMODEL = medany
 LD_SCRIPT = $(SRC_DIR)scum.ld
 
@@ -89,8 +108,9 @@ ARCHFLAGS = -march=$(ARCH) -mabi=$(ABI) -mcmodel=$(CODEMODEL) -fno-pie
 SPECFLAGS = --specs="nano.specs"
 
 # compiler Flags
-CFLAGS  = -g -std=gnu11 -Os -Wall -Wextra -Warray-bounds -Wno-unused-parameter
+CFLAGS  = -g -std=gnu11 -O0
 CFLAGS += -fno-common -fno-builtin-printf
+CFLAGS += -Wall -Wextra -Warray-bounds -Wno-unused-parameter
 CFLAGS += $(ARCHFLAGS)
 CFLAGS += $(SPECFLAGS)
 CFLAGS += $(INCLUDES)
@@ -100,6 +120,7 @@ LFLAGS  = -static
 # LFLAGS += -nostartfiles -nostdlib
 LFLAGS += -nostartfiles
 LFLAGS += -T $(LD_SCRIPT)
+
 
 
 #################################
@@ -118,9 +139,9 @@ $(TARGET_DUMP): %.dump: %.elf
 	@echo "[OD] dumping $@"
 	@$(OD) -D -S -M numeric $< > $@
 	
-$(TARGET_HEX): %.hex: %.elf
-	@echo "Converting ELF to HEX $@"
-	@$(SCRIPT_DIR)smartelf2hex.sh $< > $@
+# $(TARGET_HEX): %.hex: %.elf
+# 	@echo "Converting ELF to HEX $@"
+# 	@$(SCRIPT_DIR)smartelf2hex.sh $< > $@
 
 $(TARGET_BIN): %.bin: %.elf
 	@echo "Converting ELF to BIN $@"
@@ -143,7 +164,7 @@ $(C_OBJECTS) $(TARGET_OBJS): $(BUILD_DIR)%.o: %.c
 clean:
 	@rm -rf $(BUILD_DIR)
 
-hex: $(TARGET_HEX)
+# hex: $(TARGET_HEX)
 
 bin: $(TARGET_BIN)
 
