@@ -12,11 +12,10 @@ extern "C" {
 
 enum IRQ_SOURCE {
   RX_ERROR = 5,
-  RX_START = 6,
-  RX_FINISH = 7,
+  RX_START = 29,
+  RX_FINISH = 26,
   TX_ERROR = 8,
-  TX_FINISH = 9,
-  IF_THRESHOLD = 10
+  TX_FINISH = 28
 };
 
 enum DEBUG_STATUS {
@@ -28,9 +27,6 @@ enum DEBUG_STATUS {
 };
 extern volatile enum DEBUG_STATUS debug_status;
 
-void system_init(void);
-void enable_fpu(void);
-void print_fcsr();
 
 #ifdef __cplusplus
 }

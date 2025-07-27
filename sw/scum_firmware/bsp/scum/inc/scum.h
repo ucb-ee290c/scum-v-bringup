@@ -7,44 +7,58 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-#include "rv_core.h"
+#include "rv_common.h"
+
 
 /**
  * @brief Interrupt Number Definition, according to the selected device 
  */
 
 typedef enum {
-  UserSoftware_IRQn         = 0,
-  SupervisorSoftware_IRQn   = 1,
-  HypervisorSoftware_IRQn   = 2,
-  MachineSoftware_IRQn      = 3,
-  UserTimer_IRQn            = 4,
-  SupervisorTimer_IRQn      = 5,
-  HypervisorTimer_IRQn      = 6,
-  MachineTimer_IRQn         = 7,
-  UserExternal_IRQn         = 8,
-  SupervisorExternal_IRQn   = 9,
-  HypervisorExternal_IRQn   = 10,
-  MachineExternal_IRQn      = 11,
-} IRQn_Type;
+  UserSoftwareInterrupt         = 0,
+  SupervisorSoftwareInterrupt   = 1,
+  HypervisorSoftwareInterrupt   = 2,
+  MachineSoftwareInterrupt      = 3,
+  UserTimerInterrupt            = 4,
+  SupervisorTimerInterrupt      = 5,
+  HypervisorTimerInterrupt      = 6,
+  MachineTimerInterrupt         = 7,
+  UserExternalInterrupt         = 8,
+  SupervisorExternalInterrupt   = 9,
+  HypervisorExternalInterrupt   = 10,
+  MachineExternalInterrupt      = 11,
+} InterruptType;
 
 
-void HAL_CORE_enableInterrupt();
-
-void HAL_CORE_enableIRQ(IRQn_Type IRQn);
-
-
+/* Peripheral Struct Definition */
 typedef struct {
-  __IO uint32_t MSIP;                           /** MSIP Registers (1 bit wide) */
-  uint32_t RESERVED0[4095];
-  __IO uint64_t MTIMECMP;                       /** MTIMECMP Registers */
+  __IO uint32_t MSIP0;                          /** MSIP Registers (1 bit wide) */
+  __IO uint32_t MSIP1;                          /** MSIP Registers (1 bit wide) */
+  __IO uint32_t MSIP2;                          /** MSIP Registers (1 bit wide) */
+  __IO uint32_t MSIP3;                          /** MSIP Registers (1 bit wide) */
+  __IO uint32_t MSIP4;                          /** MSIP Registers (1 bit wide) */
+  uint32_t RESERVED0[4091];
+  __IO uint64_t MTIMECMP0;                      /** MTIMECMP Registers */
   uint32_t RESERVED1[8188];
   __IO uint64_t MTIME;                          /** Timer Register */
 } CLINT_TypeDef;
 
 typedef struct {
+  __IO uint32_t priority_threshold;
+  __IO uint32_t claim_complete;
+} PLIC_ContextControl_TypeDef;
 
+typedef struct {
+  __IO uint32_t priorities[1024];
+  __I  uint32_t pendings[1024];
+  __IO uint32_t enables[1024];
 } PLIC_TypeDef;
+
+// because the maximum struct size is 65535, we need to split PLIC content
+typedef struct {
+  PLIC_ContextControl_TypeDef context_controls[1024];
+} PLIC_Extra_TypeDef;
+
 
 typedef struct {
   __I  uint32_t INPUT_VAL;                      /** pin value */
@@ -54,13 +68,13 @@ typedef struct {
   __IO uint32_t PUE;                            /** Internal pull-up enable */
   __IO uint32_t DS;                             /** Pin drive strength */
   __IO uint32_t RISE_IE;                        /** Rise interrupt enable */
-  __I  uint32_t RISE_IP;                        /** Rise interrupt pending */
+  __IO uint32_t RISE_IP;                        /** Rise interrupt pending */
   __IO uint32_t FALL_IE;                        /** Fall interrupt enable */
-  __I  uint32_t FALL_IP;                        /** Fall interrupt pending */
+  __IO uint32_t FALL_IP;                        /** Fall interrupt pending */
   __IO uint32_t HIGH_IE;                        /** High interrupt pending */
-  __I  uint32_t HIGH_IP;                        /** High interrupt pending */
+  __IO uint32_t HIGH_IP;                        /** High interrupt pending */
   __IO uint32_t LOW_IE;                         /** Low interrupt pending */
-  __I  uint32_t LOW_IP;                         /** Low interrupt pending */
+  __IO uint32_t LOW_IP;                         /** Low interrupt pending */
   __IO uint32_t OUT_XOR;                        /** Output XOR (invert) */
 } GPIO_TypeDef;
 
@@ -77,7 +91,7 @@ typedef struct {
   __IO uint32_t DIV;                            /** Baud rate divisor */
 } UART_TypeDef;
 
-/* ================ memory map ================ */
+/* ================ memory map old ================ */
 /*
        0 -     1000 ARWX  debug-controller@0
     3000 -     4000 ARWX  error-device@3000
@@ -99,17 +113,40 @@ typedef struct {
 54000000 - 54001000 ARW   serial@54000000
 80000000 - 80040000  RWXC backing-scratchpad@80000000
 */
+
+/* Updated mem map
+0 -     1000 ARWX  debug-controller@0
+1000 -     2000 ARW   boot-address-reg@1000
+5000 -     6000 ARW   scumv-rtc-timer@5000
+6000 -     7000 ARW   scumv-afe@6000
+8000 -     9000 ARW   baseband@8000
+a000 -     b000 ARW   scumvtuning@a000
+b000 -     c000 ARW   sensoradc@b000
+d000 -     e000 ARW   nfc_modem@d000
+10000 -    20000  R X  rom@10000
+100000 -   101000 ARW   clock-gater@100000
+110000 -   111000 ARW   tile-reset-setter@110000
+2000000 -  2010000 ARW   clint@2000000
+8000000 -  8010000  RWXC memory@8000000
+c000000 - 10000000 ARW   interrupt-controller@c000000
+10010000 - 10011000 ARW   gpio@10010000
+10020000 - 10021000 ARW   serial@10020000
+10030000 - 10031000 ARW   spi@10030000
+20000000 - 30000000  R X  spi@10030000
+80000000 - 80040000  RWXC memory@80000000
+*/
+
 #define DEBUG_CONTROLLER_BASE   0x00000000
-#define BOOT_SELECT_BASE        0x00002000
+#define BOOT_SELECT_BASE        0x00001000
 #define ERROR_DEVICE_BASE       0x00003000
 #define BOOTROM_BASE            0x00010000
-#define TILE_RESET_CTRL_BASE    0x00100000
+#define TILE_RESET_CTRL_BASE    0x00110000
 #define CLINT_BASE              0x02000000
 #define PLIC_BASE               0x0C000000
 #define LBWIF_RAM_BASE          0x10000000
-#define UART_BASE               0x54000000
-#define GPIO_BASE               0x10012000
-#define QSPI_BASE               0x10040000  // TODO: check
+#define UART_BASE               0x10020000
+#define GPIO_BASE               0x10010000
+#define QSPI_BASE               0x10030000  // TODO: check
 #define FLASH_BASE              0x20000000
 
 #define DTIM_BASE               0x80000000
@@ -120,25 +157,41 @@ typedef struct {
 
 #define CLINT                   ((CLINT_TypeDef *)CLINT_BASE)
 #define PLIC                    ((PLIC_TypeDef *)PLIC_BASE)
+#define PLIC_EXTRA              ((PLIC_Extra_TypeDef *)(PLIC_BASE + 0x00200000U))
 #define GPIOA                   ((GPIO_TypeDef *)GPIOA_BASE)
 #define UART0                   ((UART_TypeDef *)UART0_BASE)
 
 
 
-#define UART_RXCTRL_RXEN_POS                    (0U)
-#define UART_RXCTRL_RXEN_MSK                    (0x1UL << UART_RXCTRL_RXEN_POS)
-#define UART_RXCTRL_RXCNT_POS                   (16U)
-#define UART_RXCTRL_RXCNT_MSK                   (0x9UL << UART_RXCTRL_RXCNT_POS)
+#define UART_TXDATA_DATA_POS                    (0U)
+#define UART_TXDATA_DATA_MSK                    (0xFFU << UART_TXDATA_DATA_POS)
+#define UART_TXDATA_FULL_POS                    (31U)
+#define UART_TXDATA_FULL_MSK                    (0x1U << UART_TXDATA_FULL_POS)
+#define UART_RXDATA_DATA_POS                    (0U)
+#define UART_RXDATA_DATA_MSK                    (0xFFU << UART_RXDATA_DATA_POS)
+#define UART_RXDATA_EMPTY_POS                   (31U)
+#define UART_RXDATA_EMPTY_MSK                   (0x1U << UART_RXDATA_EMPTY_POS)
 #define UART_TXCTRL_TXEN_POS                    (0U)
-#define UART_TXCTRL_TXEN_MSK                    (0x1UL << UART_TXCTRL_TXEN_POS)
+#define UART_TXCTRL_TXEN_MSK                    (0x1U << UART_TXCTRL_TXEN_POS)
 #define UART_TXCTRL_NSTOP_POS                   (1U)
-#define UART_TXCTRL_NSTOP_MSK                   (0x1UL << UART_TXCTRL_NSTOP_POS)
+#define UART_TXCTRL_NSTOP_MSK                   (0x1U << UART_TXCTRL_NSTOP_POS)
 #define UART_TXCTRL_TXCNT_POS                   (16U)
-#define UART_TXCTRL_TXCNT_MSK                   (0x9UL << UART_RXCTRL_RXCNT_POS)
+#define UART_TXCTRL_TXCNT_MSK                   (0x7U << UART_RXCTRL_RXCNT_POS)
+#define UART_RXCTRL_RXEN_POS                    (0U)
+#define UART_RXCTRL_RXEN_MSK                    (0x1U << UART_RXCTRL_RXEN_POS)
+#define UART_RXCTRL_RXCNT_POS                   (16U)
+#define UART_RXCTRL_RXCNT_MSK                   (0x7U << UART_RXCTRL_RXCNT_POS)
+#define UART_IE_TXWM_POS                        (0U)
+#define UART_IE_TXWM_MSK                        (0x1U << UART_IE_TXWM_POS)
+#define UART_IE_RXWM_POS                        (1U)
+#define UART_IE_RXWM_MSK                        (0x1U << UART_IE_RXWM_POS)
 #define UART_IP_TXWM_POS                        (0U)
-#define UART_IP_TXWM_MSK                        (0x1UL << UART_IP_TXWM_POS)
+#define UART_IP_TXWM_MSK                        (0x1U << UART_IP_TXWM_POS)
 #define UART_IP_RXWM_POS                        (1U)
-#define UART_IP_RXWM_MSK                        (0x1UL << UART_IP_RXWM_POS)
+#define UART_IP_RXWM_MSK                        (0x1U << UART_IP_RXWM_POS)
+#define UART_DIV_DIV_POS                        (0U)
+#define UART_DIV_DIV_MSK                        (0xFFU << UART_DIV_DIV_POS)
+
 
 
 #define MIE_USIE_POS                  0x00U

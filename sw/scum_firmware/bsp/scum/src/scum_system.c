@@ -1,196 +1,275 @@
 
+#include <stdint.h>
+#include <string.h>
+
+#include "rv_common.h"
 #include "scum_system.h"
 #include "scum_hal.h"
+#include "baseband.h"
 
 volatile enum DEBUG_STATUS debug_status = NONE;
 
-typedef struct plic_context_control
-{
-  uint32_t priority_threshold;
-  uint32_t claim_complete;
-} plic_context_control_t __attribute__ ((aligned (0x1000)));
 
-
-uint32_t *const plic_enables      =               (uint32_t* const) 0xc002000; // Context [0..15871], sources bitmap registers [0..31]
-uint32_t *const plic_priorities   =               (uint32_t* const) 0xc000000; // priorities [0..1023]
-plic_context_control_t *const plic_ctx_controls = (plic_context_control_t* const) 0xc200000; // Priority threshold & claim / complete for context [0..15871]
-
-void plic_set_bit(uint32_t* const target, uint32_t index)
-{
-  uint32_t reg_index = index >> 5;
-  uint32_t bit_index = index & 0x1F;
-  *target |= (1 << bit_index);
-}
-
-void plic_enable_for_hart(uint32_t hart_id, uint32_t irq_id) {
-  uint32_t* base = plic_enables + 32 * hart_id;
-  plic_set_bit(base, irq_id);
-}
-
-void plic_set_priority(uint32_t irq_id, uint32_t priority) {
-  plic_priorities[irq_id] = priority;
-}
-
-uint32_t plic_claim_irq(uint32_t hart_id) {
-  return plic_ctx_controls[hart_id].claim_complete;
-}
-
-void plic_complete_irq(uint32_t hart_id, uint32_t irq_id){
-  plic_ctx_controls[hart_id].claim_complete = irq_id;
-}
-
-
-inline void print_fcsr()
-{
-  uint64_t fcsr_val = 0;
-  char str[128];
-  asm volatile("csrr %0, fcsr" : "=r"(fcsr_val));
-  sprintf(str, "fcsr = %lx\r\n", fcsr_val); 
-  HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-  asm volatile("csrr %0, misa" : "=r"(fcsr_val));
-  sprintf(str, "ISA extension = %lx\r\n", fcsr_val); 
-  HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-  asm volatile("csrr %0, marchid" : "=r"(fcsr_val));
-  sprintf(str, "Architecture ID = %lx\r\n", fcsr_val); 
-  HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-}
-
-
-void enable_fpu(void) {
-    uint64_t mstatus;
-    asm volatile("csrr %0, mstatus" : "=r"(mstatus));
-    mstatus |= (1 << 13); // Set the FS field of mstatus register to Initial (0b01)
-    asm volatile("csrw mstatus, %0" ::"r"(mstatus));
-    // Clear the fcsr register
-    asm volatile("csrci fcsr, %0" :: "i"(0));
-    // Zero out all FPU registers
-    asm volatile("fmv.w.x ft0, x0");
-    asm volatile("fmv.w.x ft1, x0");
-    asm volatile("fmv.w.x ft2, x0");
-    asm volatile("fmv.w.x ft3, x0");
-    asm volatile("fmv.w.x ft4, x0");
-    asm volatile("fmv.w.x ft5, x0");
-    asm volatile("fmv.w.x ft6, x0");
-    asm volatile("fmv.w.x ft7, x0");
-    asm volatile("fmv.w.x fs0, x0");
-    asm volatile("fmv.w.x fs1, x0");
-    asm volatile("fmv.w.x fa0, x0");
-    asm volatile("fmv.w.x fa1, x0");
-    asm volatile("fmv.w.x fa2, x0");
-    asm volatile("fmv.w.x fa3, x0");
-    asm volatile("fmv.w.x fa4, x0");
-    asm volatile("fmv.w.x fa5, x0");
-    asm volatile("fmv.w.x fa6, x0");
-    asm volatile("fmv.w.x fa7, x0");
-    asm volatile("fmv.w.x fs2, x0");
-    asm volatile("fmv.w.x fs3, x0");
-    asm volatile("fmv.w.x fs4, x0");
-    asm volatile("fmv.w.x fs5, x0");
-    asm volatile("fmv.w.x fs6, x0");
-    asm volatile("fmv.w.x fs7, x0");
-    asm volatile("fmv.w.x fs8, x0");
-    asm volatile("fmv.w.x fs9, x0");
-    asm volatile("fmv.w.x fs10, x0");
-    asm volatile("fmv.w.x fs11, x0");
-    asm volatile("fmv.w.x ft8, x0");
-    asm volatile("fmv.w.x ft9, x0");
-    asm volatile("fmv.w.x ft10, x0");
-    asm volatile("fmv.w.x ft11, x0");
-}
-
-
-void system_init(void) {
-  // Store the word 0x1 at address 0x8020   
-  asm("li t1, 0x8020");
-  asm("li t0, 0x1");
-  asm("sw t0, 0(t1)");
-  //enable_fpu();
-
-  // Enable PLIC interrupts 7 through 16
-  for (int i = 1; i <= 16; i++) {
-    plic_set_bit(plic_enables, i);
+/* ==== Exception Handlers ==== */
+__attribute__((weak)) void HAL_instructionAddressMisalignedExceptionHandler() {
+  while (1) {
+    printf("Exception: instruction address misaligned\n");
   }
 }
 
+__attribute__((weak)) void HAL_instructionAccessFaultExceptionHandler() {
+  while (1) {
+    printf("Exception: instruction access fault\n");
+  }
+}
 
-/**/
-void UserSoftware_IRQn_Handler() {}
-void SupervisorSoftware_IRQn_Handler() {}
-void HypervisorSoftware_IRQn_Handler() {}
-void MachineSoftware_IRQn_Handler() {}
-void UserTimer_IRQn_Handler() {}
-void SupervisorTimer_IRQn_Handler() {}
-void HypervisorTimer_IRQn_Handler() {}
-void MachineTimer_IRQn_Handler() {}
-void UserExternal_IRQn_Handler() {}
-void SupervisorExternal_IRQn_Handler() {}
-void HypervisorExternal_IRQn_Handler() {}
+__attribute__((weak)) void HAL_illegalInstructionExceptionHandler() {
+  while (1) {
+    printf("Exception: illegal instruction\n");
+  }
+}
 
-void MachineExternal_IRQn_Handler() {
-  uint32_t m_cause;
-  char str[16];
-  sprintf(str, "interrupt: %x\n", m_cause);
-  //HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+__attribute__((weak)) void HAL_breakpointExceptionHandler() {
+  while (1) {
+    printf("Exception: breakpoint\n");
+  }
+}
+
+__attribute__((weak)) void HAL_loadAddressMisalignedExceptionHandler() {
+  while (1) {
+    printf("Exception: load address misaligned\n");
+  }
+}
+
+__attribute__((weak)) void HAL_loadAccessFaultExceptionHandler() {
+  while (1) {
+    printf("Exception: load access fault\n");
+  }
+}
+
+__attribute__((weak)) void HAL_storeAMOAddressMisalignedExceptionHandler() {
+  while (1) {
+    printf("Exception: store/AMO address misaligned\n");
+  }
+}
+
+__attribute__((weak)) void HAL_storeAMOAccessFaultExceptionHandler() {
+  while (1) {
+    printf("Exception: store/AMO access fault\n");
+  }
+}
+
+__attribute__((weak)) void HAL_environmentCallUModeExceptionHandler() {
+  // TODO: implement mode transfer
+  while (1) {
+    printf("Exception: environment call from U-mode\n");
+  }
+}
+
+__attribute__((weak)) void HAL_environmentCallMModeExceptionHandler() {
+//   // TODO: implement mode transfer
+  while (1) {
+    printf("Exception: environment call from M-mode\n");
+  }
+}
+
+__attribute__((weak)) void HAL_instructionPageFaultExceptionHandler() {
+  while (1) {
+    printf("Exception: instruction page fault\n");
+  }
+}
+
+/* ==== Interrupt Callbacks ==== */
+__attribute__((weak)) void HAL_userSoftwareInterruptCallback() {
+  printf("user software irq\n");
+  // HAL_CORE_clearIRQ(UserSoftware_IRQn);
+}
+
+__attribute__((weak)) void HAL_supervisorSoftwareInterruptCallback() {
+  printf("supervisor software irq\n");
+  // HAL_CORE_clearIRQ(SupervisorSoftware_IRQn);
+}
+
+__attribute__((weak)) void HAL_hypervisorSoftwareInterruptCallback() {
+  printf("hypervisor software irq\n");
+  // HAL_CORE_clearIRQ(HypervisorSoftware_IRQn);
+}
+
+__attribute__((weak)) void HAL_machineSoftwareInterruptCallback() {
+  printf("machine software irq\n");
+  uint32_t hartid = HAL_CORE_getHartId();
+  HAL_CLINT_clearSoftwareInterrupt(hartid);
+  // HAL_CORE_clearIRQ(MachineSoftware_IRQn);
+}
+
+__attribute__((weak)) void HAL_userTimerInterruptCallback() {
+  printf("user timer irq\n");
+  // HAL_CORE_clearIRQ(UserTimer_IRQn);
+}
+
+__attribute__((weak)) void HAL_supervisorTimerInterruptCallback() {
+  printf("supervisor timer irq\n");
+  // HAL_CORE_clearIRQ(SupervisorTimer_IRQn);
+}
+
+__attribute__((weak)) void HAL_hypervisorTimerInterruptCallback() {
+  printf("hypervisor timer irq\n");
+  // HAL_CORE_clearIRQ(HypervisorTimer_IRQn);
+}
+
+__attribute__((weak)) void HAL_machineTimerInterruptCallback() {
+  printf("machine timer irq\n");
+  uint32_t hartid = HAL_CORE_getHartId();
+  HAL_CLINT_setTimerInterruptTarget(hartid, 0xFFFFFFFFFFFFFFFF);
+}
+
+__attribute__((weak)) void HAL_machineExternalInterruptCallback() {
+  // printf("machine external irq\n");
+  uint32_t irq_source = HAL_PLIC_claimIRQ(0);
+  // printf("src: %u\n", irq_source);
+  char str[128];
+
+  if (irq_source == TX_FINISH) {
+    sprintf(str, "TX Finished\n");
+    debug_status = DEBUG_TX_FINISH;
+  }
+  if (irq_source == TX_ERROR) {
+    sprintf(str, "TX Error: %u\n", baseband_txerror_message());
+    debug_status = DEBUG_TX_FAIL;
+  }
+  if (irq_source == RX_FINISH) {
+    sprintf(str, "** RX Finish\n");
+    debug_status = DEBUG_RX_FINISH;
+  }
+  if (irq_source == RX_START) {
+    sprintf(str, "** RX Start\n");
+  }
+  if (irq_source == RX_ERROR) {
+    sprintf(str, "** RX Error: %u\n", baseband_rxerror_message());
+    debug_status = DEBUG_RX_FAIL;
+  }
+
+  // HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+  HAL_PLIC_completeIRQ(0, irq_source);
+}
+
+void __init_tls(void) {
+  register char *__thread_self __asm__ ("tp");
+  extern char __tdata_start[];
+  extern char __tbss_offset[];
+  extern char __tdata_size[];
+  extern char __tbss_size[];
+
+  memcpy(__thread_self, __tdata_start, (size_t)__tdata_size);
+  memset(__thread_self + (size_t)__tbss_offset, 0, (size_t)__tbss_size);
+}
+
+uintptr_t trap_handler(uintptr_t m_epc, uintptr_t m_cause, uintptr_t m_tval, uintptr_t regs[32]) {
+
+  char str[32];
+  switch (m_cause) {
+    case 0x00000000UL:      // instruction address misaligned
+      HAL_instructionAddressMisalignedExceptionHandler();
+      break;
+    case 0x00000001UL:      // instruction access fault
+      HAL_instructionAccessFaultExceptionHandler();
+      break;
+    case 0x00000002UL:      // illegal instruction
+      HAL_illegalInstructionExceptionHandler();
+      break;
+    case 0x00000003UL:      // breakpoint
+      HAL_breakpointExceptionHandler();
+      break;
+    case 0x00000004UL:      // load address misaligned
+      HAL_loadAddressMisalignedExceptionHandler();
+      break;
+    case 0x00000005UL:      // load access fault
+      HAL_loadAccessFaultExceptionHandler();
+      break;
+    case 0x00000006UL:      // store/AMO address misaligned
+      HAL_storeAMOAddressMisalignedExceptionHandler();
+      break;
+    case 0x00000007UL:      // store/AMO access fault
+      HAL_storeAMOAccessFaultExceptionHandler();
+      break;
+    case 0x00000008UL:      // environment call from U-mode
+      HAL_environmentCallUModeExceptionHandler();
+      break;
+    case 0x0000000BUL:      // environment call from M-mode
+      HAL_environmentCallMModeExceptionHandler();
+      break;
+    case 0x0000000CUL:      // instruction page fault
+      HAL_instructionPageFaultExceptionHandler();
+      break;
+    case (1UL << (RISCV_XLEN-1)) | 0x00000003UL:      // machine software interrupt
+      HAL_machineSoftwareInterruptCallback();
+      break;
+    case (1UL << (RISCV_XLEN-1)) | 0x00000007UL:      // machine timer interrupt
+      HAL_machineTimerInterruptCallback();
+      break;
+    case (1UL << (RISCV_XLEN-1)) | 0x0000000BUL:      // machine external interrupt
+      HAL_machineExternalInterruptCallback();
+      break;
+    default:
+      break;
+  }
+  return m_epc;
 }
 
 
-void trap_handler(void) {  
-  uint32_t m_cause;
-  asm volatile("csrr %0, mcause" : "=r"(m_cause));
+// void trap_handler(void) {  
+//   //sim_finish();
 
-  char str[128];
-  //sprintf(str, "\nintr mcause: %x\n", m_cause);
-  //HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+//   uint32_t m_cause;
+//   asm volatile("csrr %0, mcause" : "=r"(m_cause));
 
-  uint8_t is_interrupt = READ_BITS(m_cause, 0x80000000) ? 1 : 0;
+//   char str[128];
+//   sprintf(str, "\nintr mcause: %x\n", m_cause);
+//   HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
 
-  if (is_interrupt) {
-    uint32_t irqSource = plic_claim_irq(0);
-    if (m_cause == 0x80000003) {
-      // machine software interrupt
-      CLINT->MSIP = 0;
-      //plic_complete_irq(0, irqSource);
-      //return;
-    }
-    if (m_cause == 0x80000007) {
-      // machine timer interrupt
-      CLINT->MTIMECMP = 0xFFFFFFFFFFFFFFFF;
-    }
-    if (m_cause == 0x8000000B) {
-      // machine external interrupt
+//   uint8_t is_interrupt = READ_BITS(m_cause, 0x80000000) ? 1 : 0;
+
+//   if (is_interrupt) {
+//     if (m_cause == 0x80000003) {
+//       // machine software interrupt
+//       CLINT->MSIP = 0;
+//     }
+//     if (m_cause == 0x80000007) {
+//       // machine timer interrupt
+//       CLINT->MTIMECMP = 0xFFFFFFFFFFFFFFFF;
+//     }
+//     if (m_cause == 0x8000000B) {
+//       // machine external interrupt
       
-    }
+//     }
     
-    
+//     uint32_t irqSource = plic_claim_irq(0);
   
-    sprintf(str, "src: %d\n", irqSource);
-    HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+//     sprintf(str, "src: %d\n", irqSource);
+//     HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
   
-    if (irqSource == TX_FINISH) {
-      sprintf(str, "TX Finished\n");
-      debug_status = DEBUG_TX_FINISH;
-    }
-    if (irqSource == TX_ERROR) {
-      sprintf(str, "TX Error: %u\n", baseband_txerror_message());
-      debug_status = DEBUG_TX_FAIL;
-    }
-    if (irqSource == RX_FINISH) {
-      sprintf(str, "** RX Finish\n");
-      debug_status = DEBUG_RX_FINISH;
-    }
-    if (irqSource == RX_START) {
-      sprintf(str, "** RX Start\n");
-    }
-    if (irqSource == RX_ERROR) {
-      sprintf(str, "** RX Error: %u\n", baseband_rxerror_message());
-      debug_status = DEBUG_RX_FAIL;
-    }
-    if (irqSource == IF_THRESHOLD) {
-      sprintf(str, "** IF Threshold\n");
-    }
+//     if (irqSource == TX_FINISH) {
+//       sprintf(str, "TX Finished\n");
+//       debug_status = DEBUG_TX_FINISH;
+//     }
+//     if (irqSource == TX_ERROR) {
+//       sprintf(str, "TX Error: %u\n", baseband_txerror_message());
+//       debug_status = DEBUG_TX_FAIL;
+//     }
+//     if (irqSource == RX_FINISH) {
+//       sprintf(str, "** RX Finish\n");
+//       debug_status = DEBUG_RX_FINISH;
+//     }
+//     if (irqSource == RX_START) {
+//       sprintf(str, "** RX Start\n");
+//     }
+//     if (irqSource == RX_ERROR) {
+//       sprintf(str, "** RX Error: %u\n", baseband_rxerror_message());
+//       debug_status = DEBUG_RX_FAIL;
+//     }
 
-    //HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-    plic_complete_irq(0, irqSource);
-  }
-}
+//     HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+//     plic_complete_irq(0, irqSource);
+//   }
+// }
 

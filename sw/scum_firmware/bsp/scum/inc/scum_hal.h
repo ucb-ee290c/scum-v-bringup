@@ -7,6 +7,8 @@
 extern "C" {
 #endif
 
+#include "rv_arch.h"
+#include "rv_common.h"
 #include "scum.h"
 #include "scum_hal_core.h"
 #include "scum_hal_clint.h"
@@ -16,7 +18,7 @@ extern "C" {
 #include "scum_hal_uart.h"
 
 
-#define SYS_CLK_FREQ  200000                 // Hz
+#define SYS_CLK_FREQ  350000000                 // Hz
 // Division of 100
 #define MTIME_FREQ    (SYS_CLK_FREQ / 100)
 #define MTIME_PER_US  (MTIME_FREQ / 1000000)
