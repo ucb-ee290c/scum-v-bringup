@@ -1,5 +1,7 @@
-#include "sensor_adc_test.h"
+#include "sim_utils.h"
 #include "sensor_adc.h"
+#include "sensor_adc_test.h"
+
 
 #define BUF_SIZE 512
 char str[512];
@@ -64,17 +66,16 @@ void kick_oscillator()
   uint8_t num_kicks = 100;
   for (int i = 0; i < num_kicks; i++)
   {
+    if (i % 5 == 0) {
+      sprintf(str, "Oscillator kick %d\r\n", i);
+      HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+    }
     sensor_adc_set_tuning0(khigh);
     HAL_delay(10);
     sensor_adc_set_tuning0(klow);
     HAL_delay(10);
   }
 
-}
-
-void set_idac(uint8_t idac_val)
-{
-  sensor_adc_set_tuning0(idac_val);
 }
 
 void run_sensor_adc_test()
@@ -99,50 +100,38 @@ void run_sensor_adc_test()
 int main() 
 {
   HAL_init();
-  HAL_CORE_enableInterrupt();
-  HAL_CORE_enableIRQ(MachineExternal_IRQn);
+  HAL_CORE_enableInterrupt(MachineExternalInterrupt);
+  // HAL_CORE_enableIRQ(MachineExternal_IRQn);
 
-  system_init();
+  // system_init();
   
   UART_InitTypeDef UART_init_config;
-  UART_init_config.baudrate = 1000;
-  UART_init_config.tx_wm = 1;
-  
+  UART_init_config.baudrate = 921600;
+  UART_init_config.mode = UART_MODE_TX_RX;
+  UART_init_config.stopbits = UART_STOPBITS_2;
   HAL_UART_init(UART0, &UART_init_config);
-  sprintf(str, "SCuM-V23 says, 'I'm alive!'\r\n");
+  
+  sprintf(str, "SCuM-V25 says, 'I'm alive!'\r\n");
   HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
 
-  uint32_t idle_count = 0;
-  sprintf(str, "Idling on startup: %d\r\n", idle_count);
-  HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-  
-  uint32_t CLOCKS_TO_WAIT = 2000000;
-  for(idle_count = 0; idle_count < CLOCKS_TO_WAIT; idle_count++)
+  uint16_t idle_count = 0;
+  for(idle_count = 0; idle_count < 10; idle_count++)
   {
-    asm("nop");
+    sprintf(str, "Idling on startup: %d\r\n", idle_count);
+    HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+    HAL_delay(10);
   }
 
-  // Lower 6 bits are IDAC, upper 2 bits are P/N protection FET shorted
-  sensor_adc_set_tuning0(0b001000); 
-
+  kick_oscillator();
   //log_counters();
-  sensor_adc_set_chop_clk_div_1(1);
-  sensor_adc_set_chop_clk_div_2(1);
-  HAL_delay(100);
-  sensor_adc_set_chop_clk_div_1(1200);
-  sensor_adc_set_chop_clk_div_2(1200);
-  sensor_adc_set_chop_clk_en(0b11);
-
-
-  // ADC_DSP_CTRL<0> - Enable dechopper in DSP chain
-  // ADC_DSP_CTRL<1> - Select chopper clock used in the
-  // dechopper ADC_DSP_CTRL<5:2> - Dechopping clock
-  // delay, from 0 to 15 cycles
-  uint8_t digital_dechop_enable = 0;
-  uint8_t dechop_clock_select = 0;
-  uint8_t dechop_delay = 0;
-  uint8_t dsp_control = (digital_dechop_enable << 1) | (dechop_clock_select << 2) | dechop_delay;
-  sensor_adc_set_dsp_control(dsp_control);
-
-  //run_sensor_adc_test();
+  run_sensor_adc_test();
+  sim_finish(); 
 }
+
+void __attribute__((weak, noreturn)) __main(void) {
+  while (1) {
+    asm volatile ("wfi");
+  }
+}
+
+

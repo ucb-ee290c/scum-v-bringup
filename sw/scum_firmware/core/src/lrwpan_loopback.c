@@ -67,12 +67,11 @@ void run_lrwpan_loopback()
   sprintf(str, "-----LRWPAN Loopback Test-----\r\n");
   HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
 
-  #define TIMEOUT_US 50000
+  #define TIMEOUT_US 3
   uint32_t us_count = 0, bytes_read;
   uint8_t *rx_packet = packet + NUM_BYTES + 4;
 
   while (1) {
-    HAL_delay(1);
     us_count += 1;
     if (us_count > TIMEOUT_US) {
       sprintf(str, "Timeout after %u us!\r\n", us_count);
@@ -89,7 +88,7 @@ void run_lrwpan_loopback()
       case DEBUG_TX_FAIL:
       case DEBUG_RX_FAIL:
         // TODO: Exit with error code
-        //sim_finish();
+        sim_finish();
         return;
 
       case DEBUG_RX_FINISH:
@@ -102,7 +101,7 @@ void run_lrwpan_loopback()
         }
         sprintf(str, "\r\n");
         HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-        //sim_finish();
+        sim_finish();
         return;
       
       default:
@@ -113,20 +112,22 @@ void run_lrwpan_loopback()
 
 int main() {
   HAL_init();
-  HAL_CORE_enableInterrupt();
-  HAL_CORE_enableIRQ(MachineExternal_IRQn);
+  HAL_CORE_enableInterrupt(MachineExternalInterrupt);
+  HAL_CORE_enableInterrupt(MachineExternalInterrupt);
+  // HAL_CORE_enableIRQ(MachineExternal_IRQn);
 
-  system_init();
+  // system_init();
   
   //HAL_GPIO_init(GPIOA, GPIO_PIN_0);
   //HAL_GPIO_writePin(GPIOA, GPIO_PIN_0, 0);
 
   UART_InitTypeDef UART_init_config;
-  UART_init_config.baudrate = 1000;
-  UART_init_config.tx_wm = 1;
-  
+  UART_init_config.baudrate = 921600;
+  UART_init_config.mode = UART_MODE_TX_RX;
+  UART_init_config.stopbits = UART_STOPBITS_2;
   HAL_UART_init(UART0, &UART_init_config);
-  sprintf(str, "SCuM-V22 says, 'I'm alive!'\r\n");
+
+  sprintf(str, "SCuM-V25 says, 'I'm alive!'\r\n");
   HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
 
   // Set scum-v tuning registers
@@ -140,4 +141,10 @@ int main() {
   uint8_t counter = 0;
   uint8_t adc_i_data = 0;
   run_lrwpan_loopback();
+}
+
+void __attribute__((weak, noreturn)) __main(void) {
+  while (1) {
+   asm volatile ("wfi");
+  }
 }
