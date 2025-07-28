@@ -31,14 +31,16 @@ void print_baseband_status0() {
 
 int main() {
   HAL_init();
-  system_init();
+  // system_init();
 
   UART_InitTypeDef UART_init_config;
   UART_init_config.baudrate = 115200;
-
+  UART_init_config.mode = UART_MODE_TX_RX;
+  UART_init_config.stopbits = UART_STOPBITS_2;
   HAL_UART_init(UART0, &UART_init_config);
+
   print_baseband_status0();
-  sprintf(str, "SCuM-V23 says, 'I'm alive!'\r\n");
+  sprintf(str, "SCuM-V25 says, 'I'm alive!'\r\n");
   HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
 
   // Set SCuM-V tuning registers.
@@ -53,3 +55,10 @@ int main() {
     print_baseband_status0();
   }
 }
+
+void __attribute__((weak, noreturn)) __main(void) {
+  while (1) {
+    asm volatile ("wfi");
+  }
+}
+

@@ -123,10 +123,10 @@ void run_afetuning_test() {
 int main()
 {
     HAL_init();
-    HAL_CORE_enableInterrupt();
-    HAL_CORE_enableIRQ(MachineExternal_IRQn);
+    HAL_CORE_enableGlobalInterrupt();
+    HAL_CORE_enableInterrupt(MachineExternalInterrupt);
 
-    system_init();
+    // system_init();
 
     UART_InitTypeDef uart_cfg = {
         .baudrate = 921600,
@@ -147,4 +147,10 @@ int main()
     run_afetuning_test();
     sim_finish();
     return 0;
+}
+
+void __attribute__((weak, noreturn)) __main(void) {
+    while (1) {
+        asm volatile ("wfi");
+    }
 }

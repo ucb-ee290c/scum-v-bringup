@@ -5,13 +5,13 @@ TARGETS = power_test lrwpan_loopback ble_loopback template simple afe_test baseb
 #################################
 
 # SiFive Toolchain
-PREFIX = riscv64-unknown-elf-
+# PREFIX = riscv64-unknown-elf-
 
 # Nuclei Toolchain
 #PREFIX = riscv-nuclei-elf-
 
 # xPack Toolchain
-#PREFIX = riscv-none-elf-
+PREFIX = riscv-none-elf-
 
 
 CC = $(PREFIX)gcc
