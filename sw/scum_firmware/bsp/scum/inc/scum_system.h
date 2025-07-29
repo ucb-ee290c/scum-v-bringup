@@ -11,11 +11,12 @@ extern "C" {
 #include <string.h>
 
 enum IRQ_SOURCE {
-  RX_ERROR = 5,
-  RX_START = 29,
-  RX_FINISH = 26,
-  TX_ERROR = 8,
-  TX_FINISH = 28
+  RX_ERROR = 10,
+  RX_START = 11,
+  RX_FINISH = 12,
+  TX_ERROR = 13,
+  TX_FINISH = 14,
+  IF_COUNTER_THRESHOLD = 15
 };
 
 enum DEBUG_STATUS {

@@ -146,7 +146,7 @@ c000000 - 10000000 ARW   interrupt-controller@c000000
 #define LBWIF_RAM_BASE          0x10000000
 #define UART_BASE               0x10020000
 #define GPIO_BASE               0x10010000
-#define QSPI_BASE               0x10030000  // TODO: check
+#define QSPI_BASE               0x10030000
 #define FLASH_BASE              0x20000000
 
 #define DTIM_BASE               0x80000000

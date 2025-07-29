@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include "mmio.h"
 
-// #define AFE_BASE                    0x6000
+ #define AFE_BASE                    0x6000
 // #define AFE_ADC_OUTPUT_REG          (AFE_BASE + 0x00)
 // // #define AFE_DIVIDER_REF_CONFIG      (AFE_BASE + 0x02)
 // // #define AFE_DIVIDER_SAMPLE_CONFIG   (AFE_BASE + 0x08)
