@@ -23,8 +23,8 @@
 #ifdef __riscv_xlen
 #define RISCV_XLEN __riscv_xlen
 #else
-#warning "__riscv_xlen not defined, defaulting to 64"
-#define RISCV_XLEN 64
+#warning "__riscv_xlen not defined, defaulting to 32"
+#define RISCV_XLEN 32
 #endif
 
 #if RISCV_XLEN == 64

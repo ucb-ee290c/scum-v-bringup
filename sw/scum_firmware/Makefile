@@ -99,8 +99,8 @@ TARGET_BIN = $(foreach target, $(TARGETS), $(BUILD_DIR)$(target).bin)
 #################################
 
 # MCU Settings
-ARCH = rv64imafdc
-ABI = lp64d
+ARCH = rv32imafc
+ABI = ilp32
 CODEMODEL = medany
 LD_SCRIPT = $(SRC_DIR)scum.ld
 

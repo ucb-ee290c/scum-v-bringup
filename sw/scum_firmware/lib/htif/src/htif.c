@@ -9,9 +9,15 @@ volatile uint64_t fromhost __attribute__ ((section(".htif")));
 
 static spinlock_t htif_lock = SPINLOCK_INIT;
 
+#if __riscv_xlen == 64
 long htif_syscall(uint64_t a0, uint64_t a1, uint64_t a2, unsigned long n) {
   volatile uint64_t buf[8];
   uint64_t sc;
+#else
+long htif_syscall(uint32_t a0, uint32_t a1, uint32_t a2, unsigned long n) {
+  volatile uint32_t buf[8];
+  uint32_t sc;
+#endif
 
   buf[0] = n;
   buf[1] = a0;
