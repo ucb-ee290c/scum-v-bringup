@@ -49,6 +49,9 @@ typedef enum {
 
 AppState app_state = APP_STATE_INVALID;
 
+GPIO_PinState tl_in_ready_prev_state = GPIO_PIN_RESET;
+GPIO_PinState tl_in_ready_state = GPIO_PIN_RESET;
+
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
   if (app_state != APP_STATE_IDLE) {
     return;
@@ -63,7 +66,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
     tl.tx_frame.address = *(uint32_t *)(serial_rx_buffer + 4);
     tl.tx_frame.data    = *(uint64_t *)(serial_rx_buffer + 8);
     tl.tx_frame.corrupt = (*(serial_rx_buffer + 1) >> 7) & 0b1;
-    tl.tx_frame.mask    = *(serial_rx_buffer + 3);
+    tl.tx_frame.tl_union    = *(serial_rx_buffer + 3);
     tl.tx_frame.last    = 1;
 
     app_state = APP_STATE_FRAME_PENDING;
@@ -92,9 +95,14 @@ void APP_main() {
   // Poll the TL clock.
   GPIO_PinState tl_clk_state = HAL_GPIO_ReadPin(TL_CLK_GPIO_Port, TL_CLK_Pin);
 
+
   // Process TL transactions on the positive clock edge.
   if (tl_clk_state == GPIO_PIN_SET && tl_clk_prev_state == GPIO_PIN_RESET) {
+    tl_in_ready_state = HAL_GPIO_ReadPin(TL_IN_READY_GPIO_Port, TL_IN_READY_Pin);
+    
+    tl.tl_in_ready_prev_state = (uint16_t)tl_in_ready_prev_state;
     TL_update(&tl);
+    tl_in_ready_prev_state = tl_in_ready_state;
   }
 
   if (tl_clk_state != tl_clk_prev_state) {
@@ -114,8 +122,8 @@ void APP_main() {
         *(serial_tx_buffer) = tl.rx_frame.chanid;
         *(serial_tx_buffer + 1) = (tl.rx_frame.corrupt << 7) | (tl.rx_frame.param << 4) | tl.rx_frame.opcode;
         *(serial_tx_buffer + 2) = tl.rx_frame.size;
-        *(serial_tx_buffer + 3) = tl.rx_frame.mask;
-        *(uint32_t *)(serial_tx_buffer + 4) = tl.rx_frame.address;
+        *(serial_tx_buffer + 3) = tl.rx_frame.tl_union;
+        *(uint32_t *)(serial_tx_buffer + 4) = (uint32_t)tl.rx_frame.address;
         *(uint64_t *)(serial_tx_buffer + 8) = tl.rx_frame.data;
 
         HAL_UART_Transmit(&huart3, serial_tx_buffer, 16, 1000);

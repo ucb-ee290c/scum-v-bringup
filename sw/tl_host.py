@@ -15,7 +15,7 @@ TILE_RESET_CTRL_BASE = 0x00100000
 CLINT_BASE = 0x02000000
 PLIC_BASE = 0x0C000000
 LBWIF_RAM_BASE = 0x10000000
-UART_BASE = 0x54000000
+UART_BASE = 0x10020000
 GPIO_BASE = 0x10012000
 QSPI_BASE = 0x10040000
 FLASH_BASE = 0x20000000
@@ -46,7 +46,7 @@ class TileLinkHost:
 
     def read_address(self, address: int, verbose: bool = True) -> int:
         """Reads the data at the given address."""
-        buffer = struct.pack("<BBBBLL", TL_CHANID_CH_A, TL_OPCODE_A_GET, 2,
+        buffer = struct.pack("<BBBBLQ", TL_CHANID_CH_A, TL_OPCODE_A_GET, 2,
                              0b11111111, address, 0x00)
         if verbose:
             print(f"[TL Get] <address: {address:08X}, size: 4>")
@@ -69,7 +69,7 @@ class TileLinkHost:
                       data: int,
                       verbose: bool = True) -> None:
         """Writes the data to the given address."""
-        buffer = struct.pack("<BBBBLL", TL_CHANID_CH_A,
+        buffer = struct.pack("<BBBBLQ", TL_CHANID_CH_A,
                              TL_OPCODE_A_PUTFULLDATA, 2, 0b11111111, address,
                              data)
         if verbose:
@@ -165,7 +165,7 @@ class TileLinkHost:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Script for the TileLink host.")
-    parser.add_argument("-p", "--port", default="/dev/tty.usbmodem103")
+    parser.add_argument("-p", "--port", default="COM3")
     parser.add_argument("-t", "--target", default="template")
     args = parser.parse_args()
 
@@ -178,11 +178,11 @@ if __name__ == "__main__":
         binary_path = f"./scum_firmware/build/{args.target}.bin"
 
     tl_host = TileLinkHost(serial)
-    #tl_host.read_uart_registers()
+    tl_host.read_uart_registers()
     #tl_host.enable_uart_tx()
     #tl_host.send_hello_world()
     #tl_host.read_uart_registers()
-    time.sleep(0.1)
-    tl_host.flash_binary(binary_path)
-    time.sleep(0.02)
-    tl_host.trigger_software_interrupt()
+    # time.sleep(0.1)
+    # tl_host.flash_binary(binary_path)
+    # time.sleep(0.02)
+    # tl_host.trigger_software_interrupt()
