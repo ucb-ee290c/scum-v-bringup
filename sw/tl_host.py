@@ -39,6 +39,62 @@ def isWindows() -> bool:
     return os.name == "nt"
 
 
+def print_tilelink_packet(buffer: bytes, direction: str = "RX") -> None:
+    """Prints detailed information about a TileLink packet."""
+    if len(buffer) != 16:
+        print(f"[TL {direction} Packet] ERROR: Invalid packet size {len(buffer)} bytes")
+        return
+    
+    # Unpack the packet using names that reflect the C-firmware's packing
+    chanid, opcode_packed, size, union_field, address, data = struct.unpack("<BBBBLQ", buffer)
+    
+    # Print raw bytes
+    hex_bytes = ' '.join([f'{b:02X}' for b in buffer])
+    print(f"[TL {direction} Packet] Raw bytes: {hex_bytes}")
+    
+    # Decode the packed opcode byte from the C firmware
+    opcode = opcode_packed & 0b111
+    param = (opcode_packed >> 4) & 0b111
+    corrupt = (opcode_packed >> 7) & 0b1
+
+    # Print decoded fields
+    print(f"[TL {direction} Packet] Decoded:")
+    print(f"  Channel ID: {chanid}")
+    print(f"  Opcode: {opcode} ({get_opcode_name(chanid, opcode)})")
+    print(f"  Param: {param}")
+    print(f"  Size: {size} (2^{size} = {2**size if size < 10 else 'invalid'} bytes)")
+    
+    # The 4th byte (union_field) means different things on different channels
+    if chanid == TL_CHANID_CH_A:
+        print(f"  Mask: 0b{union_field:08b}")
+    elif chanid == TL_CHANID_CH_D:
+        print(f"  Denied: {bool(union_field)}")
+
+    print(f"  Corrupt: {bool(corrupt)}")
+    print(f"  Address: 0x{address:08X}")
+    print(f"  Data: 0x{data:016X}")
+
+
+def get_opcode_name(chanid: int, opcode: int) -> str:
+    """Returns the human-readable name for TileLink opcodes."""
+    if chanid == TL_CHANID_CH_A:
+        if opcode == TL_OPCODE_A_PUTFULLDATA:
+            return "PutFullData"
+        elif opcode == TL_OPCODE_A_GET:
+            return "Get"
+        else:
+            return f"Unknown Ch A opcode {opcode}"
+    elif chanid == TL_CHANID_CH_D:
+        if opcode == TL_OPCODE_D_ACCESSACK:
+            return "AccessAck"
+        elif opcode == TL_OPCODE_D_ACCESSACKDATA:
+            return "AccessAckData"
+        else:
+            return f"Unknown Ch D opcode {opcode}"
+    else:
+        return f"Unknown channel {chanid}"
+
+
 class TileLinkHost:
     """Interface to the TileLink bus."""
     def __init__(self, serial: serial.Serial) -> None:
@@ -46,18 +102,27 @@ class TileLinkHost:
 
     def read_address(self, address: int, verbose: bool = True) -> int:
         """Reads the data at the given address."""
-        buffer = struct.pack("<BBBBLQ", TL_CHANID_CH_A, TL_OPCODE_A_GET, 2,
-                             0b11111111, address, 0x00)
+        # Pack opcode and other fields into a single byte as the firmware expects
+        opcode_packed = TL_OPCODE_A_GET & 0b111
+        buffer = struct.pack("<BBBBLQ", TL_CHANID_CH_A, opcode_packed, 2, 0b11111111, address, 0x00)
+        
         if verbose:
             print(f"[TL Get] <address: {address:08X}, size: 4>")
+            print_tilelink_packet(buffer, "TX")
         self.serial.write(buffer)
 
         buffer = self.serial.read(16)
-        print(buffer)
-        chanid, opcode, size, denied, address, data = struct.unpack(
+        print_tilelink_packet(buffer, "RX")
+        
+        # Unpack the response, decoding the packed opcode byte
+        chanid, opcode_packed, size, union_field, address, data = struct.unpack(
             "<BBBBLQ", buffer)
+        opcode = opcode_packed & 0b111
+        
         if opcode == TL_OPCODE_D_ACCESSACKDATA:
             if verbose:
+                # The 4th byte is the 'denied' flag on a D channel response
+                denied = bool(union_field)
                 print(f"[TL AccessAckData] <size: 4, data: 0x{data:016X}, "
                       f"denied: {denied}>")
             return data
@@ -69,17 +134,24 @@ class TileLinkHost:
                       data: int,
                       verbose: bool = True) -> None:
         """Writes the data to the given address."""
-        buffer = struct.pack("<BBBBLQ", TL_CHANID_CH_A,
-                             TL_OPCODE_A_PUTFULLDATA, 2, 0b11111111, address,
-                             data)
+        # Pack opcode and other fields into a single byte as the firmware expects
+        opcode_packed = TL_OPCODE_A_PUTFULLDATA & 0b111
+        buffer = struct.pack("<BBBBLQ", TL_CHANID_CH_A, opcode_packed, 2, 0b11111111, address, data)
+        
         if verbose:
             print(f"[TL PutFullData] <address: 0x{address:08X}, size: 4, "
                   f"data: 0x{data:016X}>")
+            print_tilelink_packet(buffer, "TX")
         self.serial.write(buffer)
 
         buffer = self.serial.read(16)
-        chanid, opcode, size, denied, address, data = struct.unpack(
+        print_tilelink_packet(buffer, "RX")
+        
+        # Unpack the response, decoding the packed opcode byte
+        chanid, opcode_packed, size, _, _, _ = struct.unpack(
             "<BBBBLQ", buffer)
+        opcode = opcode_packed & 0b111
+        
         if opcode == TL_OPCODE_D_ACCESSACK:
             if verbose:
                 print("[TL AccessAck]")

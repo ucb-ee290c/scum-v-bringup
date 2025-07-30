@@ -10,37 +10,27 @@
 
 void TL_update(TileLinkController *tl) {
   if (tl->tx_pending) {
-    if (tl->tx_entry == 0) {
-      tl->tx_entry = 1;
-      HAL_GPIO_WritePin(TL_IN_VALID_GPIO_Port, TL_IN_VALID_Pin, 1);
-      HAL_GPIO_WritePin(TL_OUT_READY_GPIO_Port, TL_OUT_READY_Pin, 1);
-      return;
-    }
     // Check if receiver is ready before sending the current bit
     if (tl->tl_in_ready_prev_state == 1) {
-      // Send the current bit
-      //HAL_GPIO_WritePin(TL_IN_DATA_GPIO_Port, TL_IN_DATA_Pin, 0);
+      // Send the current bit (no setup cycle - start with real data immediately)
       HAL_GPIO_WritePin(TL_IN_DATA_GPIO_Port, TL_IN_DATA_Pin, tl->tx_frame.buffer[tl->tx_bit_offset]);
       HAL_GPIO_WritePin(TL_IN_VALID_GPIO_Port, TL_IN_VALID_Pin, 1);
-//      if (tl->tx_bit_offset == 0) {
-//        // HAL_GPIO_WritePin(TL_OUT_READY_GPIO_Port, TL_OUT_READY_Pin, 1);
-//        HAL_GPIO_WritePin(TL_IN_VALID_GPIO_Port, TL_IN_VALID_Pin, 1);
-//      }
 
       // Increment offset after sending the bit
       tl->tx_bit_offset += 1;
 
-      // Check if we've sent all bits
+      // Check if we've sent all bits - but keep VALID high for one more cycle
       if (tl->tx_bit_offset == TL_SERDES_TOTAL_SIZE) {
+        // Don't drop VALID yet - FPGA needs one full cycle to capture the last bit
+        tl->tx_bit_offset++; // Go to 165 to mark "termination cycle"
+      } else if (tl->tx_bit_offset > TL_SERDES_TOTAL_SIZE) {
+        // NOW it's safe to drop VALID - FPGA has captured all 164 bits
         HAL_GPIO_WritePin(TL_IN_VALID_GPIO_Port, TL_IN_VALID_Pin, 0);
         tl->tx_pending = 0;
         tl->tx_finished = 1;
       }
     }
-    else {
-    	// HAL_GPIO_WritePin(TL_IN_VALID_GPIO_Port, TL_IN_VALID_Pin, 0);
-    }
-    // If receiver not ready, don't increment offset - will retry next call
+    // If receiver not ready, don't do anything - wait for next cycle
   }
 
   else if (tl->rx_pending) {
@@ -63,34 +53,34 @@ void TL_update(TileLinkController *tl) {
 
 void TL_serialize(TileLinkFrame *frame) {
   for (uint16_t i=0; i<TL_SERDES_LAST_SIZE; i+=1) {
-    frame->buffer[i] = (frame->last >> i) & 0b1;
+    frame->buffer[i+TL_SERDES_LAST_OFFSET] = (frame->last >> i) & 0b1;
   }
   for (uint16_t i=0; i<TL_SERDES_UNION_SIZE; i+=1) {
-    frame->buffer[i+TL_SERDES_LAST_OFFSET] = (frame->tl_union >> i) & 0b1;
+    frame->buffer[i+TL_SERDES_UNION_OFFSET] = (frame->tl_union >> i) & 0b1;
   }
   for (uint16_t i=0; i<TL_SERDES_CORRUPT_SIZE; i+=1) {
-    frame->buffer[i+TL_SERDES_UNION_OFFSET] = (frame->corrupt >> i) & 0b1;
+    frame->buffer[i+TL_SERDES_CORRUPT_OFFSET] = (frame->corrupt >> i) & 0b1;
   }
   for (uint16_t i=0; i<TL_SERDES_DATA_SIZE; i+=1) {
-    frame->buffer[i+TL_SERDES_CORRUPT_OFFSET] = (frame->data >> i) & 0b1;
+    frame->buffer[i+TL_SERDES_DATA_OFFSET] = (frame->data >> i) & 0b1;
   }
   for (uint16_t i=0; i<TL_SERDES_ADDRESS_SIZE; i+=1) {
-    frame->buffer[i+TL_SERDES_DATA_OFFSET] = (frame->address >> i) & 0b1;
+    frame->buffer[i+TL_SERDES_ADDRESS_OFFSET] = (frame->address >> i) & 0b1;
   }
   for (uint16_t i=0; i<TL_SERDES_SOURCE_SIZE; i+=1) {
-    frame->buffer[i+TL_SERDES_ADDRESS_OFFSET] = (frame->source >> i) & 0b1;
+    frame->buffer[i+TL_SERDES_SOURCE_OFFSET] = (frame->source >> i) & 0b1;
   }
   for (uint16_t i=0; i<TL_SERDES_SIZE_SIZE; i+=1) {
-    frame->buffer[i+TL_SERDES_SOURCE_OFFSET] = (frame->size >> i) & 0b1;
+    frame->buffer[i+TL_SERDES_SIZE_OFFSET] = (frame->size >> i) & 0b1;
   }
   for (uint16_t i=0; i<TL_SERDES_PARAM_SIZE; i+=1) {
-    frame->buffer[i+TL_SERDES_SIZE_OFFSET] = (frame->param >> i) & 0b1;
+    frame->buffer[i+TL_SERDES_PARAM_OFFSET] = (frame->param >> i) & 0b1;
   }
   for (uint16_t i=0; i<TL_SERDES_OPCODE_SIZE; i+=1) {
-    frame->buffer[i+TL_SERDES_PARAM_OFFSET] = (frame->opcode >> i) & 0b1;
+    frame->buffer[i+TL_SERDES_OPCODE_OFFSET] = (frame->opcode >> i) & 0b1;
   }
   for (uint16_t i=0; i<TL_SERDES_CHANID_SIZE; i+=1) {
-    frame->buffer[i+TL_SERDES_OPCODE_OFFSET] = (frame->chanid >> i) & 0b1;
+    frame->buffer[i+TL_SERDES_CHANID_OFFSET] = (frame->chanid >> i) & 0b1;
   }
 }
 
@@ -107,39 +97,44 @@ void TL_deserialize(TileLinkFrame *frame) {
   frame->last = 0;
 
   for (uint16_t i=0; i<TL_SERDES_LAST_SIZE; i+=1) {
-    frame->last |= ((frame->buffer[i] & 0b1) << i);
+    frame->last |= ((frame->buffer[i+TL_SERDES_LAST_OFFSET] & 0b1) << i);
   }
   for (uint16_t i=0; i<TL_SERDES_UNION_SIZE; i+=1) {
-    frame->tl_union |= ((frame->buffer[i+TL_SERDES_LAST_OFFSET] & 0b1) << i);
+    frame->tl_union |= ((frame->buffer[i+TL_SERDES_UNION_OFFSET] & 0b1) << i);
   }
   for (uint16_t i=0; i<TL_SERDES_CORRUPT_SIZE; i+=1) {
-    frame->corrupt |= ((frame->buffer[i+TL_SERDES_UNION_OFFSET] & 0b1) << i);
+    frame->corrupt |= ((frame->buffer[i+TL_SERDES_CORRUPT_OFFSET] & 0b1) << i);
   }
   for (uint16_t i=0; i<TL_SERDES_DATA_SIZE; i+=1) {
-    frame->data |= ((uint64_t)(frame->buffer[i+TL_SERDES_CORRUPT_OFFSET] & 0b1) << i);
+    frame->data |= ((uint64_t)(frame->buffer[i+TL_SERDES_DATA_OFFSET] & 0b1) << i);
   }
   for (uint16_t i=0; i<TL_SERDES_ADDRESS_SIZE; i+=1) {
-    frame->address |= ((uint64_t)(frame->buffer[i+TL_SERDES_DATA_OFFSET] & 0b1) << i);
+    frame->address |= ((uint64_t)(frame->buffer[i+TL_SERDES_ADDRESS_OFFSET] & 0b1) << i);
   }
   for (uint16_t i=0; i<TL_SERDES_SOURCE_SIZE; i+=1) {
-    frame->source |= ((frame->buffer[i+TL_SERDES_ADDRESS_OFFSET] & 0b1) << i);
+    frame->source |= ((frame->buffer[i+TL_SERDES_SOURCE_OFFSET] & 0b1) << i);
   }
   for (uint16_t i=0; i<TL_SERDES_SIZE_SIZE; i+=1) {
-    frame->size |= ((frame->buffer[i+TL_SERDES_SOURCE_OFFSET] & 0b1) << i);
+    frame->size |= ((frame->buffer[i+TL_SERDES_SIZE_OFFSET] & 0b1) << i);
   }
   for (uint16_t i=0; i<TL_SERDES_PARAM_SIZE; i+=1) {
-    frame->param |= ((frame->buffer[i+TL_SERDES_SIZE_OFFSET] & 0b1) << i);
+    frame->param |= ((frame->buffer[i+TL_SERDES_PARAM_OFFSET] & 0b1) << i);
   }
   for (uint16_t i=0; i<TL_SERDES_OPCODE_SIZE; i+=1) {
-    frame->opcode |= ((frame->buffer[i+TL_SERDES_PARAM_OFFSET] & 0b1) << i);
+    frame->opcode |= ((frame->buffer[i+TL_SERDES_OPCODE_OFFSET] & 0b1) << i);
   }
   for (uint16_t i=0; i<TL_SERDES_CHANID_SIZE; i+=1) {
-    frame->chanid |= ((frame->buffer[i+TL_SERDES_OPCODE_OFFSET] & 0b1) << i);
+    frame->chanid |= ((frame->buffer[i+TL_SERDES_CHANID_OFFSET] & 0b1) << i);
   }
 }
 
 void TL_transmit(TileLinkController *tl) {
   TL_serialize(&tl->tx_frame);
+
+  // Ensure clean start: explicitly set signals to known state
+  HAL_GPIO_WritePin(TL_IN_VALID_GPIO_Port, TL_IN_VALID_Pin, 0);
+  HAL_GPIO_WritePin(TL_IN_DATA_GPIO_Port, TL_IN_DATA_Pin, 0);
+  HAL_GPIO_WritePin(TL_OUT_READY_GPIO_Port, TL_OUT_READY_Pin, 0);
 
   // reset state
   tl->tx_entry = 0;
