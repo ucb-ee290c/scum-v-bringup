@@ -1,13 +1,13 @@
 # Ignore all Xilinx Vivado project files and directories.
 # Users should use the create_project.tcl to generate the Vivado project.
-scanchain.xpr
-scanchain.hw/
-scanchain.gen/
-scanchain.ip_user_files/
-scanchain.runs/
-scanchain.srcs/
-scanchain.sim/
-scanchain.cache/
+scumv-controller.xpr
+scumv-controller.hw/
+scumv-controller.gen/
+scumv-controller.ip_user_files/
+scumv-controller.runs/
+scumv-controller.srcs/
+scumv-controller.sim/
+scumv-controller.cache/
 
 # Ignore logs, journal files, and steps to reproduce files.
 *.log

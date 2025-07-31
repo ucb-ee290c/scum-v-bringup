@@ -77,7 +77,7 @@ module stl_uart_client #(
             end
             
             STATE_RECEIVING: begin
-                if (data_valid && byte_count == PACKET_SIZE - 1) begin
+                if (data_valid && byte_count == PACKET_SIZE) begin
                     next_state = STATE_PACKET_READY;
                 end
             end
@@ -89,7 +89,8 @@ module stl_uart_client #(
             end
             
             STATE_RESPONSE: begin
-                if (response_active && response_byte_count == PACKET_SIZE - 1 && response_ready) begin
+                //TODO: check if this is correct
+                if (response_active && response_byte_count == PACKET_SIZE && response_ready) begin
                     next_state = STATE_IDLE;
                 end else if (tl_response_valid && !response_active) begin
                     // Start response streaming

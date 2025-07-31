@@ -13,7 +13,7 @@
 
 module scumvcontroller_uart_handler #(
     parameter CLOCK_FREQ = 100_000_000,
-    parameter BAUD_RATE = 115_200
+    parameter BAUD_RATE = 921_600
 )(
     // Clock and reset
     input wire clk,
@@ -51,8 +51,12 @@ module scumvcontroller_uart_handler #(
     localparam STATE_PREFIX_3 = 4'h3; // Received third character
     localparam STATE_ASC_MODE = 4'h4; // In ASC mode, forwarding data
     localparam STATE_STL_MODE = 4'h5; // In STL mode, forwarding data
-    localparam STATE_ASC_RESPONSE = 4'h6; // Sending ASC response (1 byte)
-    localparam STATE_STL_RESPONSE = 4'h7; // Sending STL response (16 bytes)
+    localparam STATE_ASC_MODE_FINAL = 4'h6; // Final cycle of ASC data forwarding
+    localparam STATE_STL_MODE_FINAL = 4'h7; // Final cycle of STL data forwarding
+    localparam STATE_ASC_RESPONSE = 4'h8; // Sending ASC response (1 byte)
+    localparam STATE_STL_RESPONSE = 4'h9; // Sending STL response (16 bytes)
+    localparam STATE_ASC_RESPONSE_FINAL = 4'hA; // Final cycle of ASC response
+    localparam STATE_STL_RESPONSE_FINAL = 4'hB; // Final cycle of STL response
     localparam STATE_ERROR = 4'hF; // Error state
     
     // Protocol prefixes: "asc+" = {0x61, 0x73, 0x63, 0x2B}
@@ -141,11 +145,12 @@ module scumvcontroller_uart_handler #(
             end
             
             // Handle packet counting during data forwarding
-            if ((state == STATE_ASC_MODE || state == STATE_STL_MODE) && 
+            if ((state == STATE_ASC_MODE || state == STATE_STL_MODE || 
+                 state == STATE_ASC_MODE_FINAL || state == STATE_STL_MODE_FINAL) && 
                 uart_data_in_valid && 
-                ((state == STATE_ASC_MODE && asc_data_ready) || 
-                 (state == STATE_STL_MODE && stl_data_ready))) begin
-                if (packet_count == current_packet_size - 1) begin
+                (((state == STATE_ASC_MODE || state == STATE_ASC_MODE_FINAL) && asc_data_ready) || 
+                 ((state == STATE_STL_MODE || state == STATE_STL_MODE_FINAL) && stl_data_ready))) begin
+                if (packet_count == current_packet_size) begin
                     packet_count <= 0;
                 end else begin
                     packet_count <= packet_count + 1;
@@ -154,7 +159,7 @@ module scumvcontroller_uart_handler #(
             
             // Handle response counting
             if (state == STATE_STL_RESPONSE && stl_response_valid && uart_data_out_ready) begin
-                if (response_count == STL_RESPONSE_SIZE - 1) begin
+                if (response_count == STL_RESPONSE_SIZE) begin
                     response_count <= 0;
                 end else begin
                     response_count <= response_count + 1;
@@ -194,8 +199,8 @@ module scumvcontroller_uart_handler #(
             
             STATE_PREFIX_2: begin
                 if (uart_data_in_valid) begin
-                    if ((prefix_buffer[0] == PREFIX_1_ASC && uart_data_in == PREFIX_3_ASC) ||
-                        (prefix_buffer[0] == PREFIX_1_STL && uart_data_in == PREFIX_3_STL)) begin
+                    if ((prefix_buffer[0] == PREFIX_1_ASC && prefix_buffer[1] == PREFIX_2_ASC && uart_data_in == PREFIX_3_ASC) ||
+                        (prefix_buffer[0] == PREFIX_1_STL && prefix_buffer[1] == PREFIX_2_STL && uart_data_in == PREFIX_3_STL)) begin
                         next_state = STATE_PREFIX_3;
                     end else begin
                         next_state = STATE_ERROR;
@@ -206,9 +211,9 @@ module scumvcontroller_uart_handler #(
             STATE_PREFIX_3: begin
                 if (uart_data_in_valid) begin
                     if (uart_data_in == PREFIX_4_COMMON) begin
-                        if (prefix_buffer[0] == PREFIX_1_ASC) begin
+                        if (prefix_buffer[0] == PREFIX_1_ASC && prefix_buffer[1] == PREFIX_2_ASC && prefix_buffer[2] == PREFIX_3_ASC) begin
                             next_state = STATE_ASC_MODE;
-                        end else begin
+                        end else if (prefix_buffer[0] == PREFIX_1_STL && prefix_buffer[1] == PREFIX_2_STL && prefix_buffer[2] == PREFIX_3_STL) begin
                             next_state = STATE_STL_MODE;
                         end
                     end else begin
@@ -218,27 +223,47 @@ module scumvcontroller_uart_handler #(
             end
             
             STATE_ASC_MODE: begin
-                if (uart_data_in_valid && asc_data_ready && packet_count == current_packet_size - 1) begin
-                    next_state = STATE_ASC_RESPONSE;
+                if (uart_data_in_valid && asc_data_ready && packet_count == current_packet_size) begin
+                    next_state = STATE_ASC_MODE_FINAL;
                 end
             end
             
             STATE_STL_MODE: begin
-                if (uart_data_in_valid && stl_data_ready && packet_count == current_packet_size - 1) begin
+                if (uart_data_in_valid && stl_data_ready && packet_count == current_packet_size) begin
+                    next_state = STATE_STL_MODE_FINAL;
+                end
+            end
+            
+            STATE_ASC_MODE_FINAL: begin
+                if (uart_data_in_valid && asc_data_ready) begin
+                    next_state = STATE_ASC_RESPONSE;
+                end
+            end
+            
+            STATE_STL_MODE_FINAL: begin
+                if (uart_data_in_valid && stl_data_ready) begin
                     next_state = STATE_STL_RESPONSE;
                 end
             end
             
             STATE_ASC_RESPONSE: begin
                 if (asc_response_valid && uart_data_out_ready) begin
-                    next_state = STATE_IDLE;
+                    next_state = STATE_ASC_RESPONSE_FINAL;
                 end
             end
             
             STATE_STL_RESPONSE: begin
                 if (stl_response_valid && uart_data_out_ready && response_count == STL_RESPONSE_SIZE - 1) begin
-                    next_state = STATE_IDLE;
+                    next_state = STATE_STL_RESPONSE_FINAL;
                 end
+            end
+
+            STATE_ASC_RESPONSE_FINAL: begin
+                next_state = STATE_IDLE;
+            end
+
+            STATE_STL_RESPONSE_FINAL: begin
+                next_state = STATE_IDLE;
             end
             
             STATE_ERROR: begin
@@ -253,34 +278,36 @@ module scumvcontroller_uart_handler #(
     end
     
     // Output assignments
-    assign active_mode = (state == STATE_ASC_MODE || state == STATE_ASC_RESPONSE) ? 2'b01 :
-                        (state == STATE_STL_MODE || state == STATE_STL_RESPONSE) ? 2'b10 :
+    assign active_mode = (state == STATE_ASC_MODE || state == STATE_ASC_MODE_FINAL || 
+                          state == STATE_ASC_RESPONSE || state == STATE_ASC_RESPONSE_FINAL) ? 2'b01 :
+                        (state == STATE_STL_MODE || state == STATE_STL_MODE_FINAL || 
+                          state == STATE_STL_RESPONSE || state == STATE_STL_RESPONSE_FINAL) ? 2'b10 :
                         2'b00;
     
     assign debug_state = state;
     
     // ASC subsystem connections
     assign asc_data_out = uart_data_in;
-    assign asc_data_valid = (state == STATE_ASC_MODE) ? uart_data_in_valid : 1'b0;
-    assign asc_response_ready = (state == STATE_ASC_RESPONSE) ? uart_data_out_ready : 1'b0;
+    assign asc_data_valid = (state == STATE_ASC_MODE || state == STATE_ASC_MODE_FINAL) ? uart_data_in_valid : 1'b0;
+    assign asc_response_ready = (state == STATE_ASC_RESPONSE || state == STATE_ASC_RESPONSE_FINAL) ? uart_data_out_ready : 1'b0;
     
     // STL subsystem connections  
     assign stl_data_out = uart_data_in;
-    assign stl_data_valid = (state == STATE_STL_MODE) ? uart_data_in_valid : 1'b0;
-    assign stl_response_ready = (state == STATE_STL_RESPONSE) ? uart_data_out_ready : 1'b0;
+    assign stl_data_valid = (state == STATE_STL_MODE || state == STATE_STL_MODE_FINAL) ? uart_data_in_valid : 1'b0;
+    assign stl_response_ready = (state == STATE_STL_RESPONSE || state == STATE_STL_RESPONSE_FINAL) ? uart_data_out_ready : 1'b0;
     
     // UART output mux
-    assign uart_data_out = (state == STATE_ASC_RESPONSE) ? asc_response_data :
-                          (state == STATE_STL_RESPONSE) ? stl_response_data :
+    assign uart_data_out = (state == STATE_ASC_RESPONSE || state == STATE_ASC_RESPONSE_FINAL) ? asc_response_data :
+                          (state == STATE_STL_RESPONSE || state == STATE_STL_RESPONSE_FINAL) ? stl_response_data :
                           8'h00;
     
-    assign uart_data_out_valid = (state == STATE_ASC_RESPONSE) ? asc_response_valid :
-                                (state == STATE_STL_RESPONSE) ? stl_response_valid :
+    assign uart_data_out_valid = (state == STATE_ASC_RESPONSE || state == STATE_ASC_RESPONSE_FINAL) ? asc_response_valid :
+                                (state == STATE_STL_RESPONSE || state == STATE_STL_RESPONSE_FINAL) ? stl_response_valid :
                                 1'b0;
     
     // UART input ready signal - ready when subsystem can accept data or during prefix detection
-    assign uart_data_in_ready = (state == STATE_ASC_MODE) ? asc_data_ready :
-                               (state == STATE_STL_MODE) ? stl_data_ready :
+    assign uart_data_in_ready = (state == STATE_ASC_MODE || state == STATE_ASC_MODE_FINAL) ? asc_data_ready :
+                               (state == STATE_STL_MODE || state == STATE_STL_MODE_FINAL) ? stl_data_ready :
                                (state >= STATE_IDLE && state <= STATE_PREFIX_3) ? 1'b1 :
                                1'b0;
 
