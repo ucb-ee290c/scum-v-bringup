@@ -1,6 +1,6 @@
 module uart_receiver #(
-    parameter CLOCK_FREQ = 125_000_000,
-    parameter BAUD_RATE = 115_200)
+    parameter CLOCK_FREQ = 100_000_000,
+    parameter BAUD_RATE = 1_000_000)
 (
     input clk,
     input reset,

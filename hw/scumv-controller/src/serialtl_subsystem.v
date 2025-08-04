@@ -30,7 +30,11 @@ module serialtl_subsystem #(
     input wire tl_in_data,
     output wire tl_out_valid,
     input wire tl_out_ready,
-    output wire tl_out_data
+    output wire tl_out_data,
+    
+    // Debug signals
+    output wire [4:0] debug_byte_count,
+    output wire [1:0] debug_state
 );
 
     // Internal packet interface signals
@@ -40,7 +44,8 @@ module serialtl_subsystem #(
     wire [127:0] tl_response_data; // 16 bytes
     wire tl_response_valid;
     wire tl_response_ready;
-    
+    wire [4:0] debug_byte_count;
+    wire [1:0] debug_state;
     // TileLink serializer/deserializer interface signals
     wire tl_ser_in_ready;
     wire tl_ser_in_valid;
@@ -96,7 +101,9 @@ module serialtl_subsystem #(
         // Interface from TileLink-to-UART bridge
         .tl_response_valid(tl_response_valid),
         .tl_response_ready(tl_response_ready),
-        .tl_response_data(tl_response_data)
+        .tl_response_data(tl_response_data),
+        .debug_byte_count(debug_byte_count),
+        .debug_state(debug_state)
     );
 
     // UART to TileLink Bridge - unpacks 16-byte packets to TileLink frames

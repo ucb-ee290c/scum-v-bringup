@@ -8,7 +8,7 @@
     parameter ADDR_BITS = 12,
     parameter PAYLOAD_BITS = 160,
 
-    parameter BAUD_RATE = 921_600,
+    parameter BAUD_RATE = 1_000_000,
     
     // Sample the button signal every 500us
     parameter integer B_SAMPLE_CNT_MAX = 0.0005 * CLOCK_FREQ,
@@ -30,12 +30,12 @@
     
     // SerialTL interface to SCuM-V (TODO: Add to constraint file)
     input TL_CLK,        // TileLink clock from SCuM-V
-    input TL_IN_VALID,   // Valid signal for data going to SCuM-V
-    output TL_IN_READY,  // Ready signal for data going to SCuM-V
-    input TL_IN_DATA,    // Serial data going to SCuM-V
-    output TL_OUT_VALID, // Valid signal for data coming from SCuM-V
-    input TL_OUT_READY,  // Ready signal for data coming from SCuM-V
-    output TL_OUT_DATA,  // Serial data coming from SCuM-V
+    input TL_IN_VALID,   // Valid signal for data coming from SCuM-V 
+    output TL_IN_READY,  // Ready signal for data coming from SCuM-V (connect to SCuM's TL_OUT_READY)
+    input TL_IN_DATA,    // Serial data coming from SCuM-V (connect to SCuM's TL_OUT_DATA)
+    output TL_OUT_VALID, // Valid signal for data going to SCuM-V
+    input TL_OUT_READY,  // Ready signal for data going to SCuM-V
+    output TL_OUT_DATA,  // Serial data going to SCuM-V
 
     output [3 : 0] led
 );
@@ -65,7 +65,10 @@
     wire stl_response_valid;
     wire stl_response_ready;
     wire [7:0] stl_response_data;
-
+    wire [7:0] debug_uart_data_in;
+    wire [7:0] debug_packet_count;
+    wire [4:0] debug_byte_count;
+    wire [1:0] debug_stl_state;
     // Protocol multiplexer - handles "asc+" and "stl+" prefixes
     scumvcontroller_uart_handler #(
         .CLOCK_FREQ(CLOCK_FREQ),
@@ -96,7 +99,9 @@
         
         // Status and control
         .active_mode(active_mode),
-        .debug_state(debug_state)
+        .debug_state(debug_state),
+        .debug_uart_data_in(debug_uart_data_in),
+        .debug_packet_count(debug_packet_count)
     );
 
     // ASC subsystem - handles scan chain operations
@@ -150,7 +155,9 @@
         .tl_in_data(TL_IN_DATA),
         .tl_out_valid(TL_OUT_VALID),
         .tl_out_ready(TL_OUT_READY),
-        .tl_out_data(TL_OUT_DATA)
+        .tl_out_data(TL_OUT_DATA),
+        .debug_byte_count(debug_byte_count),
+        .debug_state(debug_stl_state)
     );
 
     button_parser #(
@@ -167,4 +174,17 @@
     assign led[1] = active_mode[0]; // ASC mode active
     assign led[2] = active_mode[1]; // STL mode active  
     assign led[3] = TL_IN_VALID;
+
+    ila_0 ILA1 (
+        .clk    (FPGA_CLK),
+        .probe0 (stl_data_out),                     // 8 bit
+        .probe1 ({4'b0000, debug_byte_count}),                     // 8 bit
+        .probe2 (TL_CLK),                     // 1 bit
+        .probe3 (stl_data_valid),                 // 1 bit
+        .probe4 (TL_OUT_READY),                    // 1 bit
+        .probe5 (TL_OUT_VALID),                  // 1 bit
+        .probe6 (UART_TXD_IN),              // 1 bit
+        .probe7 (stl_data_ready),                // 1 bit
+        .probe8 ({2'b00, debug_stl_state})
+    );
 endmodule

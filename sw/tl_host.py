@@ -30,7 +30,7 @@ TL_OPCODE_D_ACCESSACK = 0
 TL_OPCODE_D_ACCESSACKDATA = 1
 
 # Serial interface.
-SERIAL_INTERFACE_BAUD_RATE = 2000000
+SERIAL_INTERFACE_BAUD_RATE = 1000000
 SERIAL_INTERFACE_TIMEOUT = 2  # seconds
 
 
@@ -104,12 +104,17 @@ class TileLinkHost:
         """Reads the data at the given address."""
         # Pack opcode and other fields into a single byte as the firmware expects
         opcode_packed = TL_OPCODE_A_GET & 0b111
-        buffer = struct.pack("<BBBBLQ", TL_CHANID_CH_A, opcode_packed, 2, 0b11111111, address, 0x00)
+        tl_packet = struct.pack("<BBBBLQ", TL_CHANID_CH_A, opcode_packed, 2, 0b11111111, address, 0x00)
+        
+        # Add STL prefix before the TileLink packet
+        stl_prefix = b"stl+"
+        full_command = stl_prefix + tl_packet
         
         if verbose:
             print(f"[TL Get] <address: {address:08X}, size: 4>")
-            print_tilelink_packet(buffer, "TX")
-        self.serial.write(buffer)
+            print_tilelink_packet(tl_packet, "TX")
+            print(f"[STL Command] Full command: {' '.join([f'{b:02X}' for b in full_command])}")
+        self.serial.write(full_command)
 
         buffer = self.serial.read(16)
         print_tilelink_packet(buffer, "RX")
@@ -136,13 +141,18 @@ class TileLinkHost:
         """Writes the data to the given address."""
         # Pack opcode and other fields into a single byte as the firmware expects
         opcode_packed = TL_OPCODE_A_PUTFULLDATA & 0b111
-        buffer = struct.pack("<BBBBLQ", TL_CHANID_CH_A, opcode_packed, 2, 0b11111111, address, data)
+        tl_packet = struct.pack("<BBBBLQ", TL_CHANID_CH_A, opcode_packed, 2, 0b11111111, address, data)
+        
+        # Add STL prefix before the TileLink packet
+        stl_prefix = b"stl+"
+        full_command = stl_prefix + tl_packet
         
         if verbose:
             print(f"[TL PutFullData] <address: 0x{address:08X}, size: 4, "
                   f"data: 0x{data:016X}>")
-            print_tilelink_packet(buffer, "TX")
-        self.serial.write(buffer)
+            print_tilelink_packet(tl_packet, "TX")
+            print(f"[STL Command] Full command: {' '.join([f'{b:02X}' for b in full_command])}")
+        self.serial.write(full_command)
 
         buffer = self.serial.read(16)
         print_tilelink_packet(buffer, "RX")
@@ -237,7 +247,7 @@ class TileLinkHost:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Script for the TileLink host.")
-    parser.add_argument("-p", "--port", default="COM3")
+    parser.add_argument("-p", "--port", default="COM6")
     parser.add_argument("-t", "--target", default="template")
     args = parser.parse_args()
 

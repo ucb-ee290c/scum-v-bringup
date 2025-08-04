@@ -13,7 +13,7 @@
 
 module scumvcontroller_uart_handler #(
     parameter CLOCK_FREQ = 100_000_000,
-    parameter BAUD_RATE = 921_600
+    parameter BAUD_RATE = 1_000_000
 )(
     // Clock and reset
     input wire clk,
@@ -41,7 +41,9 @@ module scumvcontroller_uart_handler #(
     
     // Status and control
     output wire [1:0] active_mode, // 0=idle, 1=asc, 2=stl
-    output wire [3:0] debug_state
+    output wire [3:0] debug_state,
+    output wire [7:0] debug_uart_data_in,
+    output wire [7:0] debug_packet_count
 );
 
     // Protocol detection states
@@ -82,9 +84,12 @@ module scumvcontroller_uart_handler #(
     reg [7:0] response_count;
     reg [7:0] current_packet_size;
     reg protocol_detected; // 0=ASC, 1=STL
+    reg final_packet_seen;
     
     // UART interface signals
     wire [7:0] uart_data_in;
+    assign debug_uart_data_in = uart_data_in;
+    assign debug_packet_count = packet_count;
     wire uart_data_in_valid;
     wire uart_data_in_ready;
     wire [7:0] uart_data_out;
@@ -117,6 +122,7 @@ module scumvcontroller_uart_handler #(
             response_count <= 0;
             current_packet_size <= 0;
             protocol_detected <= 0;
+            final_packet_seen <= 0;
         end else begin
             state <= next_state;
             
@@ -150,10 +156,12 @@ module scumvcontroller_uart_handler #(
                 uart_data_in_valid && 
                 (((state == STATE_ASC_MODE || state == STATE_ASC_MODE_FINAL) && asc_data_ready) || 
                  ((state == STATE_STL_MODE || state == STATE_STL_MODE_FINAL) && stl_data_ready))) begin
-                if (packet_count == current_packet_size) begin
+                if (packet_count == current_packet_size - 1) begin
                     packet_count <= 0;
+                    final_packet_seen <= 1;
                 end else begin
                     packet_count <= packet_count + 1;
+                    final_packet_seen <= 0;
                 end
             end
             
@@ -161,12 +169,14 @@ module scumvcontroller_uart_handler #(
             if (state == STATE_STL_RESPONSE && stl_response_valid && uart_data_out_ready) begin
                 if (response_count == STL_RESPONSE_SIZE) begin
                     response_count <= 0;
+                    final_packet_seen <= 0;
                 end else begin
                     response_count <= response_count + 1;
                 end
             end else if (state == STATE_IDLE) begin
                 packet_count <= 0;
                 response_count <= 0;
+                final_packet_seen <= 0;
             end
         end
     end
@@ -229,8 +239,8 @@ module scumvcontroller_uart_handler #(
             end
             
             STATE_STL_MODE: begin
-                if (uart_data_in_valid && stl_data_ready && packet_count == current_packet_size) begin
-                    next_state = STATE_STL_MODE_FINAL;
+                if (final_packet_seen) begin
+                    next_state = STATE_STL_RESPONSE;
                 end
             end
             

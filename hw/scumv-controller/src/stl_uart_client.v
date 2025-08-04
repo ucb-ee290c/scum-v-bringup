@@ -32,7 +32,9 @@ module stl_uart_client #(
     // Interface from TileLink-to-UART bridge
     input wire tl_response_valid,
     output wire tl_response_ready,
-    input wire [127:0] tl_response_data // 16 bytes = 128 bits
+    input wire [127:0] tl_response_data, // 16 bytes = 128 bits
+    output wire [4:0] debug_byte_count,
+    output wire [1:0] debug_state
 );
 
     // State machine for packet assembly
@@ -42,10 +44,12 @@ module stl_uart_client #(
     localparam STATE_RESPONSE = 2'b11;
     
     reg [1:0] state, next_state;
+    assign debug_state = state;
     
     // Packet assembly registers
     reg [127:0] packet_buffer;
     reg [4:0] byte_count; // 0 to 15 for 16 bytes
+    assign debug_byte_count = byte_count;
     
     // Response streaming registers
     reg [127:0] response_buffer;
@@ -77,7 +81,7 @@ module stl_uart_client #(
             end
             
             STATE_RECEIVING: begin
-                if (data_valid && byte_count == PACKET_SIZE) begin
+                if (byte_count == PACKET_SIZE) begin
                     next_state = STATE_PACKET_READY;
                 end
             end
