@@ -60,12 +60,21 @@ proc checkRequiredFiles { origin_dir} {
  "[file normalize "$origin_dir/src/scanchain_uart_client.v"]"\
  "[file normalize "$origin_dir/src/uart_receiver.v"]"\
  "[file normalize "$origin_dir/src/button_parser/debouncer.v"]"\
+ "[file normalize "$origin_dir/src/scanchain_subsystem.v"]"\
+ "[file normalize "$origin_dir/src/serialtl_subsystem.v"]"\
+ "[file normalize "$origin_dir/src/scumvcontroller_uart_handler.v"]"\
+ "[file normalize "$origin_dir/src/stl_uart_client.v"]"\
+ "[file normalize "$origin_dir/src/uart_to_tilelink_bridge.v"]"\
+ "[file normalize "$origin_dir/src/tilelink_to_uart_bridge.v"]"\
+ "[file normalize "$origin_dir/src/tilelink/GenericSerializer.sv"]"\
+ "[file normalize "$origin_dir/src/tilelink/GenericDeserializer.sv"]"\
  "[file normalize "$origin_dir/src/a7top.xdc"]"\
  "[file normalize "$origin_dir/sim/scanchain_integration_tb.v"]"\
  "[file normalize "$origin_dir/sim/scanchain_writer_tb.v"]"\
  "[file normalize "$origin_dir/sim/ScanTop_tb.v"]"\
  "[file normalize "$origin_dir/sim/scanchain_top_tb.v"]"\
  "[file normalize "$origin_dir/sim/scanchain_uart_client_tb.v"]"\
+ "[file normalize "$origin_dir/sim/scumv_controller_integration_tb.v"]"\
   ]
   foreach ifile $files {
     if { ![file isfile $ifile] } {
@@ -155,7 +164,7 @@ if { $validate_required } {
 }
 
 # Create project
-create_project ${_xil_proj_name_} ./${_xil_proj_name_} -part xc7a100tcsg324-1
+create_project ${_xil_proj_name_} ./${_xil_proj_name_} -part xc7a100tcsg324-1 -force
 
 # Set the directory path for the new project
 set proj_dir [get_property directory [current_project]]
@@ -196,6 +205,14 @@ set files [list \
  [file normalize "${origin_dir}/src/scanchain_uart_client.v"] \
  [file normalize "${origin_dir}/src/uart_receiver.v"] \
  [file normalize "${origin_dir}/src/button_parser/debouncer.v"] \
+ [file normalize "${origin_dir}/src/scanchain_subsystem.v"] \
+ [file normalize "${origin_dir}/src/serialtl_subsystem.v"] \
+ [file normalize "${origin_dir}/src/scumvcontroller_uart_handler.v"] \
+ [file normalize "${origin_dir}/src/stl_uart_client.v"] \
+ [file normalize "${origin_dir}/src/uart_to_tilelink_bridge.v"] \
+ [file normalize "${origin_dir}/src/tilelink_to_uart_bridge.v"] \
+ [file normalize "${origin_dir}/src/tilelink/GenericSerializer.sv"] \
+ [file normalize "${origin_dir}/src/tilelink/GenericDeserializer.sv"] \
 ]
 set added_files [add_files -fileset sources_1 $files]
 
@@ -245,6 +262,7 @@ set files [list \
  [file normalize "${origin_dir}/sim/ScanTop_tb.v"] \
  [file normalize "${origin_dir}/sim/scanchain_top_tb.v"] \
  [file normalize "${origin_dir}/sim/scanchain_uart_client_tb.v"] \
+ [file normalize "${origin_dir}/sim/scumv_controller_integration_tb.v"] \
 ]
 set added_files [add_files -fileset sim_1 $files]
 
