@@ -18,8 +18,9 @@
  */
 
 module uart_to_tilelink_bridge (
-    input wire clk,
+    input wire sysclk,
     input wire reset,
+    input wire tl_clk,
     
     // Interface from STL UART client
     input wire packet_valid,
@@ -27,8 +28,8 @@ module uart_to_tilelink_bridge (
     input wire [127:0] packet_data, // 16 bytes
     
     // Interface to GenericSerializer
-    output wire tl_in_valid,
-    input wire tl_in_ready,
+    output wire tl_ser_in_valid,
+    input wire tl_ser_in_ready,
     output wire [2:0] tl_in_bits_chanId,
     output wire [2:0] tl_in_bits_opcode,
     output wire [2:0] tl_in_bits_param,
@@ -65,18 +66,25 @@ module uart_to_tilelink_bridge (
     wire corrupt;
     
     // State machine
-    always @(posedge clk) begin
+    reg tl_ser_in_ready_buf;
+    reg tl_clk_buf;
+    always @(posedge sysclk) begin
         if (reset) begin
             state <= STATE_IDLE;
+            tl_ser_in_ready_buf <= 1'b0;
         end else begin
             state <= next_state;
+            tl_ser_in_ready_buf <= tl_ser_in_ready;
         end
+        tl_clk_buf <= tl_clk;
     end
-    
+
+    reg tl_clk_posedge;
+
     // Next state logic
     always @(*) begin
         next_state = state;
-        
+        tl_clk_posedge = tl_clk && !tl_clk_buf;
         case (state)
             STATE_IDLE: begin
                 if (packet_valid) begin
@@ -85,7 +93,7 @@ module uart_to_tilelink_bridge (
             end
             
             STATE_FRAME_READY: begin
-                if (tl_in_ready) begin
+                if (tl_ser_in_ready_buf && tl_clk_posedge && tl_ser_in_valid) begin
                     next_state = STATE_IDLE;
                 end
             end
@@ -93,7 +101,7 @@ module uart_to_tilelink_bridge (
     end
     
     // Packet buffer and unpacking
-    always @(posedge clk) begin
+    always @(posedge sysclk) begin
         if (reset) begin
             packet_buffer <= 128'h0;
             frame_valid_reg <= 1'b0;
@@ -101,7 +109,7 @@ module uart_to_tilelink_bridge (
             // Capture incoming packet
             packet_buffer <= packet_data;
             frame_valid_reg <= 1'b1;
-        end else if (state == STATE_FRAME_READY && tl_in_ready) begin
+        end else if (state == STATE_FRAME_READY && tl_ser_in_ready) begin
             // Frame consumed, clear valid
             frame_valid_reg <= 1'b0;
         end
@@ -139,7 +147,7 @@ module uart_to_tilelink_bridge (
     // Output assignments
     assign packet_ready = (state == STATE_IDLE);
     
-    assign tl_in_valid = frame_valid_reg;
+    assign tl_ser_in_valid = (state == STATE_FRAME_READY);
     assign tl_in_bits_chanId = channel_id[2:0];       // Only 3 bits for channel ID
     assign tl_in_bits_opcode = opcode;
     assign tl_in_bits_param = param;

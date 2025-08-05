@@ -69,6 +69,10 @@
     wire [7:0] debug_packet_count;
     wire [4:0] debug_byte_count;
     wire [1:0] debug_stl_state;
+    wire debug_bridge_packet_valid;
+    wire debug_bridge_packet_ready;
+    wire debug_serializer_in_ready;
+    wire debug_serializer_in_valid;
     // Protocol multiplexer - handles "asc+" and "stl+" prefixes
     scumvcontroller_uart_handler #(
         .CLOCK_FREQ(CLOCK_FREQ),
@@ -157,7 +161,11 @@
         .tl_out_ready(TL_OUT_READY),
         .tl_out_data(TL_OUT_DATA),
         .debug_byte_count(debug_byte_count),
-        .debug_state(debug_stl_state)
+        .debug_state(debug_stl_state),
+        .debug_bridge_packet_valid(debug_bridge_packet_valid),
+        .debug_bridge_packet_ready(debug_bridge_packet_ready),
+        .debug_serializer_in_ready(debug_serializer_in_ready),
+        .debug_serializer_in_valid(debug_serializer_in_valid)
     );
 
     button_parser #(
@@ -178,7 +186,7 @@
     ila_0 ILA1 (
         .clk    (FPGA_CLK),
         .probe0 (stl_data_out),                     // 8 bit
-        .probe1 ({4'b0000, debug_byte_count}),                     // 8 bit
+        .probe1 ({debug_bridge_packet_valid, debug_bridge_packet_ready, debug_serializer_in_ready, debug_serializer_in_valid, debug_byte_count}),                     // 8 bit
         .probe2 (TL_CLK),                     // 1 bit
         .probe3 (stl_data_valid),                 // 1 bit
         .probe4 (TL_OUT_READY),                    // 1 bit

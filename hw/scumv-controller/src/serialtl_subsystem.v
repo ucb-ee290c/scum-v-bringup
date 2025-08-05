@@ -34,7 +34,11 @@ module serialtl_subsystem #(
     
     // Debug signals
     output wire [4:0] debug_byte_count,
-    output wire [1:0] debug_state
+    output wire [1:0] debug_state,
+    output wire debug_bridge_packet_valid,
+    output wire debug_bridge_packet_ready,
+    output wire debug_serializer_in_ready,
+    output wire debug_serializer_in_valid
 );
 
     // Internal packet interface signals
@@ -44,8 +48,6 @@ module serialtl_subsystem #(
     wire [127:0] tl_response_data; // 16 bytes
     wire tl_response_valid;
     wire tl_response_ready;
-    wire [4:0] debug_byte_count;
-    wire [1:0] debug_state;
     // TileLink serializer/deserializer interface signals
     wire tl_ser_in_ready;
     wire tl_ser_in_valid;
@@ -78,6 +80,12 @@ module serialtl_subsystem #(
     wire tl_deser_out_bits_corrupt;
     wire [8:0] tl_deser_out_bits_union;
 
+
+    assign debug_bridge_packet_valid = packet_valid;
+    assign debug_bridge_packet_ready = packet_ready;
+    assign debug_serializer_in_ready = tl_ser_in_ready;
+    assign debug_serializer_in_valid = tl_ser_in_valid;
+
     // STL UART Client - handles byte-level FIFO interface
     stl_uart_client stl_client (
         .clk(clk),
@@ -108,8 +116,9 @@ module serialtl_subsystem #(
 
     // UART to TileLink Bridge - unpacks 16-byte packets to TileLink frames
     uart_to_tilelink_bridge uart_to_tl (
-        .clk(clk),
+        .sysclk(clk),
         .reset(reset),
+        .tl_clk(tl_clk),
         
         // Interface from STL UART client
         .packet_valid(packet_valid),
@@ -117,8 +126,8 @@ module serialtl_subsystem #(
         .packet_data(packet_data),
         
         // Interface to GenericSerializer
-        .tl_in_valid(tl_ser_in_valid),
-        .tl_in_ready(tl_ser_in_ready),
+        .tl_ser_in_valid(tl_ser_in_valid),
+        .tl_ser_in_ready(tl_ser_in_ready),
         .tl_in_bits_chanId(tl_ser_in_bits_chanId),
         .tl_in_bits_opcode(tl_ser_in_bits_opcode),
         .tl_in_bits_param(tl_ser_in_bits_param),

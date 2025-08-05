@@ -23,7 +23,7 @@ module scumv_controller_integration_tb();
 
     // Test parameters
     parameter CLOCK_FREQ = 100_000_000;  // 100 MHz system clock
-    parameter BAUD_RATE = 921_600;       // UART baud rate (slower for simulation)
+    parameter BAUD_RATE = 1_000_000;       // UART baud rate
     parameter TEST_VECTOR_FILE = "C:/Projects/Repositories/scum-v-bringup/hw/scumv-controller/sim/sim_input.bin";  // Input file from tl_host_sim.py
     parameter MAX_BYTES = 1024;          // Maximum test vector size
     parameter TIMEOUT_CYCLES = 1000000;  // Timeout for waiting operations
@@ -137,10 +137,10 @@ module scumv_controller_integration_tb();
         forever #5 clk = ~clk;  // 100 MHz clock (10ns period)
     end
     
-    // TileLink clock generation (mock - faster than system clock)
+    // TileLink clock generation (mock - 50 kHz)
     initial begin
         tl_clk = 0;
-        forever #2 tl_clk = ~tl_clk;  // 250 MHz TL clock
+        forever #10000 tl_clk = ~tl_clk;  // 50 kHz TL clock (period = 20 us, half-period = 10 us = 10000 ns)
     end
     
     // Main test procedure
@@ -168,9 +168,9 @@ module scumv_controller_integration_tb();
         
         // Reset sequence
         $display("[TB] Applying reset...");
-        #100;
+        #12000;
         reset_n = 1;
-        #100;
+        #12000;
         $display("[TB] Reset released, starting test sequence");
         
         // Wait for system to settle

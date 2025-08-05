@@ -108,8 +108,8 @@ module stl_uart_client #(
     always @(posedge clk) begin
         if (reset) begin
             byte_count <= 0;
-        end else if (state == STATE_IDLE) begin
-            byte_count <= 0;
+        end else if (state == STATE_IDLE && data_valid && data_ready) begin
+            byte_count <= 1;
         end else if (state == STATE_RECEIVING && data_valid && data_ready) begin
             byte_count <= byte_count + 1;
         end

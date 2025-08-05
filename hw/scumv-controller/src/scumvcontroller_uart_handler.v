@@ -191,7 +191,7 @@ module scumvcontroller_uart_handler #(
                     if (uart_data_in == PREFIX_1_ASC || uart_data_in == PREFIX_1_STL) begin
                         next_state = STATE_PREFIX_1;
                     end else begin
-                        next_state = STATE_ERROR;
+                        next_state = STATE_IDLE;
                     end
                 end
             end
@@ -202,7 +202,7 @@ module scumvcontroller_uart_handler #(
                         (prefix_buffer[0] == PREFIX_1_STL && uart_data_in == PREFIX_2_STL)) begin
                         next_state = STATE_PREFIX_2;
                     end else begin
-                        next_state = STATE_ERROR;
+                        next_state = STATE_IDLE;
                     end
                 end
             end
@@ -213,7 +213,7 @@ module scumvcontroller_uart_handler #(
                         (prefix_buffer[0] == PREFIX_1_STL && prefix_buffer[1] == PREFIX_2_STL && uart_data_in == PREFIX_3_STL)) begin
                         next_state = STATE_PREFIX_3;
                     end else begin
-                        next_state = STATE_ERROR;
+                        next_state = STATE_IDLE;
                     end
                 end
             end
@@ -227,7 +227,7 @@ module scumvcontroller_uart_handler #(
                             next_state = STATE_STL_MODE;
                         end
                     end else begin
-                        next_state = STATE_ERROR;
+                        next_state = STATE_IDLE;
                     end
                 end
             end
