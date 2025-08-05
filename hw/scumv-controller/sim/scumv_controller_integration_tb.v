@@ -216,7 +216,7 @@ module scumv_controller_integration_tb();
     // TileLink clock generation (mock - 50 kHz)
     initial begin
         tl_clk = 0;
-        forever #10000 tl_clk = ~tl_clk;  // 50 kHz TL clock (period = 20 us, half-period = 10 us = 10000 ns)
+        forever #1000 tl_clk = ~tl_clk;  // 500 kHz TL clock (period = 2 us, half-period = 1 us = 1000 ns)
     end
     
     // Main test procedure
@@ -450,13 +450,6 @@ module scumv_controller_integration_tb();
                 response_count <= response_count + 1;
                 $display("[TB] Captured response byte %0d: 0x%02X", response_count, uart_rx_data);
             end
-        end
-    end
-    
-    // Monitor STL interface activity
-    always @(posedge clk) begin
-        if (tl_out_valid && tl_out_ready) begin
-            $display("[TB] STL TL_OUT transaction: data=%b", tl_out_data);
         end
     end
     

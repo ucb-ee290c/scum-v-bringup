@@ -46,20 +46,13 @@ module scumvcontroller_uart_handler #(
     output wire [7:0] debug_packet_count
 );
 
-    // Protocol detection states
-    localparam STATE_IDLE = 4'h0;
-    localparam STATE_PREFIX_1 = 4'h1; // Received first character
-    localparam STATE_PREFIX_2 = 4'h2; // Received second character  
-    localparam STATE_PREFIX_3 = 4'h3; // Received third character
-    localparam STATE_ASC_MODE = 4'h4; // In ASC mode, forwarding data
-    localparam STATE_STL_MODE = 4'h5; // In STL mode, forwarding data
-    localparam STATE_ASC_MODE_FINAL = 4'h6; // Final cycle of ASC data forwarding
-    localparam STATE_STL_MODE_FINAL = 4'h7; // Final cycle of STL data forwarding
-    localparam STATE_ASC_RESPONSE = 4'h8; // Sending ASC response (1 byte)
-    localparam STATE_STL_RESPONSE = 4'h9; // Sending STL response (16 bytes)
-    localparam STATE_ASC_RESPONSE_FINAL = 4'hA; // Final cycle of ASC response
-    localparam STATE_STL_RESPONSE_FINAL = 4'hB; // Final cycle of STL response
-    localparam STATE_ERROR = 4'hF; // Error state
+    // Simplified Mealy FSM states
+    localparam STATE_IDLE = 3'h0;        // Wait for data, check first prefix character
+    localparam STATE_PREFIX = 3'h1;      // Collect 4-character prefix
+    localparam STATE_FORWARD_ASC = 3'h2; // Forward 22 bytes ASC data
+    localparam STATE_FORWARD_STL = 3'h3; // Forward 16 bytes STL data
+    localparam STATE_RESPOND_ASC = 3'h4; // Send 1 byte ASC response
+    localparam STATE_RESPOND_STL = 3'h5; // Send 16 bytes STL response
     
     // Protocol prefixes: "asc+" = {0x61, 0x73, 0x63, 0x2B}
     //                   "stl+" = {0x73, 0x74, 0x6C, 0x2B}
@@ -77,14 +70,11 @@ module scumvcontroller_uart_handler #(
     localparam STL_RESPONSE_SIZE = 16; // 16 bytes for STL response
     
     // State registers
-    reg [3:0] state, next_state;
+    reg [2:0] state;
     reg [7:0] prefix_buffer [0:3];
-    reg [1:0] prefix_count;
-    reg [7:0] packet_count;
-    reg [7:0] response_count;
-    reg [7:0] current_packet_size;
+    reg [7:0] counter; // Unified counter for prefix, packet, and response bytes
     reg protocol_detected; // 0=ASC, 1=STL
-    reg final_packet_seen;
+    reg fifo_rd_en_prev; // Track previous cycle FIFO read for valid data
     
     // UART interface signals (direct from UART module)
     wire [7:0] uart_rx_data;
@@ -97,9 +87,8 @@ module scumvcontroller_uart_handler #(
     // Incoming FIFO signals (UART RX -> Protocol Processing)
     wire [7:0] fifo_to_fsm_data;        // Data from incoming FIFO to FSM
     assign debug_uart_data_in = fifo_to_fsm_data;
-    assign debug_packet_count = packet_count;
-    reg subsystem_data_ready;             // FSM ready to consume data from FIFO
-    wire incoming_fifo_rd_en;           // Explicit FIFO read enable
+    assign debug_packet_count = counter;
+    reg incoming_fifo_rd_en;            // Explicit FIFO read enable
     wire incoming_fifo_full;
     wire incoming_fifo_empty;
     
@@ -161,220 +150,160 @@ module scumvcontroller_uart_handler #(
     
     // FIFO control signals - explicit handshaking
     assign uart_rx_data_ready = !incoming_fifo_full;           // UART can write when FIFO has space
-    reg incoming_fifo_rd_en_buf;
-    assign incoming_fifo_rd_en = !incoming_fifo_empty && subsystem_data_ready; // Read when both valid and ready
     assign outgoing_fifo_wr_en = fsm_to_fifo_valid && !outgoing_fifo_full; // Write when both valid and ready
     assign uart_tx_data_valid = !outgoing_fifo_empty;          // UART sends when FIFO has data
     
-    // State machine
+    // Sequential logic - state transitions and data storage
     always @(posedge clk) begin
         if (reset) begin
             state <= STATE_IDLE;
-            prefix_count <= 0;
-            packet_count <= 0;
-            response_count <= 0;
-            current_packet_size <= 0;
+            counter <= 0;
             protocol_detected <= 0;
-            final_packet_seen <= 0;
-            incoming_fifo_rd_en_buf <= 0;
+            fifo_rd_en_prev <= 0;
         end else begin
-            state <= next_state;
-            incoming_fifo_rd_en_buf <= incoming_fifo_rd_en;
+            fifo_rd_en_prev <= incoming_fifo_rd_en;
             
-            // Handle prefix detection
-            if (state >= STATE_IDLE && state <= STATE_PREFIX_3 && incoming_fifo_rd_en_buf) begin
-                prefix_buffer[prefix_count] <= fifo_to_fsm_data;
-                if (state == STATE_PREFIX_3) begin
-                    prefix_count <= 0;
-                    if (fifo_to_fsm_data == PREFIX_4_COMMON) begin
-                        // Determine protocol based on collected prefix
-                        if (prefix_buffer[0] == PREFIX_1_ASC && 
-                            prefix_buffer[1] == PREFIX_2_ASC && 
-                            prefix_buffer[2] == PREFIX_3_ASC) begin
-                            protocol_detected <= 0; // ASC
-                            current_packet_size <= ASC_PACKET_SIZE;
-                        end else if (prefix_buffer[0] == PREFIX_1_STL && 
-                                   prefix_buffer[1] == PREFIX_2_STL && 
-                                   prefix_buffer[2] == PREFIX_3_STL) begin
-                            protocol_detected <= 1; // STL
-                            current_packet_size <= STL_PACKET_SIZE;
+            // Mealy FSM: actions on state transitions
+            case (state)
+                STATE_IDLE: begin
+                    if (incoming_fifo_rd_en && (fifo_to_fsm_data == PREFIX_1_ASC || fifo_to_fsm_data == PREFIX_1_STL)) begin
+                        state <= STATE_PREFIX;
+                        prefix_buffer[0] <= fifo_to_fsm_data;
+                        counter <= 1;
+                    end
+                end
+                
+                STATE_PREFIX: begin
+                    if (fifo_rd_en_prev) begin // Data is valid this cycle
+                        prefix_buffer[counter] <= fifo_to_fsm_data;
+                        if (counter == 3 && fifo_to_fsm_data == PREFIX_4_COMMON) begin
+                            // Complete prefix received, determine protocol
+                            if (prefix_buffer[0] == PREFIX_1_ASC && prefix_buffer[1] == PREFIX_2_ASC && prefix_buffer[2] == PREFIX_3_ASC) begin
+                                state <= STATE_FORWARD_ASC;
+                                protocol_detected <= 0;
+                                counter <= 0;
+                            end else if (prefix_buffer[0] == PREFIX_1_STL && prefix_buffer[1] == PREFIX_2_STL && prefix_buffer[2] == PREFIX_3_STL) begin
+                                state <= STATE_FORWARD_STL;
+                                protocol_detected <= 1;
+                                counter <= 0;
+                            end else begin
+                                state <= STATE_IDLE;
+                                counter <= 0;
+                            end
+                        end else if (counter < 3) begin
+                            counter <= counter + 1;
+                        end else begin
+                            // Invalid prefix
+                            state <= STATE_IDLE;
+                            counter <= 0;
                         end
                     end
-                end else begin
-                    prefix_count <= prefix_count + 1;
                 end
-            end
-            
-            // Handle packet counting during data forwarding
-            if ((state == STATE_ASC_MODE || state == STATE_STL_MODE || 
-                 state == STATE_ASC_MODE_FINAL || state == STATE_STL_MODE_FINAL) && 
-                incoming_fifo_rd_en_buf && 
-                (((state == STATE_ASC_MODE || state == STATE_ASC_MODE_FINAL) && asc_data_ready) || 
-                 ((state == STATE_STL_MODE || state == STATE_STL_MODE_FINAL) && stl_data_ready))) begin
-                if (packet_count == current_packet_size - 1) begin
-                    packet_count <= 0;
-                    final_packet_seen <= 1;
-                end else begin
-                    packet_count <= packet_count + 1;
-                    final_packet_seen <= 0;
+                
+                STATE_FORWARD_ASC: begin
+                    if (fifo_rd_en_prev && asc_data_ready) begin
+                        if (counter == ASC_PACKET_SIZE - 1) begin
+                            state <= STATE_RESPOND_ASC;
+                            counter <= 0;
+                        end else begin
+                            counter <= counter + 1;
+                        end
+                    end
                 end
-            end
-            
-            // Handle response counting
-            if (state == STATE_STL_RESPONSE && stl_response_valid && !outgoing_fifo_full) begin
-                if (response_count == STL_RESPONSE_SIZE) begin
-                    response_count <= 0;
-                    final_packet_seen <= 0;
-                end else begin
-                    response_count <= response_count + 1;
+                
+                STATE_FORWARD_STL: begin
+                    if (fifo_rd_en_prev && stl_data_ready) begin
+                        if (counter == STL_PACKET_SIZE - 1) begin
+                            state <= STATE_RESPOND_STL;
+                            counter <= 0;
+                        end else begin
+                            counter <= counter + 1;
+                        end
+                    end
                 end
-            end else if (state == STATE_IDLE) begin
-                packet_count <= 0;
-                response_count <= 0;
-                final_packet_seen <= 0;
-            end
+                
+                STATE_RESPOND_ASC: begin
+                    if (asc_response_valid && !outgoing_fifo_full) begin
+                        state <= STATE_IDLE;
+                        counter <= 0;
+                    end
+                end
+                
+                STATE_RESPOND_STL: begin
+                    if (stl_response_valid && !outgoing_fifo_full) begin
+                        if (counter == STL_RESPONSE_SIZE - 1) begin
+                            state <= STATE_IDLE;
+                            counter <= 0;
+                        end else begin
+                            counter <= counter + 1;
+                        end
+                    end
+                end
+                
+                default: begin
+                    state <= STATE_IDLE;
+                    counter <= 0;
+                end
+            endcase
         end
     end
     
-    // Next state logic
+    // Mealy FSM: combinational outputs and FIFO control
     always @(*) begin
-        next_state = state;
-        
         case (state)
             STATE_IDLE: begin
-                if (incoming_fifo_rd_en_buf) begin
-                    if (fifo_to_fsm_data == PREFIX_1_ASC || fifo_to_fsm_data == PREFIX_1_STL) begin
-                        next_state = STATE_PREFIX_1;
-                    end else begin
-                        next_state = STATE_IDLE;
-                    end
-                end
+                incoming_fifo_rd_en = !incoming_fifo_empty;
             end
             
-            STATE_PREFIX_1: begin
-                if (incoming_fifo_rd_en_buf) begin
-                    if ((prefix_buffer[0] == PREFIX_1_ASC && fifo_to_fsm_data == PREFIX_2_ASC) ||
-                        (prefix_buffer[0] == PREFIX_1_STL && fifo_to_fsm_data == PREFIX_2_STL)) begin
-                        next_state = STATE_PREFIX_2;
-                    end else begin
-                        next_state = STATE_IDLE;
-                    end
-                end
+            STATE_PREFIX: begin
+                incoming_fifo_rd_en = !incoming_fifo_empty;
             end
             
-            STATE_PREFIX_2: begin
-                if (incoming_fifo_rd_en_buf) begin
-                    if ((prefix_buffer[0] == PREFIX_1_ASC && prefix_buffer[1] == PREFIX_2_ASC && fifo_to_fsm_data == PREFIX_3_ASC) ||
-                        (prefix_buffer[0] == PREFIX_1_STL && prefix_buffer[1] == PREFIX_2_STL && fifo_to_fsm_data == PREFIX_3_STL)) begin
-                        next_state = STATE_PREFIX_3;
-                    end else begin
-                        next_state = STATE_IDLE;
-                    end
-                end
+            STATE_FORWARD_ASC: begin
+                incoming_fifo_rd_en = !incoming_fifo_empty && asc_data_ready;
             end
             
-            STATE_PREFIX_3: begin
-                if (incoming_fifo_rd_en_buf) begin
-                    if (fifo_to_fsm_data == PREFIX_4_COMMON) begin
-                        if (prefix_buffer[0] == PREFIX_1_ASC && prefix_buffer[1] == PREFIX_2_ASC && prefix_buffer[2] == PREFIX_3_ASC) begin
-                            next_state = STATE_ASC_MODE;
-                        end else if (prefix_buffer[0] == PREFIX_1_STL && prefix_buffer[1] == PREFIX_2_STL && prefix_buffer[2] == PREFIX_3_STL) begin
-                            next_state = STATE_STL_MODE;
-                        end
-                    end else begin
-                        next_state = STATE_IDLE;
-                    end
-                end
+            STATE_FORWARD_STL: begin
+                incoming_fifo_rd_en = !incoming_fifo_empty && stl_data_ready;
             end
             
-            STATE_ASC_MODE: begin
-                if (incoming_fifo_rd_en_buf && asc_data_ready && packet_count == current_packet_size) begin
-                    next_state = STATE_ASC_MODE_FINAL;
-                end
+            STATE_RESPOND_ASC: begin
+                incoming_fifo_rd_en = 1'b0;
             end
             
-            STATE_STL_MODE: begin
-                if (final_packet_seen) begin
-                    next_state = STATE_STL_RESPONSE;
-                end
-            end
-            
-            STATE_ASC_MODE_FINAL: begin
-                if (incoming_fifo_rd_en_buf && asc_data_ready) begin
-                    next_state = STATE_ASC_RESPONSE;
-                end
-            end
-            
-            STATE_STL_MODE_FINAL: begin
-                if (incoming_fifo_rd_en_buf && stl_data_ready) begin
-                    next_state = STATE_STL_RESPONSE;
-                end
-            end
-            
-            STATE_ASC_RESPONSE: begin
-                if (asc_response_valid && !outgoing_fifo_full) begin
-                    next_state = STATE_ASC_RESPONSE_FINAL;
-                end
-            end
-            
-            STATE_STL_RESPONSE: begin
-                if (stl_response_valid && !outgoing_fifo_full && response_count == STL_RESPONSE_SIZE - 1) begin
-                    next_state = STATE_STL_RESPONSE_FINAL;
-                end
-            end
-
-            STATE_ASC_RESPONSE_FINAL: begin
-                next_state = STATE_IDLE;
-            end
-
-            STATE_STL_RESPONSE_FINAL: begin
-                next_state = STATE_IDLE;
-            end
-            
-            STATE_ERROR: begin
-                // Stay in error state until reset
-                next_state = STATE_ERROR;
+            STATE_RESPOND_STL: begin
+                incoming_fifo_rd_en = 1'b0;
             end
             
             default: begin
-                next_state = STATE_IDLE;
+                incoming_fifo_rd_en = 1'b0;
             end
         endcase
     end
     
     // Output assignments
-    assign active_mode = (state == STATE_ASC_MODE || state == STATE_ASC_MODE_FINAL || 
-                          state == STATE_ASC_RESPONSE || state == STATE_ASC_RESPONSE_FINAL) ? 2'b01 :
-                        (state == STATE_STL_MODE || state == STATE_STL_MODE_FINAL || 
-                          state == STATE_STL_RESPONSE || state == STATE_STL_RESPONSE_FINAL) ? 2'b10 :
+    assign active_mode = (state == STATE_FORWARD_ASC || state == STATE_RESPOND_ASC) ? 2'b01 :
+                        (state == STATE_FORWARD_STL || state == STATE_RESPOND_STL) ? 2'b10 :
                         2'b00;
     
-    assign debug_state = state;
+    assign debug_state = {1'b0, state}; // Extend to 4 bits for compatibility
     
     // ASC subsystem connections
     assign asc_data_out = fifo_to_fsm_data;
-    assign asc_data_valid = (state == STATE_ASC_MODE || state == STATE_ASC_MODE_FINAL) ? incoming_fifo_rd_en_buf : 1'b0;
-    assign asc_response_ready = (state == STATE_ASC_RESPONSE || state == STATE_ASC_RESPONSE_FINAL) ? !outgoing_fifo_full : 1'b0;
+    assign asc_data_valid = (state == STATE_FORWARD_ASC) ? fifo_rd_en_prev : 1'b0;
+    assign asc_response_ready = (state == STATE_RESPOND_ASC) ? !outgoing_fifo_full : 1'b0;
     
     // STL subsystem connections  
     assign stl_data_out = fifo_to_fsm_data;
-    assign stl_data_valid = (state == STATE_STL_MODE || state == STATE_STL_MODE_FINAL) ? incoming_fifo_rd_en_buf : 1'b0;
-    assign stl_response_ready = (state == STATE_STL_RESPONSE || state == STATE_STL_RESPONSE_FINAL) ? !outgoing_fifo_full : 1'b0;
+    assign stl_data_valid = (state == STATE_FORWARD_STL) ? fifo_rd_en_prev : 1'b0;
+    assign stl_response_ready = (state == STATE_RESPOND_STL) ? !outgoing_fifo_full : 1'b0;
     
     // Response output mux (FSM -> Outgoing FIFO)
-    assign fsm_to_fifo_data = (state == STATE_ASC_RESPONSE || state == STATE_ASC_RESPONSE_FINAL) ? asc_response_data :
-                             (state == STATE_STL_RESPONSE || state == STATE_STL_RESPONSE_FINAL) ? stl_response_data :
+    assign fsm_to_fifo_data = (state == STATE_RESPOND_ASC) ? asc_response_data :
+                             (state == STATE_RESPOND_STL) ? stl_response_data :
                              8'h00;
     
-    assign fsm_to_fifo_valid = (state == STATE_ASC_RESPONSE || state == STATE_ASC_RESPONSE_FINAL) ? asc_response_valid :
-                              (state == STATE_STL_RESPONSE || state == STATE_STL_RESPONSE_FINAL) ? stl_response_valid :
+    assign fsm_to_fifo_valid = (state == STATE_RESPOND_ASC) ? asc_response_valid :
+                              (state == STATE_RESPOND_STL) ? stl_response_valid :
                               1'b0;
-    
-    // FSM ready signal - ready when subsystem can accept data or during prefix detection
-    always @(posedge clk) begin
-        subsystem_data_ready <= (state == STATE_ASC_MODE || state == STATE_ASC_MODE_FINAL) ? asc_data_ready :
-                              (state == STATE_STL_MODE || state == STATE_STL_MODE_FINAL) ? stl_data_ready :
-                              (state >= STATE_IDLE && state <= STATE_PREFIX_3) ? 1'b1 :
-                              1'b0;
-    end
 endmodule
