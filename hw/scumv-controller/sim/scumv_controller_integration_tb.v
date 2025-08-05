@@ -57,17 +57,80 @@ module scumv_controller_integration_tb();
     // Device under test (DUT) - a7top module
     wire [3:0] led;
     
-    // Mock SerialTL interface (since we're only testing UART/STL path)
+    // SerialTL interface - now with loopback and inspection
     reg tl_clk;
-    reg tl_in_valid;
+    wire tl_in_valid;
     wire tl_in_ready;
-    reg tl_in_data;
+    wire tl_in_data;
     wire tl_out_valid;
-    reg tl_out_ready;
+    wire tl_out_ready;
     wire tl_out_data;
+    
+    // TileLink packet inspection signals
+    wire tl_inspector_ready;
+    wire tl_inspector_valid;
+    wire [2:0] tl_inspector_chanId;
+    wire [2:0] tl_inspector_opcode;
+    wire [2:0] tl_inspector_param;
+    wire [7:0] tl_inspector_size;
+    wire [7:0] tl_inspector_source;
+    wire [63:0] tl_inspector_address;
+    wire [63:0] tl_inspector_data;
+    wire tl_inspector_corrupt;
+    wire [8:0] tl_inspector_union;
     
     // Mock ASC interface
     wire scan_clk, scan_en, scan_in, scan_reset;
+    
+    // TileLink packet inspector (deserializer for monitoring)
+    GenericDeserializer tl_inspector (
+        .clock(tl_clk),
+        .reset(reset),
+        .io_in_ready(tl_inspector_ready),    // Output - not used
+        .io_in_valid(tl_out_valid),          // Input from DUT TL_OUT
+        .io_in_bits(tl_out_data),            // Input from DUT TL_OUT
+        .io_out_ready(1'b1),                 // Always ready to accept packets
+        .io_out_valid(tl_inspector_valid),
+        .io_out_bits_chanId(tl_inspector_chanId),
+        .io_out_bits_opcode(tl_inspector_opcode),
+        .io_out_bits_param(tl_inspector_param),
+        .io_out_bits_size(tl_inspector_size),
+        .io_out_bits_source(tl_inspector_source),
+        .io_out_bits_address(tl_inspector_address),
+        .io_out_bits_data(tl_inspector_data),
+        .io_out_bits_corrupt(tl_inspector_corrupt),
+        .io_out_bits_union(tl_inspector_union)
+    );
+    
+    // TileLink echo serializer (re-serializes packets back to TL_IN)
+    GenericSerializer tl_echo_serializer (
+        .clock(tl_clk),
+        .reset(reset),
+        .io_in_ready(),                          // Not used - serializer always ready when not sending
+        .io_in_valid(tl_inspector_valid),        // Input from deserializer
+        .io_in_bits_chanId(tl_inspector_chanId),
+        .io_in_bits_opcode(tl_inspector_opcode),
+        .io_in_bits_param(tl_inspector_param),
+        .io_in_bits_size(tl_inspector_size),
+        .io_in_bits_source(tl_inspector_source),
+        .io_in_bits_address(tl_inspector_address),
+        .io_in_bits_data(tl_inspector_data),
+        .io_in_bits_corrupt(tl_inspector_corrupt),
+        .io_in_bits_union(tl_inspector_union),
+        .io_in_bits_last(1'b1),                 // Always last bit for single packets
+        .io_out_ready(tl_in_ready),              // Ready signal from DUT
+        .io_out_valid(tl_in_valid),              // Output to DUT TL_IN
+        .io_out_bits(tl_in_data)                 // Output to DUT TL_IN
+    );
+    
+    // TL_OUT_READY comes from the deserializer (when it can accept more data)
+    assign tl_out_ready = tl_inspector_ready;
+    
+    // Test validation variables
+    integer packets_sent_count;
+    integer packets_received_count;
+    integer assertion_failures;
+    reg test_passed;
     
     // UART stimulus generator (transmitter to feed data to DUT)
     uart #(
@@ -158,10 +221,14 @@ module scumv_controller_integration_tb();
         response_count = 0;
         timeout_counter = 0;
         
-        // Mock TileLink interface (not active for this test)
-        tl_in_valid = 1'b0;
-        tl_in_data = 1'b0;
-        tl_out_ready = 1'b1;
+        // Initialize test validation variables
+        packets_sent_count = 0;
+        packets_received_count = 0;
+        assertion_failures = 0;
+        test_passed = 1'b0;
+        
+        // TileLink interface is now active with loopback connections
+        // (no initialization needed - handled by assign statements)
         
         // Load test vectors from file
         load_test_vectors();
@@ -314,6 +381,10 @@ module scumv_controller_integration_tb();
                 $write("\n");
             end
             
+            // TileLink packet validation results
+            $display("[TB] TileLink packets received: %0d", packets_received_count);
+            $display("[TB] Assertion failures: %0d", assertion_failures);
+            
             // Check LED status
             $display("[TB] Final LED status: %b", led);
             $display("[TB] LED[0] (n_reset): %b", led[0]);
@@ -321,11 +392,35 @@ module scumv_controller_integration_tb();
             $display("[TB] LED[2] (STL active): %b", led[2]);
             $display("[TB] LED[3] (TL_IN_VALID): %b", led[3]);
             
-            // Basic pass/fail criteria
-            if (response_count > 0) begin
-                $display("[TB] PASS: Received response data from STL controller");
+            // Comprehensive pass/fail criteria
+            test_passed = 1'b1;  // Start with pass assumption
+            
+            if (response_count == 0) begin
+                $display("[TB] FAIL: No UART response data received");
+                test_passed = 1'b0;
             end else begin
-                $display("[TB] FAIL: No response data received");
+                $display("[TB] PASS: Received %0d UART response bytes", response_count);
+            end
+            
+            if (packets_received_count == 0) begin
+                $display("[TB] FAIL: No TileLink packets captured");
+                test_passed = 1'b0;
+            end else begin
+                $display("[TB] PASS: Captured %0d TileLink packets", packets_received_count);
+            end
+            
+            if (assertion_failures > 0) begin
+                $display("[TB] FAIL: %0d assertion failures detected", assertion_failures);
+                test_passed = 1'b0;
+            end else begin
+                $display("[TB] PASS: No assertion failures");
+            end
+            
+            // Final test result
+            if (test_passed) begin
+                $display("[TB] OVERALL RESULT: PASS - Echo functionality working correctly");
+            end else begin
+                $display("[TB] OVERALL RESULT: FAIL - Test validation failed");
             end
             
             $display("[TB] ===================================");
@@ -349,6 +444,47 @@ module scumv_controller_integration_tb();
     always @(posedge clk) begin
         if (tl_out_valid && tl_out_ready) begin
             $display("[TB] STL TL_OUT transaction: data=%b", tl_out_data);
+        end
+    end
+    
+    // Monitor and validate deserialized TileLink packets
+    always @(posedge tl_clk) begin
+        if (tl_inspector_valid) begin
+            packets_received_count = packets_received_count + 1;
+            
+            $display("[TB] ========== TILELINK PACKET CAPTURED ==========");
+            $display("[TB] Packet #%0d", packets_received_count);
+            $display("[TB] Channel ID: 0x%01X", tl_inspector_chanId);
+            $display("[TB] Opcode:     0x%01X (%s)", tl_inspector_opcode, 
+                     tl_inspector_opcode == 3'h0 ? "PutFullData" :
+                     tl_inspector_opcode == 3'h1 ? "PutPartialData" :
+                     tl_inspector_opcode == 3'h4 ? "Get" :
+                     tl_inspector_opcode == 3'h0 ? "AccessAck" :
+                     tl_inspector_opcode == 3'h1 ? "AccessAckData" : "Unknown");
+            $display("[TB] Param:      0x%01X", tl_inspector_param);
+            $display("[TB] Size:       0x%02X (%0d bytes)", tl_inspector_size, 1 << tl_inspector_size);
+            $display("[TB] Source:     0x%02X", tl_inspector_source);
+            $display("[TB] Address:    0x%016X", tl_inspector_address);
+            $display("[TB] Data:       0x%016X", tl_inspector_data);
+            $display("[TB] Corrupt:    %b", tl_inspector_corrupt);
+            $display("[TB] Union:      0x%03X", tl_inspector_union);
+            $display("[TB] =============================================");
+            
+            // Basic packet validation assertions (content only, not timing)
+            if (tl_inspector_size > 8'h06) begin
+                $error("[TB] ASSERTION FAILED: Invalid packet size: 0x%02X (max 0x06)", tl_inspector_size);
+                assertion_failures = assertion_failures + 1;
+            end
+            
+            if (tl_inspector_chanId > 3'h2) begin
+                $error("[TB] ASSERTION FAILED: Invalid channel ID: 0x%01X (max 0x2)", tl_inspector_chanId);
+                assertion_failures = assertion_failures + 1;
+            end
+            
+            if (tl_inspector_opcode > 3'h6) begin
+                $error("[TB] ASSERTION FAILED: Invalid opcode: 0x%01X (max 0x6)", tl_inspector_opcode);
+                assertion_failures = assertion_failures + 1;
+            end
         end
     end
     
