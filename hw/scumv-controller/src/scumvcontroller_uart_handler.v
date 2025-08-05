@@ -98,8 +98,7 @@ module scumvcontroller_uart_handler #(
     wire [7:0] fifo_to_fsm_data;        // Data from incoming FIFO to FSM
     assign debug_uart_data_in = fifo_to_fsm_data;
     assign debug_packet_count = packet_count;
-    wire fifo_to_fsm_valid;             // Data available from incoming FIFO
-    wire fsm_to_fifo_ready;             // FSM ready to consume data from FIFO
+    reg subsystem_data_ready;             // FSM ready to consume data from FIFO
     wire incoming_fifo_rd_en;           // Explicit FIFO read enable
     wire incoming_fifo_full;
     wire incoming_fifo_empty;
@@ -107,7 +106,6 @@ module scumvcontroller_uart_handler #(
     // Outgoing FIFO signals (Response -> UART TX)
     wire [7:0] fsm_to_fifo_data;        // Data from FSM to outgoing FIFO
     wire fsm_to_fifo_valid;             // FSM has response data to send
-    wire fifo_to_fsm_ready;             // Outgoing FIFO ready to accept data
     wire outgoing_fifo_wr_en;           // Explicit FIFO write enable
     wire outgoing_fifo_full;
     wire outgoing_fifo_empty;
@@ -163,12 +161,9 @@ module scumvcontroller_uart_handler #(
     
     // FIFO control signals - explicit handshaking
     assign uart_rx_data_ready = !incoming_fifo_full;           // UART can write when FIFO has space
-    assign fifo_to_fsm_valid = !incoming_fifo_empty;           // FSM sees data when FIFO has data
     reg incoming_fifo_rd_en_buf;
-    assign incoming_fifo_rd_en = fifo_to_fsm_valid && fsm_to_fifo_ready; // Read when both valid and ready
-    
-    assign fifo_to_fsm_ready = !outgoing_fifo_full;            // Outgoing FIFO can accept response
-    assign outgoing_fifo_wr_en = fsm_to_fifo_valid && fifo_to_fsm_ready; // Write when both valid and ready
+    assign incoming_fifo_rd_en = !incoming_fifo_empty && subsystem_data_ready; // Read when both valid and ready
+    assign outgoing_fifo_wr_en = fsm_to_fifo_valid && !outgoing_fifo_full; // Write when both valid and ready
     assign uart_tx_data_valid = !outgoing_fifo_empty;          // UART sends when FIFO has data
     
     // State machine
@@ -226,7 +221,7 @@ module scumvcontroller_uart_handler #(
             end
             
             // Handle response counting
-            if (state == STATE_STL_RESPONSE && stl_response_valid && fifo_to_fsm_ready) begin
+            if (state == STATE_STL_RESPONSE && stl_response_valid && !outgoing_fifo_full) begin
                 if (response_count == STL_RESPONSE_SIZE) begin
                     response_count <= 0;
                     final_packet_seen <= 0;
@@ -317,13 +312,13 @@ module scumvcontroller_uart_handler #(
             end
             
             STATE_ASC_RESPONSE: begin
-                if (asc_response_valid && fifo_to_fsm_ready) begin
+                if (asc_response_valid && !outgoing_fifo_full) begin
                     next_state = STATE_ASC_RESPONSE_FINAL;
                 end
             end
             
             STATE_STL_RESPONSE: begin
-                if (stl_response_valid && fifo_to_fsm_ready && response_count == STL_RESPONSE_SIZE - 1) begin
+                if (stl_response_valid && !outgoing_fifo_full && response_count == STL_RESPONSE_SIZE - 1) begin
                     next_state = STATE_STL_RESPONSE_FINAL;
                 end
             end
@@ -359,12 +354,12 @@ module scumvcontroller_uart_handler #(
     // ASC subsystem connections
     assign asc_data_out = fifo_to_fsm_data;
     assign asc_data_valid = (state == STATE_ASC_MODE || state == STATE_ASC_MODE_FINAL) ? incoming_fifo_rd_en_buf : 1'b0;
-    assign asc_response_ready = (state == STATE_ASC_RESPONSE || state == STATE_ASC_RESPONSE_FINAL) ? fifo_to_fsm_ready : 1'b0;
+    assign asc_response_ready = (state == STATE_ASC_RESPONSE || state == STATE_ASC_RESPONSE_FINAL) ? !outgoing_fifo_full : 1'b0;
     
     // STL subsystem connections  
     assign stl_data_out = fifo_to_fsm_data;
     assign stl_data_valid = (state == STATE_STL_MODE || state == STATE_STL_MODE_FINAL) ? incoming_fifo_rd_en_buf : 1'b0;
-    assign stl_response_ready = (state == STATE_STL_RESPONSE || state == STATE_STL_RESPONSE_FINAL) ? fifo_to_fsm_ready : 1'b0;
+    assign stl_response_ready = (state == STATE_STL_RESPONSE || state == STATE_STL_RESPONSE_FINAL) ? !outgoing_fifo_full : 1'b0;
     
     // Response output mux (FSM -> Outgoing FIFO)
     assign fsm_to_fifo_data = (state == STATE_ASC_RESPONSE || state == STATE_ASC_RESPONSE_FINAL) ? asc_response_data :
@@ -376,9 +371,10 @@ module scumvcontroller_uart_handler #(
                               1'b0;
     
     // FSM ready signal - ready when subsystem can accept data or during prefix detection
-    assign fsm_to_fifo_ready = (state == STATE_ASC_MODE || state == STATE_ASC_MODE_FINAL) ? asc_data_ready :
+    always @(posedge clk) begin
+        subsystem_data_ready <= (state == STATE_ASC_MODE || state == STATE_ASC_MODE_FINAL) ? asc_data_ready :
                               (state == STATE_STL_MODE || state == STATE_STL_MODE_FINAL) ? stl_data_ready :
                               (state >= STATE_IDLE && state <= STATE_PREFIX_3) ? 1'b1 :
                               1'b0;
-
+    end
 endmodule
