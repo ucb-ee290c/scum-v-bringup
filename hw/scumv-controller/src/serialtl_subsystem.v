@@ -193,6 +193,8 @@ module serialtl_subsystem #(
     tilelink_to_uart_bridge tl_to_uart (
         .clk(clk),
         .reset(reset),
+        .tl_clk(tl_clk),
+
         
         // Interface from GenericDeserializer
         .tl_out_valid(tl_deser_out_valid),

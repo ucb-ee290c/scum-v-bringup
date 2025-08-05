@@ -24,7 +24,12 @@ The SCuM-V Controller is a dual-mode FPGA implementation that provides UART-base
 │  ┌──────────┐   UART   ┌─────────────────────────────────────────────┐   │
 │  │   Host   │◄────────►│        scumvcontroller_uart_handler        │   │
 │  │    PC    │          │        (Protocol Multiplexer)              │   │
-│  └──────────┘          └─────────────┬─────────────┬─────────────────┘   │
+│  └──────────┘          │     ┌─────────────┐  ┌─────────────┐       │   │
+│                        │     │  Incoming   │  │  Outgoing   │       │   │
+│                        │     │    FIFOs    │  │    FIFOs    │       │   │
+│                        │     │(Flow Ctrl)  │  │(Flow Ctrl)  │       │   │
+│                        │     └─────────────┘  └─────────────┘       │   │
+│                        └─────────────┬─────────────┬─────────────────┘   │
 │                                      │             │                     │
 │                               FIFO   │             │   FIFO              │
 │                            Interface │             │ Interface           │
@@ -194,7 +199,34 @@ output wire TL_OUT_DATA    // Serial data coming from SCuM-V
 
 ### 4.2 Internal FIFO Interfaces
 
-#### 4.2.1 Standard FIFO Interface
+#### 4.2.1 UART Handler Flow Control Architecture
+
+The UART handler implements internal FIFOs to manage flow control between the UART interface (high baud rate) and the TileLink interface (slower TL_CLK). This is critical because:
+
+- **TL_CLK Timing**: The TileLink clock runs much slower than UART baud rate (typically 200kHz vs 1Mbaud+)
+- **Burst Handling**: Complete TileLink packets (16 bytes) must be buffered before processing
+- **Bidirectional Flow**: Both incoming (UART→subsystem) and outgoing (subsystem→UART) FIFOs are required
+
+```
+UART Handler Internal Architecture:
+┌─────────────────────────────────────────────────────────────────┐
+│                    scumvcontroller_uart_handler                 │
+│                                                                 │
+│  UART RX ──► Incoming ──► Protocol ──► ASC/STL ──► Subsystems   │
+│             FIFO (128B)  Detection    Mux                       │
+│                                                                 │
+│  UART TX ◄── Outgoing ◄── Response ◄── ASC/STL ◄── Subsystems   │
+│             FIFO (128B)  Mux        Demux                       │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**FIFO Specifications:**
+- **Incoming FIFO**: 128-byte depth, buffers UART data before protocol processing
+- **Outgoing FIFO**: 128-byte depth, buffers subsystem responses before UART transmission
+- **Flow Control**: Prevents data loss during clock domain differences
+- **Protocol Isolation**: Each subsystem sees consistent data flow regardless of UART timing
+
+#### 4.2.2 Standard FIFO Interface
 All subsystem interfaces follow this standard pattern:
 ```verilog
 // Input data stream
@@ -374,7 +406,9 @@ SCuM-V SerialTL → TL Deserializer → TL Bridge → STL Client → UART Handle
 
 #### 6.1.4 Test Infrastructure (Completed)
 - **`tl_host_sim.py`**: Modified version of `tl_host.py` that generates UART byte streams to files for RTL simulation
-- **`scumv_controller_integration_tb.v`**: Comprehensive integration testbench for Vivado RTL simulation
+- **`scumv_controller_integration_tb.v`**: Comprehensive integration testbench with TileLink echo and inspection functionality
+- **TileLink Echo Architecture**: TL_OUT → GenericDeserializer (inspection) → GenericSerializer → TL_IN
+- **Packet Validation**: Complete packet field inspection with content-based assertions
 - **Test Vectors**: Generated binary files with real STL command sequences for simulation validation
 
 #### 6.1.5 Remaining Tasks
@@ -454,9 +488,71 @@ input  wire [7:0] response_data   // Response payload
    - Pin assignments for TL_OUT_VALID, TL_OUT_READY, TL_OUT_DATA
    - Timing constraints for clock domain crossing
 
-### 7.2 Verification Strategy
+### 7.2 Testbench Architecture
 
-#### 7.2.1 Module-Level Testing
+#### 7.2.1 TileLink Echo and Inspection System
+
+The integration testbench implements a sophisticated TileLink echo and inspection system for comprehensive validation:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    Integration Testbench Architecture                   │
+│                                                                         │
+│  ┌──────────────┐    UART     ┌─────────────────────────────────────┐   │
+│  │ Test Vector  │ ────────────►│            a7top DUT               │   │
+│  │ Generator    │              │                                     │   │
+│  └──────────────┘              │  ┌─────────────────────────────────┐│   │
+│                                 │  │      serialtl_subsystem        ││   │
+│  ┌──────────────┐              │  └──────────┬──────────────────────┘│   │
+│  │ UART Response│◄─────────────│             │                       │   │
+│  │   Capture    │              └─────────────┼───────────────────────┘   │
+│  └──────────────┘                            │                           │
+│                                               │ TL_OUT                    │
+│  ┌─────────────────────────────────────────────┼─────────────────────────┐ │
+│  │              TileLink Echo & Inspection     ▼                         │ │
+│  │                                                                       │ │
+│  │  TL_OUT ──► GenericDeserializer ──► GenericSerializer ──► TL_IN      │ │
+│  │                       │                                               │ │
+│  │                       ▼                                               │ │
+│  │              ┌─────────────────┐                                      │ │
+│  │              │ Packet Inspector│                                      │ │
+│  │              │  & Validator    │                                      │ │
+│  │              │                 │                                      │ │
+│  │              │ - Display all   │                                      │ │
+│  │              │   packet fields │                                      │ │
+│  │              │ - Content       │                                      │ │
+│  │              │   assertions    │                                      │ │
+│  │              │ - Pass/fail     │                                      │ │
+│  │              │   tracking      │                                      │ │
+│  │              └─────────────────┘                                      │ │
+│  └───────────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Key Features:**
+- **Realistic Echo**: Deserialize → re-serialize path provides proper timing behavior
+- **Complete Inspection**: All TileLink packet fields captured and displayed
+- **Content Validation**: Assertions verify packet field validity (size, channel, opcode)
+- **Pass/Fail Criteria**: Comprehensive validation including UART responses, packet counts, and assertion results
+
+#### 7.2.2 Validation Methodology
+
+The testbench provides multi-level validation:
+
+1. **UART Level**: Verifies byte-level communication and response capture
+2. **TileLink Level**: Validates packet structure and content correctness  
+3. **Echo Level**: Confirms commands are properly echoed back via TL_IN
+4. **System Level**: Overall pass/fail based on all validation criteria
+
+**Assertion Strategy:**
+- Content-based assertions only (no timing assumptions)
+- Field range validation (size ≤ 0x06, channel ≤ 0x2, opcode ≤ 0x6)
+- Packet count tracking for echo verification
+- Graceful error reporting with detailed failure information
+
+#### 7.2.3 Verification Strategy
+
+#### 7.2.3.1 Module-Level Testing
 - **UART Handler**: Test prefix detection state machine with various input sequences
 - **ASC Subsystem**: Validate against existing `hw/client.py` without modifications
 - **STL Bridges**: Unit tests for packet ↔ TileLink frame conversion

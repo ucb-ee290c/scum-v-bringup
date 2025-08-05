@@ -86,15 +86,31 @@ module scumvcontroller_uart_handler #(
     reg protocol_detected; // 0=ASC, 1=STL
     reg final_packet_seen;
     
-    // UART interface signals
-    wire [7:0] uart_data_in;
-    assign debug_uart_data_in = uart_data_in;
+    // UART interface signals (direct from UART module)
+    wire [7:0] uart_rx_data;
+    wire uart_rx_data_valid;
+    wire uart_rx_data_ready;
+    wire [7:0] uart_tx_data;
+    wire uart_tx_data_valid;
+    wire uart_tx_data_ready;
+    
+    // Incoming FIFO signals (UART RX -> Protocol Processing)
+    wire [7:0] fifo_to_fsm_data;        // Data from incoming FIFO to FSM
+    assign debug_uart_data_in = fifo_to_fsm_data;
     assign debug_packet_count = packet_count;
-    wire uart_data_in_valid;
-    wire uart_data_in_ready;
-    wire [7:0] uart_data_out;
-    wire uart_data_out_valid;
-    wire uart_data_out_ready;
+    wire fifo_to_fsm_valid;             // Data available from incoming FIFO
+    wire fsm_to_fifo_ready;             // FSM ready to consume data from FIFO
+    wire incoming_fifo_rd_en;           // Explicit FIFO read enable
+    wire incoming_fifo_full;
+    wire incoming_fifo_empty;
+    
+    // Outgoing FIFO signals (Response -> UART TX)
+    wire [7:0] fsm_to_fifo_data;        // Data from FSM to outgoing FIFO
+    wire fsm_to_fifo_valid;             // FSM has response data to send
+    wire fifo_to_fsm_ready;             // Outgoing FIFO ready to accept data
+    wire outgoing_fifo_wr_en;           // Explicit FIFO write enable
+    wire outgoing_fifo_full;
+    wire outgoing_fifo_empty;
     
     // Internal UART instance
     uart #(
@@ -103,15 +119,57 @@ module scumvcontroller_uart_handler #(
     ) uart_inst (
         .clk(clk),
         .reset(reset),
-        .data_in(uart_data_out),
-        .data_in_valid(uart_data_out_valid),
-        .data_in_ready(uart_data_out_ready),
-        .data_out(uart_data_in),
-        .data_out_valid(uart_data_in_valid),
-        .data_out_ready(uart_data_in_ready),
+        .data_in(uart_tx_data),
+        .data_in_valid(uart_tx_data_valid),
+        .data_in_ready(uart_tx_data_ready),
+        .data_out(uart_rx_data),
+        .data_out_valid(uart_rx_data_valid),
+        .data_out_ready(uart_rx_data_ready),
         .serial_in(uart_rx),
         .serial_out(uart_tx)
     );
+    
+    // Incoming FIFO (UART RX -> Protocol Processing)
+    // Buffers incoming UART data for protocol detection and forwarding
+    fifo #(
+        .WIDTH(8),
+        .DEPTH(128)
+    ) incoming_fifo (
+        .clk(clk),
+        .rst(reset),
+        .wr_en(uart_rx_data_valid && uart_rx_data_ready),
+        .din(uart_rx_data),
+        .full(incoming_fifo_full),
+        .rd_en(incoming_fifo_rd_en),
+        .dout(fifo_to_fsm_data),
+        .empty(incoming_fifo_empty)
+    );
+    
+    // Outgoing FIFO (Response -> UART TX)  
+    // Buffers response data before UART transmission
+    fifo #(
+        .WIDTH(8),
+        .DEPTH(128)
+    ) outgoing_fifo (
+        .clk(clk),
+        .rst(reset),
+        .wr_en(outgoing_fifo_wr_en),
+        .din(fsm_to_fifo_data),
+        .full(outgoing_fifo_full),
+        .rd_en(uart_tx_data_ready && !outgoing_fifo_empty),
+        .dout(uart_tx_data),
+        .empty(outgoing_fifo_empty)
+    );
+    
+    // FIFO control signals - explicit handshaking
+    assign uart_rx_data_ready = !incoming_fifo_full;           // UART can write when FIFO has space
+    assign fifo_to_fsm_valid = !incoming_fifo_empty;           // FSM sees data when FIFO has data
+    reg incoming_fifo_rd_en_buf;
+    assign incoming_fifo_rd_en = fifo_to_fsm_valid && fsm_to_fifo_ready; // Read when both valid and ready
+    
+    assign fifo_to_fsm_ready = !outgoing_fifo_full;            // Outgoing FIFO can accept response
+    assign outgoing_fifo_wr_en = fsm_to_fifo_valid && fifo_to_fsm_ready; // Write when both valid and ready
+    assign uart_tx_data_valid = !outgoing_fifo_empty;          // UART sends when FIFO has data
     
     // State machine
     always @(posedge clk) begin
@@ -123,15 +181,17 @@ module scumvcontroller_uart_handler #(
             current_packet_size <= 0;
             protocol_detected <= 0;
             final_packet_seen <= 0;
+            incoming_fifo_rd_en_buf <= 0;
         end else begin
             state <= next_state;
+            incoming_fifo_rd_en_buf <= incoming_fifo_rd_en;
             
             // Handle prefix detection
-            if (state >= STATE_IDLE && state <= STATE_PREFIX_3 && uart_data_in_valid) begin
-                prefix_buffer[prefix_count] <= uart_data_in;
+            if (state >= STATE_IDLE && state <= STATE_PREFIX_3 && incoming_fifo_rd_en_buf) begin
+                prefix_buffer[prefix_count] <= fifo_to_fsm_data;
                 if (state == STATE_PREFIX_3) begin
                     prefix_count <= 0;
-                    if (uart_data_in == PREFIX_4_COMMON) begin
+                    if (fifo_to_fsm_data == PREFIX_4_COMMON) begin
                         // Determine protocol based on collected prefix
                         if (prefix_buffer[0] == PREFIX_1_ASC && 
                             prefix_buffer[1] == PREFIX_2_ASC && 
@@ -153,7 +213,7 @@ module scumvcontroller_uart_handler #(
             // Handle packet counting during data forwarding
             if ((state == STATE_ASC_MODE || state == STATE_STL_MODE || 
                  state == STATE_ASC_MODE_FINAL || state == STATE_STL_MODE_FINAL) && 
-                uart_data_in_valid && 
+                incoming_fifo_rd_en_buf && 
                 (((state == STATE_ASC_MODE || state == STATE_ASC_MODE_FINAL) && asc_data_ready) || 
                  ((state == STATE_STL_MODE || state == STATE_STL_MODE_FINAL) && stl_data_ready))) begin
                 if (packet_count == current_packet_size - 1) begin
@@ -166,7 +226,7 @@ module scumvcontroller_uart_handler #(
             end
             
             // Handle response counting
-            if (state == STATE_STL_RESPONSE && stl_response_valid && uart_data_out_ready) begin
+            if (state == STATE_STL_RESPONSE && stl_response_valid && fifo_to_fsm_ready) begin
                 if (response_count == STL_RESPONSE_SIZE) begin
                     response_count <= 0;
                     final_packet_seen <= 0;
@@ -187,8 +247,8 @@ module scumvcontroller_uart_handler #(
         
         case (state)
             STATE_IDLE: begin
-                if (uart_data_in_valid) begin
-                    if (uart_data_in == PREFIX_1_ASC || uart_data_in == PREFIX_1_STL) begin
+                if (incoming_fifo_rd_en_buf) begin
+                    if (fifo_to_fsm_data == PREFIX_1_ASC || fifo_to_fsm_data == PREFIX_1_STL) begin
                         next_state = STATE_PREFIX_1;
                     end else begin
                         next_state = STATE_IDLE;
@@ -197,9 +257,9 @@ module scumvcontroller_uart_handler #(
             end
             
             STATE_PREFIX_1: begin
-                if (uart_data_in_valid) begin
-                    if ((prefix_buffer[0] == PREFIX_1_ASC && uart_data_in == PREFIX_2_ASC) ||
-                        (prefix_buffer[0] == PREFIX_1_STL && uart_data_in == PREFIX_2_STL)) begin
+                if (incoming_fifo_rd_en_buf) begin
+                    if ((prefix_buffer[0] == PREFIX_1_ASC && fifo_to_fsm_data == PREFIX_2_ASC) ||
+                        (prefix_buffer[0] == PREFIX_1_STL && fifo_to_fsm_data == PREFIX_2_STL)) begin
                         next_state = STATE_PREFIX_2;
                     end else begin
                         next_state = STATE_IDLE;
@@ -208,9 +268,9 @@ module scumvcontroller_uart_handler #(
             end
             
             STATE_PREFIX_2: begin
-                if (uart_data_in_valid) begin
-                    if ((prefix_buffer[0] == PREFIX_1_ASC && prefix_buffer[1] == PREFIX_2_ASC && uart_data_in == PREFIX_3_ASC) ||
-                        (prefix_buffer[0] == PREFIX_1_STL && prefix_buffer[1] == PREFIX_2_STL && uart_data_in == PREFIX_3_STL)) begin
+                if (incoming_fifo_rd_en_buf) begin
+                    if ((prefix_buffer[0] == PREFIX_1_ASC && prefix_buffer[1] == PREFIX_2_ASC && fifo_to_fsm_data == PREFIX_3_ASC) ||
+                        (prefix_buffer[0] == PREFIX_1_STL && prefix_buffer[1] == PREFIX_2_STL && fifo_to_fsm_data == PREFIX_3_STL)) begin
                         next_state = STATE_PREFIX_3;
                     end else begin
                         next_state = STATE_IDLE;
@@ -219,8 +279,8 @@ module scumvcontroller_uart_handler #(
             end
             
             STATE_PREFIX_3: begin
-                if (uart_data_in_valid) begin
-                    if (uart_data_in == PREFIX_4_COMMON) begin
+                if (incoming_fifo_rd_en_buf) begin
+                    if (fifo_to_fsm_data == PREFIX_4_COMMON) begin
                         if (prefix_buffer[0] == PREFIX_1_ASC && prefix_buffer[1] == PREFIX_2_ASC && prefix_buffer[2] == PREFIX_3_ASC) begin
                             next_state = STATE_ASC_MODE;
                         end else if (prefix_buffer[0] == PREFIX_1_STL && prefix_buffer[1] == PREFIX_2_STL && prefix_buffer[2] == PREFIX_3_STL) begin
@@ -233,7 +293,7 @@ module scumvcontroller_uart_handler #(
             end
             
             STATE_ASC_MODE: begin
-                if (uart_data_in_valid && asc_data_ready && packet_count == current_packet_size) begin
+                if (incoming_fifo_rd_en_buf && asc_data_ready && packet_count == current_packet_size) begin
                     next_state = STATE_ASC_MODE_FINAL;
                 end
             end
@@ -245,25 +305,25 @@ module scumvcontroller_uart_handler #(
             end
             
             STATE_ASC_MODE_FINAL: begin
-                if (uart_data_in_valid && asc_data_ready) begin
+                if (incoming_fifo_rd_en_buf && asc_data_ready) begin
                     next_state = STATE_ASC_RESPONSE;
                 end
             end
             
             STATE_STL_MODE_FINAL: begin
-                if (uart_data_in_valid && stl_data_ready) begin
+                if (incoming_fifo_rd_en_buf && stl_data_ready) begin
                     next_state = STATE_STL_RESPONSE;
                 end
             end
             
             STATE_ASC_RESPONSE: begin
-                if (asc_response_valid && uart_data_out_ready) begin
+                if (asc_response_valid && fifo_to_fsm_ready) begin
                     next_state = STATE_ASC_RESPONSE_FINAL;
                 end
             end
             
             STATE_STL_RESPONSE: begin
-                if (stl_response_valid && uart_data_out_ready && response_count == STL_RESPONSE_SIZE - 1) begin
+                if (stl_response_valid && fifo_to_fsm_ready && response_count == STL_RESPONSE_SIZE - 1) begin
                     next_state = STATE_STL_RESPONSE_FINAL;
                 end
             end
@@ -297,28 +357,28 @@ module scumvcontroller_uart_handler #(
     assign debug_state = state;
     
     // ASC subsystem connections
-    assign asc_data_out = uart_data_in;
-    assign asc_data_valid = (state == STATE_ASC_MODE || state == STATE_ASC_MODE_FINAL) ? uart_data_in_valid : 1'b0;
-    assign asc_response_ready = (state == STATE_ASC_RESPONSE || state == STATE_ASC_RESPONSE_FINAL) ? uart_data_out_ready : 1'b0;
+    assign asc_data_out = fifo_to_fsm_data;
+    assign asc_data_valid = (state == STATE_ASC_MODE || state == STATE_ASC_MODE_FINAL) ? incoming_fifo_rd_en_buf : 1'b0;
+    assign asc_response_ready = (state == STATE_ASC_RESPONSE || state == STATE_ASC_RESPONSE_FINAL) ? fifo_to_fsm_ready : 1'b0;
     
     // STL subsystem connections  
-    assign stl_data_out = uart_data_in;
-    assign stl_data_valid = (state == STATE_STL_MODE || state == STATE_STL_MODE_FINAL) ? uart_data_in_valid : 1'b0;
-    assign stl_response_ready = (state == STATE_STL_RESPONSE || state == STATE_STL_RESPONSE_FINAL) ? uart_data_out_ready : 1'b0;
+    assign stl_data_out = fifo_to_fsm_data;
+    assign stl_data_valid = (state == STATE_STL_MODE || state == STATE_STL_MODE_FINAL) ? incoming_fifo_rd_en_buf : 1'b0;
+    assign stl_response_ready = (state == STATE_STL_RESPONSE || state == STATE_STL_RESPONSE_FINAL) ? fifo_to_fsm_ready : 1'b0;
     
-    // UART output mux
-    assign uart_data_out = (state == STATE_ASC_RESPONSE || state == STATE_ASC_RESPONSE_FINAL) ? asc_response_data :
-                          (state == STATE_STL_RESPONSE || state == STATE_STL_RESPONSE_FINAL) ? stl_response_data :
-                          8'h00;
+    // Response output mux (FSM -> Outgoing FIFO)
+    assign fsm_to_fifo_data = (state == STATE_ASC_RESPONSE || state == STATE_ASC_RESPONSE_FINAL) ? asc_response_data :
+                             (state == STATE_STL_RESPONSE || state == STATE_STL_RESPONSE_FINAL) ? stl_response_data :
+                             8'h00;
     
-    assign uart_data_out_valid = (state == STATE_ASC_RESPONSE || state == STATE_ASC_RESPONSE_FINAL) ? asc_response_valid :
-                                (state == STATE_STL_RESPONSE || state == STATE_STL_RESPONSE_FINAL) ? stl_response_valid :
-                                1'b0;
+    assign fsm_to_fifo_valid = (state == STATE_ASC_RESPONSE || state == STATE_ASC_RESPONSE_FINAL) ? asc_response_valid :
+                              (state == STATE_STL_RESPONSE || state == STATE_STL_RESPONSE_FINAL) ? stl_response_valid :
+                              1'b0;
     
-    // UART input ready signal - ready when subsystem can accept data or during prefix detection
-    assign uart_data_in_ready = (state == STATE_ASC_MODE || state == STATE_ASC_MODE_FINAL) ? asc_data_ready :
-                               (state == STATE_STL_MODE || state == STATE_STL_MODE_FINAL) ? stl_data_ready :
-                               (state >= STATE_IDLE && state <= STATE_PREFIX_3) ? 1'b1 :
-                               1'b0;
+    // FSM ready signal - ready when subsystem can accept data or during prefix detection
+    assign fsm_to_fifo_ready = (state == STATE_ASC_MODE || state == STATE_ASC_MODE_FINAL) ? asc_data_ready :
+                              (state == STATE_STL_MODE || state == STATE_STL_MODE_FINAL) ? stl_data_ready :
+                              (state >= STATE_IDLE && state <= STATE_PREFIX_3) ? 1'b1 :
+                              1'b0;
 
 endmodule

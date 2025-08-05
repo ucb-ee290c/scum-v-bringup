@@ -20,6 +20,7 @@
 module tilelink_to_uart_bridge (
     input wire clk,
     input wire reset,
+    input wire tl_clk,
     
     // Interface from GenericDeserializer
     input wire tl_out_valid,
@@ -41,10 +42,11 @@ module tilelink_to_uart_bridge (
 );
 
     // State machine for response packing
-    localparam STATE_IDLE = 1'b0;
-    localparam STATE_RESPONSE_READY = 1'b1;
+    localparam STATE_IDLE = 2'b00;
+    localparam STATE_RESPONSE_READY = 2'b01;
+    localparam STATE_RESPONSE_DOWNTIME = 2'b10;
     
-    reg state, next_state;
+    reg [1:0] state, next_state;
     
     // Response packing registers
     reg [127:0] response_buffer;
@@ -54,6 +56,8 @@ module tilelink_to_uart_bridge (
     wire [7:0] opcode_packed;
     wire [31:0] address_truncated;
     wire [7:0] union_truncated;
+
+    reg tl_clk_buf; 
     
     // State machine
     always @(posedge clk) begin
@@ -62,12 +66,13 @@ module tilelink_to_uart_bridge (
         end else begin
             state <= next_state;
         end
+        tl_clk_buf <= tl_clk;
     end
-    
+    reg tl_clk_posedge;
     // Next state logic
     always @(*) begin
         next_state = state;
-        
+        tl_clk_posedge = tl_clk && !tl_clk_buf;
         case (state)
             STATE_IDLE: begin
                 if (tl_out_valid) begin
@@ -77,6 +82,12 @@ module tilelink_to_uart_bridge (
             
             STATE_RESPONSE_READY: begin
                 if (response_ready) begin
+                    next_state = STATE_RESPONSE_DOWNTIME;
+                end
+            end
+            
+            STATE_RESPONSE_DOWNTIME: begin
+                if (tl_clk_posedge) begin
                     next_state = STATE_IDLE;
                 end
             end
@@ -132,13 +143,13 @@ module tilelink_to_uart_bridge (
             };
             response_valid_reg <= 1'b1;
         end else if (state == STATE_RESPONSE_READY && response_ready) begin
-            // Response consumed, clear valid
+            // Response consumed, clear valid and transition to downtime
             response_valid_reg <= 1'b0;
         end
     end
     
     // Output assignments
-    assign tl_out_ready = (state == STATE_IDLE);
+    assign tl_out_ready = (state == STATE_IDLE) | (state == STATE_RESPONSE_DOWNTIME);
     assign response_valid = response_valid_reg;
     assign response_data = response_buffer;
 
