@@ -74,7 +74,8 @@ module scumvcontroller_uart_handler #(
     reg [7:0] prefix_buffer [0:3];
     reg [7:0] counter; // Unified counter for prefix, packet, and response bytes
     reg protocol_detected; // 0=ASC, 1=STL
-    reg fifo_rd_en_prev; // Track previous cycle FIFO read for valid data
+    reg incoming_fifo_rd_en_prev; // Track previous cycle FIFO read for valid data
+    reg outgoing_fifo_rd_en_prev; // Track previous cycle FIFO read for valid data
     
     // UART interface signals (direct from UART module)
     wire [7:0] uart_rx_data;
@@ -98,6 +99,7 @@ module scumvcontroller_uart_handler #(
     wire outgoing_fifo_wr_en;           // Explicit FIFO write enable
     wire outgoing_fifo_full;
     wire outgoing_fifo_empty;
+    wire outgoing_fifo_rd_en;
     
     // Internal UART instance
     uart #(
@@ -107,7 +109,7 @@ module scumvcontroller_uart_handler #(
         .clk(clk),
         .reset(reset),
         .data_in(uart_tx_data),
-        .data_in_valid(uart_tx_data_valid),
+        .data_in_valid(outgoing_fifo_rd_en_prev),
         .data_in_ready(uart_tx_data_ready),
         .data_out(uart_rx_data),
         .data_out_valid(uart_rx_data_valid),
@@ -143,7 +145,7 @@ module scumvcontroller_uart_handler #(
         .wr_en(outgoing_fifo_wr_en),
         .din(fsm_to_fifo_data),
         .full(outgoing_fifo_full),
-        .rd_en(uart_tx_data_ready && !outgoing_fifo_empty),
+        .rd_en(outgoing_fifo_rd_en),
         .dout(uart_tx_data),
         .empty(outgoing_fifo_empty)
     );
@@ -152,16 +154,18 @@ module scumvcontroller_uart_handler #(
     assign uart_rx_data_ready = !incoming_fifo_full;           // UART can write when FIFO has space
     assign outgoing_fifo_wr_en = fsm_to_fifo_valid && !outgoing_fifo_full; // Write when both valid and ready
     assign uart_tx_data_valid = !outgoing_fifo_empty;          // UART sends when FIFO has data
-    
+    assign outgoing_fifo_rd_en = uart_tx_data_ready && !outgoing_fifo_empty && !outgoing_fifo_rd_en_prev;
     // Sequential logic - state transitions and data storage
     always @(posedge clk) begin
         if (reset) begin
             state <= STATE_IDLE;
             counter <= 0;
             protocol_detected <= 0;
-            fifo_rd_en_prev <= 0;
+            incoming_fifo_rd_en_prev <= 0;
+            outgoing_fifo_rd_en_prev <= 0;
         end else begin
-            fifo_rd_en_prev <= incoming_fifo_rd_en;
+            incoming_fifo_rd_en_prev <= incoming_fifo_rd_en;
+            outgoing_fifo_rd_en_prev <= outgoing_fifo_rd_en;
             
             // Mealy FSM: actions on state transitions
             case (state)
@@ -174,7 +178,7 @@ module scumvcontroller_uart_handler #(
                 end
                 
                 STATE_PREFIX: begin
-                    if (fifo_rd_en_prev) begin // Data is valid this cycle
+                    if (incoming_fifo_rd_en_prev) begin // Data is valid this cycle
                         prefix_buffer[counter] <= fifo_to_fsm_data;
                         if (counter == 3 && fifo_to_fsm_data == PREFIX_4_COMMON) begin
                             // Complete prefix received, determine protocol
@@ -201,7 +205,7 @@ module scumvcontroller_uart_handler #(
                 end
                 
                 STATE_FORWARD_ASC: begin
-                    if (fifo_rd_en_prev && asc_data_ready) begin
+                    if (incoming_fifo_rd_en_prev && asc_data_ready) begin
                         if (counter == ASC_PACKET_SIZE - 1) begin
                             state <= STATE_RESPOND_ASC;
                             counter <= 0;
@@ -212,7 +216,7 @@ module scumvcontroller_uart_handler #(
                 end
                 
                 STATE_FORWARD_STL: begin
-                    if (fifo_rd_en_prev && stl_data_ready) begin
+                    if (incoming_fifo_rd_en_prev && stl_data_ready) begin
                         if (counter == STL_PACKET_SIZE - 1) begin
                             state <= STATE_RESPOND_STL;
                             counter <= 0;
@@ -290,12 +294,12 @@ module scumvcontroller_uart_handler #(
     
     // ASC subsystem connections
     assign asc_data_out = fifo_to_fsm_data;
-    assign asc_data_valid = (state == STATE_FORWARD_ASC) ? fifo_rd_en_prev : 1'b0;
+    assign asc_data_valid = (state == STATE_FORWARD_ASC) ? incoming_fifo_rd_en_prev : 1'b0;
     assign asc_response_ready = (state == STATE_RESPOND_ASC) ? !outgoing_fifo_full : 1'b0;
     
     // STL subsystem connections  
     assign stl_data_out = fifo_to_fsm_data;
-    assign stl_data_valid = (state == STATE_FORWARD_STL) ? fifo_rd_en_prev : 1'b0;
+    assign stl_data_valid = (state == STATE_FORWARD_STL) ? incoming_fifo_rd_en_prev : 1'b0;
     assign stl_response_ready = (state == STATE_RESPOND_STL) ? !outgoing_fifo_full : 1'b0;
     
     // Response output mux (FSM -> Outgoing FIFO)

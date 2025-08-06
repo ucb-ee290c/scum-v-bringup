@@ -38,7 +38,9 @@ module serialtl_subsystem #(
     output wire debug_bridge_packet_valid,
     output wire debug_bridge_packet_ready,
     output wire debug_serializer_in_ready,
-    output wire debug_serializer_in_valid
+    output wire debug_serializer_in_valid,
+    output wire debug_tl_response_valid,
+    output wire debug_tl_response_ready
 );
 
     // Internal packet interface signals
@@ -85,7 +87,8 @@ module serialtl_subsystem #(
     assign debug_bridge_packet_ready = packet_ready;
     assign debug_serializer_in_ready = tl_ser_in_ready;
     assign debug_serializer_in_valid = tl_ser_in_valid;
-
+    assign debug_tl_response_valid = tl_response_valid;
+    assign debug_tl_response_ready = tl_response_ready;
     // STL UART Client - handles byte-level FIFO interface
     stl_uart_client stl_client (
         .clk(clk),

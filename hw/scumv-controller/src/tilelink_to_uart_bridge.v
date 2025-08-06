@@ -114,20 +114,20 @@ module tilelink_to_uart_bridge (
             // Pack TileLink frame into 16-byte response packet (little endian)
             response_buffer <= {
                 // Bytes 15-8: Data (64-bit little endian)
-                tl_out_bits_data[7:0],     // Byte 8 (LSB)
-                tl_out_bits_data[15:8],    // Byte 9
-                tl_out_bits_data[23:16],   // Byte 10
-                tl_out_bits_data[31:24],   // Byte 11
-                tl_out_bits_data[39:32],   // Byte 12
-                tl_out_bits_data[47:40],   // Byte 13
-                tl_out_bits_data[55:48],   // Byte 14
                 tl_out_bits_data[63:56],   // Byte 15 (MSB)
+                tl_out_bits_data[55:48],   // Byte 14
+                tl_out_bits_data[47:40],   // Byte 13
+                tl_out_bits_data[39:32],   // Byte 12
+                tl_out_bits_data[31:24],   // Byte 11
+                tl_out_bits_data[23:16],   // Byte 10
+                tl_out_bits_data[15:8],    // Byte 9
+                tl_out_bits_data[7:0],     // Byte 8 (LSB)
                 
                 // Bytes 7-4: Address (32-bit little endian)
-                address_truncated[7:0],    // Byte 4 (LSB)
-                address_truncated[15:8],   // Byte 5
-                address_truncated[23:16],  // Byte 6
                 address_truncated[31:24],  // Byte 7 (MSB)
+                address_truncated[23:16],  // Byte 6
+                address_truncated[15:8],   // Byte 5
+                address_truncated[7:0],    // Byte 4 (LSB)
                 
                 // Byte 3: Union field (denied/mask)
                 union_truncated,           // Byte 3

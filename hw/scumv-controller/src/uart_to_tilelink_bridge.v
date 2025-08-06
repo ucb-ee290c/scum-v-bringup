@@ -93,7 +93,7 @@ module uart_to_tilelink_bridge (
             end
             
             STATE_FRAME_READY: begin
-                if (tl_ser_in_ready_buf && tl_clk_posedge && tl_ser_in_valid) begin
+                if (~tl_ser_in_ready && tl_clk_posedge && tl_ser_in_valid) begin
                     next_state = STATE_IDLE;
                 end
             end

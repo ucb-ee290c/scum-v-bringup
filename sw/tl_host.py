@@ -110,14 +110,14 @@ class TileLinkHost:
         stl_prefix = b"stl+"
         full_command = stl_prefix + tl_packet
         
-        if verbose:
-            print(f"[TL Get] <address: {address:08X}, size: 4>")
-            print_tilelink_packet(tl_packet, "TX")
-            print(f"[STL Command] Full command: {' '.join([f'{b:02X}' for b in full_command])}")
+        # if verbose:
+        #     print(f"[TL Get] <address: {address:08X}, size: 4>")
+        #     print_tilelink_packet(tl_packet, "TX")
+        #     print(f"[STL Command] Full command: {' '.join([f'{b:02X}' for b in full_command])}")
         self.serial.write(full_command)
 
         buffer = self.serial.read(16)
-        print_tilelink_packet(buffer, "RX")
+        # print_tilelink_packet(buffer, "RX")
         
         # Unpack the response, decoding the packed opcode byte
         chanid, opcode_packed, size, union_field, address, data = struct.unpack(
@@ -147,15 +147,15 @@ class TileLinkHost:
         stl_prefix = b"stl+"
         full_command = stl_prefix + tl_packet
         
-        if verbose:
-            print(f"[TL PutFullData] <address: 0x{address:08X}, size: 4, "
-                  f"data: 0x{data:016X}>")
-            print_tilelink_packet(tl_packet, "TX")
-            print(f"[STL Command] Full command: {' '.join([f'{b:02X}' for b in full_command])}")
+        # if verbose:
+        #     print(f"[TL PutFullData] <address: 0x{address:08X}, size: 4, "
+        #           f"data: 0x{data:016X}>")
+        #     print_tilelink_packet(tl_packet, "TX")
+        #     print(f"[STL Command] Full command: {' '.join([f'{b:02X}' for b in full_command])}")
         self.serial.write(full_command)
 
         buffer = self.serial.read(16)
-        print_tilelink_packet(buffer, "RX")
+        # print_tilelink_packet(buffer, "RX")
         
         # Unpack the response, decoding the packed opcode byte
         chanid, opcode_packed, size, _, _, _ = struct.unpack(
@@ -187,7 +187,7 @@ class TileLinkHost:
                                instruction,
                                verbose=False)
 
-        time.sleep(0.1)
+        time.sleep(0.01)
         self.write_address(CLINT_BASE, 1)
 
     def memory_scan(self) -> None:
@@ -206,6 +206,7 @@ class TileLinkHost:
         """Reads UART registers."""
         for address in range(UART_BASE, UART_BASE + 0x1C, 4):
             self.read_address(address)
+            time.sleep(0.1)
 
     def read_baseband_registers(self) -> None:
         """Reads baseband registers."""
@@ -260,11 +261,11 @@ if __name__ == "__main__":
         binary_path = f"./scum_firmware/build/{args.target}.bin"
 
     tl_host = TileLinkHost(serial)
-    tl_host.read_uart_registers()
+    # tl_host.read_uart_registers()
     #tl_host.enable_uart_tx()
     #tl_host.send_hello_world()
     #tl_host.read_uart_registers()
-    # time.sleep(0.1)
-    # tl_host.flash_binary(binary_path)
-    # time.sleep(0.02)
-    # tl_host.trigger_software_interrupt()
+    time.sleep(0.1)
+    tl_host.flash_binary(binary_path)
+    time.sleep(0.02)
+    tl_host.trigger_software_interrupt()
