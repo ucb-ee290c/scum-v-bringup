@@ -40,6 +40,8 @@ module scumv_controller_integration_tb();
     parameter TEST_VECTOR_FILE = "C:/Projects/Repositories/scum-v-bringup/hw/scumv-controller/sim/sim_input.bin";  // Input file from tl_host_sim.py
     parameter MAX_BYTES = 1024;          // Maximum test vector size
     parameter TIMEOUT_CYCLES = 5000000;  // Timeout for waiting operations
+    parameter BUNDLE_SIZE = 20;          // Number of bytes to send per bundle
+    parameter BUNDLE_DELAY_TL_CYCLES = 500;  // TL clock cycles to wait between bundles
     
     // Clock and reset
     reg clk;
@@ -308,31 +310,54 @@ module scumv_controller_integration_tb();
     
     // Send test vectors byte by byte through UART
     task send_test_vectors;
-        integer i;
+        integer i, bundle_start, bundle_end, bundle_count, tl_cycle_count;
         begin
-            $display("[TB] Sending %0d test vector bytes...", test_vector_size);
+            $display("[TB] Sending %0d test vector bytes in bundles of %0d...", test_vector_size, BUNDLE_SIZE);
             
-            for (i = 0; i < test_vector_size; i = i + 1) begin
-                // Wait for UART transmitter to be ready
-                wait_for_uart_ready();
+            bundle_count = 0;
+            i = 0;
+            
+            while (i < test_vector_size) begin
+                bundle_start = i;
+                bundle_end = (i + BUNDLE_SIZE < test_vector_size) ? i + BUNDLE_SIZE : test_vector_size;
+                bundle_count = bundle_count + 1;
                 
-                // Send next byte
-                uart_tx_data = test_vectors[i];
-                uart_tx_valid = 1'b1;
-                @(posedge clk);
-                @(posedge clk);
-                // Wait for byte to be accepted
-                wait (uart_tx_ready);
-                uart_tx_valid = 1'b0;
-                @(posedge clk);
+                $display("[TB] Sending bundle %0d: bytes %0d-%0d", bundle_count, bundle_start, bundle_end-1);
                 
-                $display("[TB] Sent byte %0d: 0x%02X", i, test_vectors[i]);
+                // Send bytes in current bundle
+                for (i = bundle_start; i < bundle_end; i = i + 1) begin
+                    // Wait for UART transmitter to be ready
+                    wait_for_uart_ready();
+                    
+                    // Send next byte
+                    uart_tx_data = test_vectors[i];
+                    uart_tx_valid = 1'b1;
+                    @(posedge clk);
+                    @(posedge clk);
+                    // Wait for byte to be accepted
+                    wait (uart_tx_ready);
+                    uart_tx_valid = 1'b0;
+                    @(posedge clk);
+                    
+                    $display("[TB] Sent byte %0d: 0x%02X", i, test_vectors[i]);
+                    
+                    // Small delay between bytes within bundle
+                    repeat(10) @(posedge clk);
+                end
                 
-                // Small delay between bytes (optional)
-                repeat(10) @(posedge clk);
+                // Wait for BUNDLE_DELAY_TL_CYCLES tl_clk cycles before next bundle (unless this was the last bundle)
+                if (i < test_vector_size) begin
+                    $display("[TB] Bundle %0d complete, waiting %0d TL clock cycles...", bundle_count, BUNDLE_DELAY_TL_CYCLES);
+                    tl_cycle_count = 0;
+                    while (tl_cycle_count < BUNDLE_DELAY_TL_CYCLES) begin
+                        @(posedge tl_clk);
+                        tl_cycle_count = tl_cycle_count + 1;
+                    end
+                    $display("[TB] Bundle delay complete, continuing with next bundle");
+                end
             end
             
-            $display("[TB] All test vector bytes sent");
+            $display("[TB] All test vector bytes sent in %0d bundles", bundle_count);
         end
     endtask
     

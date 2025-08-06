@@ -6,66 +6,64 @@ The SCuM-V Controller is a dual-mode FPGA implementation that provides UART-base
 
 ### 1.1 System Requirements
 
-- **Dual Interface Support**: Handle both ASC and STL protocols
-- **Protocol Multiplexing**: Route commands based on 4-byte prefixes ("asc+" or "stl+")
-- **Compatibility**: Maintain compatibility with existing Python host scripts (`hw/client.py` and `sw/tl_host.py`)
-- **Performance**: Support baud rates up to 115.2kbaud (configurable)
-- **ASIC Compliance**: Use identical GenericSerializer/GenericDeserializer modules as SCuM-V24B
-- **Clean Architecture**: Hierarchical design with well-defined FIFO interfaces
+The controller must support both the Analog Scan Chain (ASC) and Serial TileLink (STL) protocols. It will multiplex between them by detecting a 4-byte prefix (`"asc+"` or `"stl+"`) at the start of each incoming UART command. The design must maintain compatibility with the existing Python host scripts (`hw/client.py` and `sw/tl_host.py`) and support configurable baud rates up to 115.2kbaud. To ensure compliance with the SCuM-V24B ASIC, the implementation will reuse the exact `GenericSerializer` and `GenericDeserializer` modules. Architecturally, the design will follow a clean, hierarchical structure with well-defined FIFO-based interfaces between modules.
 
 ## 2. System Architecture
 
 ### 2.1 High-Level Block Diagram
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           SCuM-V Controller FPGA                       │
-│                                                                         │
-│  ┌──────────┐   UART   ┌─────────────────────────────────────────────┐   │
-│  │   Host   │◄────────►│        scumvcontroller_uart_handler        │   │
-│  │    PC    │          │        (Protocol Multiplexer)              │   │
-│  └──────────┘          │     ┌─────────────┐  ┌─────────────┐       │   │
-│                        │     │  Incoming   │  │  Outgoing   │       │   │
-│                        │     │    FIFOs    │  │    FIFOs    │       │   │
-│                        │     │(Flow Ctrl)  │  │(Flow Ctrl)  │       │   │
-│                        │     └─────────────┘  └─────────────┘       │   │
-│                        └─────────────┬─────────────┬─────────────────┘   │
-│                                      │             │                     │
-│                               FIFO   │             │   FIFO              │
-│                            Interface │             │ Interface           │
-│                                      ▼             ▼                     │
-│              ┌─────────────────────────────┐   ┌──────────────────────┐  │
-│              │    scanchain_subsystem      │   │  serialtl_subsystem  │  │
-│              │  ┌─────────────────────────┐│   │┌────────────────────┐│  │
-│              │  │ scanchain_uart_client   ││   ││  stl_uart_client   ││  │
-│              │  │     (modified)          ││   ││                    ││  │
-│              │  └─────────────────────────┘│   │└────────────────────┘│  │
-│              │  ┌─────────────────────────┐│   │┌────────────────────┐│  │
-│              │  │   scanchain_writer      ││   ││uart_to_tilelink_   ││  │
-│              │  │     (existing)          ││   ││      bridge        ││  │
-│              │  └─────────────────────────┘│   │└────────────────────┘│  │
-│              └─────────────┬───────────────┘   │┌────────────────────┐│  │
-│                            │                   ││ GenericSerializer  ││  │
-│                            ▼                   ││    (ASIC module)   ││  │
-│                    ┌───────────────┐           │└────────────────────┘│  │
-│                    │   SCuM-V      │           │┌────────────────────┐│  │
-│                    │  Scan Chain   │           ││GenericDeserializer││  │
-│                    │               │           ││    (ASIC module)   ││  │
-│                    └───────────────┘           │└────────────────────┘│  │
-│                                                │┌────────────────────┐│  │
-│                                                ││tilelink_to_uart_   ││  │
-│                                                ││      bridge        ││  │
-│                                                │└────────────────────┘│  │
-│                                                └──────────┬───────────┘  │
-│                                                           │              │
-│                                                           ▼              │
-│                                                   ┌──────────────┐       │
-│                                                   │    SCuM-V    │       │
-│                                                   │  SerialTL    │       │
-│                                                   │   Interface  │       │
-│                                                   └──────────────┘       │
-└─────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                         SCuM-V Controller FPGA                                                    │
+├───────────────────┬──────────────────────────────────────────────────────┬────────────────────────────────────────┤
+│   External Host   │               UART Protocol Handler                │           Processing Subsystems          │
+│                   │                                                      │                                        │
+│  ┌──────────────┐ │  ┌─────────────┐   ┌─────────────────┐               │  ┌────────────────────────────────────┐  │
+│  │   Host PC    │◄─►│    UART     │───│    Protocol     │───────────────│──│             ASC Subsystem            │  │
+│  │              │ │  │  Interface  │   │   Detection     │               │  │  ┌──────────┐┌──────────┐┌──────────┐│  │
+│  │• client.py   │ │  │             │   │ ('asc+'/'stl+') │               │  │  │  UART    ││  Scan    ││  Scan    ││  │
+│  │• tl_host.py  │ │  └─────────────┘   └─────────────────┘               │  │  │  Client  ││  Writer  ││ Hardware ││  │
+│  └──────────────┘ │           │                 │                        │  │  └──────────┘└──────────┘└──────────┘│  │
+│                   │           │                 │                        │  └────────────────────────────────────┘  │
+│                   │           │                 │                        │                                        │
+│                   │           └─────────────────┼────────────────────────┘                                        │
+│                   │                             │                                                                 │
+│                   │                             ▼                        ┌────────────────────────────────────┐  │
+│                   │                     ┌───────────────┐                │             STL Subsystem            │  │
+│                   │                     │ Routing Logic │                │                                        │  │
+│                   │                     └───────┬───────┘                │  ┌─────────────────┐┌─────────────────┐ │  │
+│                   │                             │                        │  │  Outgoing Path  ││  Incoming Path  │ │  │
+│                   │          ┌──────────────────┴──────────────────┐     │  │                 ││                 │ │  │
+│                   │          │                                   │     │  │ ┌─────────────┐ ││ ┌─────────────┐ │ │  │
+│                   │          ▼                                   ▼     │  │ │   Outgoing  │ ││ │  Incoming   │ │ │  │
+│                   │  ┌───────────────┐                   ┌───────────────┐ │  │ │UART Client  │ ││ │UART Client  │ │ │  │
+│                   │  │ To ASC FIFO   │                   │ To STL FIFO   │ │  │ └─────────────┘ ││ └─────────────┘ │ │  │
+│                   │  └───────────────┘                   └───────────────┘ │  │        │        ││        ▲        │ │  │
+│                   │                                                      │  │        ▼        ││        │        │ │  │
+│                   │                                                      │  │ ┌─────────────┐ ││ ┌─────────────┐ │ │  │
+│                   │                                                      │  │ │ UART→TL     │ ││ │ TL→UART     │ │ │  │
+│                   │                                                      │  │ │   Bridge    │ ││ │   Bridge    │ │  │
+│                   │                                                      │  │ └─────────────┘ ││ └─────────────┘ │ │  │
+│                   │                                                      │  │        │        ││        ▲        │ │  │
+│                   │                                                      │  │        ▼        ││        │        │ │  │
+│                   │                                                      │  │ ┌─────────────┐ ││ ┌─────────────┐ │ │  │
+│                   │                                                      │  │ │  Generic    │ ││ │   Generic   │ │ │  │
+│                   │                                                      │  │ │ Serializer  │ ││ │Deserializer │ │ │  │
+│                   │                                                      │  │ └─────────────┘ ││ └─────────────┘ │ │  │
+│                   │                                                      │  │        │        ││        ▲        │ │  │
+│                   │                                                      │  │        └────────│─│────────┘        │ │  │
+│                   │                                                      │  │                 ││                 │ │  │
+│                   │                                                      │  │     ┌─────────────────────────┐    │ │  │
+│                   │                                                      │  │     │      SerialTL Bus       │    │ │  │
+│                   │                                                      │  │     │  TL_CLK, TL_IN_*, TL_OUT_*│    │ │  │
+│                   │                                                      │  │     │    (to/from SCuM-V)     │    │ │  │
+│                   │                                                      │  │     └─────────────────────────┘    │ │  │
+│                   │                                                      │  └─────────────────┴─────────────────┘ │  │
+│                   │                                                      └────────────────────────────────────────┘  │
+└───────────────────┴──────────────────────────────────────────────────────┴────────────────────────────────────────┘
 ```
+
+**See also:** [PlantUML System Diagram](system_diagram.puml) for a clean, professional version of this architecture.
 
 ### 2.2 Implemented Module Hierarchy
 
@@ -112,14 +110,8 @@ Total ASC Command: 26 bytes
 
 #### 3.2.2 ASC Packet Structure
 The 22-byte payload contains a scan chain packet with the following bit layout:
-```
-Bit Position: [172:0] (173 bits total, padded to 176 bits = 22 bytes)
-┌────┬─────┬─────────────────────────────────────┬─────────────┐
-│ 3  │  1  │              160                   │     12      │
-├────┼─────┼─────────────────────────────────────┼─────────────┤
-│ 0  │Reset│           Payload                  │   Address   │
-└────┴─────┴─────────────────────────────────────┴─────────────┘
-```
+
+![ASC Packet Structure](asc_packet_diagram.svg)
 
 - **Address [11:0]**: Scan chain domain address (0-5)
 - **Payload [159:0]**: Domain-specific configuration data
@@ -145,20 +137,8 @@ Total STL Command: 20 bytes
 
 #### 3.3.2 TileLink Packet Structure
 The 16-byte payload contains a TileLink transaction:
-```
-Byte Offset:  0    1    2    3    4    5    6    7    8    9   10   11   12   13   14   15
-           ┌────┬────┬────┬────┬─────────────┬─────────────────────────────────────────────┐
-           │ChID│Opc │Size│Mask│   Address   │                   Data                      │
-           └────┴────┴────┴────┴─────────────┴─────────────────────────────────────────────┘
-```
 
-Fields (Little Endian):
-- **Channel ID [7:0]**: TileLink channel (0=A, 3=D)
-- **Opcode [7:0]**: Packed field containing opcode[2:0], param[2:0], corrupt[0], reserved[1:0]
-- **Size [7:0]**: Log2 of transfer size
-- **Union [7:0]**: Mask (Ch A) or Denied flag (Ch D)
-- **Address [31:0]**: Memory address (little endian)
-- **Data [63:0]**: Data payload (little endian)
+![STL Packet Structure](stl_packet_diagram.svg)
 
 #### 3.3.3 STL Response Format
 For STL commands, responses depend on the transaction type:
@@ -199,24 +179,21 @@ output wire TL_OUT_DATA    // Serial data coming from SCuM-V
 
 ### 4.2 Internal FIFO Interfaces
 
-#### 4.2.1 UART Handler Flow Control Architecture
+The `scumvcontroller_uart_handler` module serves as the primary interface to the host. Because the TileLink clock (`TL_CLK`) runs much slower than a typical UART baud rate (e.g., 200kHz vs. 1Mbaud+), internal FIFOs are essential for flow control. They prevent data loss by buffering incoming and outgoing data, allowing the different clock domains to operate without dropping packets. The handler's architecture ensures that complete packets are buffered before being processed and that both subsystems see a consistent data flow regardless of UART timing.
 
-The UART handler implements internal FIFOs to manage flow control between the UART interface (high baud rate) and the TileLink interface (slower TL_CLK). This is critical because:
-
-- **TL_CLK Timing**: The TileLink clock runs much slower than UART baud rate (typically 200kHz vs 1Mbaud+)
-- **Burst Handling**: Complete TileLink packets (16 bytes) must be buffered before processing
-- **Bidirectional Flow**: Both incoming (UART→subsystem) and outgoing (subsystem→UART) FIFOs are required
-
-```
 UART Handler Internal Architecture:
 ┌─────────────────────────────────────────────────────────────────┐
 │                    scumvcontroller_uart_handler                 │
 │                                                                 │
-│  UART RX ──► Incoming ──► Protocol ──► ASC/STL ──► Subsystems   │
-│             FIFO (128B)  Detection    Mux                       │
+│   ┌─────────┐    ┌─────────────┐   ┌───────────┐   ┌─────────┐    │
+│   │ UART RX │───►│ Incoming    │──►│ Protocol  │──►│ ASC/STL │───►│ Subsystems
+│   └─────────┘    │ FIFO (128B) │   │ Detection │   │ Mux     │    │
+│                  └─────────────┘   └───────────┘   └─────────┘    │
 │                                                                 │
-│  UART TX ◄── Outgoing ◄── Response ◄── ASC/STL ◄── Subsystems   │
-│             FIFO (128B)  Mux        Demux                       │
+│   ┌─────────┐    ┌─────────────┐   ┌───────────┐   ┌─────────┐    │
+│   │ UART TX │◄───│ Outgoing    │◄──│ Response  │◄──│ ASC/STL │◄───│ Subsystems
+│   └─────────┘    │ FIFO (128B) │   │ Mux       │   │ Demux   │    │
+│                  └─────────────┘   └───────────┘   └─────────┘    │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -311,222 +288,108 @@ module serialtl_subsystem (
 ## 5. Data Flow Diagrams
 
 ### 5.1 ASC Command Flow
+
 ```
-Host PC → UART Handler → Scanchain Subsystem → SCuM-V ASC
-  26B       FIFO           FIFO Interface        Hardware
-"asc+"    Interface                              Signals
-+22B        ↓                  ↓                    ↓
-Packet   Prefix Strip      ASC Client         Scan Writer
-            ↓              & Response            ↓
-         22B Data             ↓               SCAN_CLK
-                           1B Status          SCAN_EN
-                              ↑               SCAN_IN
-                         FIFO Response       SCAN_RESET
-                              ↑                 ↑
-Host PC ← UART Handler ← Scanchain Subsystem ←┘
-  1B         ↑              ↑
-Status    UART TX       Response FIFO
+ Host PC        UART Handler        Scanchain Subsystem      SCuM-V ASC
+─────────      ──────────────      ───────────────────     ────────────
+"asc+"+22B ───►                 
+(26B total)    Strip "asc+" prefix
+               ┌───────────────────►     22B Packet
+               │                     ┌───────────────────►   SCAN_*
+               │                     │                     Signals
+               │     1B Status       │
+               ◄───────────────────┘
+ 1B Status ◄───┘
 ```
 
 ### 5.2 STL Command Flow
 ```
-Host PC → UART Handler → SerialTL Subsystem → SCuM-V SerialTL
-  20B       FIFO           FIFO Interface        Hardware
-"stl+"    Interface                              Interface
-+16B        ↓                  ↓                    ↓
-Packet   Prefix Strip      STL Client         TL Serializer
-            ↓              & Buffering            ↓
-         16B Data             ↓               TL_OUT_DATA
-                         TL Bridge             TL_OUT_VALID
-                              ↓               TL_OUT_READY
-                         TL Frame                 ↓
-                                              TL_CLK Domain
+ Host PC         UART Handler          SerialTL Subsystem       SCuM-V SerialTL
+─────────       ──────────────        ────────────────────     ───────────────
+"stl+"+16B ───►                   
+(20B total)     Strip "stl+" prefix
+                ┌───────────────────►       16B Packet
+                │                     ┌────────────────────►    TL_OUT_*
+                │                     │                      (Serialized)
+                │                     │
+                │     16B Response    │      16B Response
+                │   ◄───────────────────┘  ◄────────────────────    TL_IN_*
+                │                                                (Deserialized)
+16B Resp ◄──────┘
 
-Response Path:
-SCuM-V SerialTL → TL Deserializer → TL Bridge → STL Client → UART Handler → Host PC
-    Hardware          TL_CLK           FPGA_CLK    FIFO        FIFO         16B
-    Interface         Domain           Domain      Interface   Interface    Response
-       ↓                ↓                ↓          ↓           ↓
-   TL_IN_DATA      TL Frame        16B Packet   Response    UART TX
-   TL_IN_VALID     Struct          Buffer       FIFO
-   TL_IN_READY
 ```
 
 ### 5.3 Protocol Detection State Machine
 ```
-                    ┌─────────────┐
-                    │    IDLE     │◄─── Reset/Complete
-                    └──────┬──────┘
-                           │ UART byte
-                    ┌──────▼──────┐
-                    │ PREFIX_1    │ 'a' or 's'
-                    └──────┬──────┘
-                           │ 's'/'t'
-                    ┌──────▼──────┐
-                    │ PREFIX_2    │
-                    └──────┬──────┘
-                           │ 'c'/'l'
-                    ┌──────▼──────┐
-                    │ PREFIX_3    │
-                    └──────┬──────┘
-                           │ '+'
-                    ┌──────▼──────┐
-                    │  Determine  │
-                    │  Protocol   │
-                    └──┬───────┬──┘
-                 "asc+"│       │"stl+"
-              ┌────────▼─┐   ┌─▼────────┐
-              │ASC_MODE  │   │STL_MODE  │
-              │22 bytes  │   │16 bytes  │
-              └────────┬─┘   └─┬────────┘
-                       │       │
-              ┌────────▼─┐   ┌─▼────────┐
-              │ASC_RESP  │   │STL_RESP  │
-              │1 byte    │   │16 bytes  │
-              └──────────┘   └──────────┘
+                      ┌───────────┐
+                      │   IDLE    │
+                      └─────┬─────┘
+                            │ UART Byte
+              ┌─────────────▼─────────────┐
+        'a' ──┤         PREFIX_1          ├── 's'
+              └─────────────┬─────────────┘
+                            │
+              ┌─────────────▼─────────────┐
+        's' ──┤         PREFIX_2          ├── 't'
+              └─────────────┬─────────────┘
+                            │
+              ┌─────────────▼─────────────┐
+        'c' ──┤         PREFIX_3          ├── 'l'
+              └─────────────┬─────────────┘
+                            │
+              ┌─────────────▼─────────────┐
+        '+' ──┤         PREFIX_4          ├── '+'
+              └─────────────┬─────────────┘
+                            │
+          ┌─────────────────▼─────────────────┐
+          │        DETERMINE_PROTOCOL         │
+          └─────────┬───────────┬─────────────┘
+                    │           │
+           "asc+"   │           │   "stl+"
+           ┌────────▼─┐       ┌─▼────────┐
+           │ ASC_MODE │       │ STL_MODE │
+           │ 22 bytes │       │ 16 bytes │
+           └────────┬─┘       └─┬────────┘
+                    │           │
+           ┌────────▼─┐       ┌─▼────────┐
+           │ ASC_RESP │       │ STL_RESP │
+           │  1 byte  │       │ 16 bytes │
+           └──────────┘       └──────────┘
 ```
 
-## 6. Implementation Status and Guidelines
+## 6. Testbench Architecture
 
-### 6.1 Implementation Complete ✅
-
-#### 6.1.1 Core Infrastructure (Completed)
-- **`a7top.v`**: Top-level integration with clean hierarchical structure
-- **`scumvcontroller_uart_handler.v`**: Protocol multiplexer with prefix detection state machine
-- **`scanchain_subsystem.v`**: ASC subsystem wrapper with FIFO interfaces  
-- **`serialtl_subsystem.v`**: STL subsystem wrapper integrating all STL components
-
-#### 6.1.2 STL Implementation (Completed)
-- **`stl_uart_client.v`**: STL packet buffering with 4-state FSM (IDLE→RECEIVING→PACKET_READY→RESPONSE)
-- **`uart_to_tilelink_bridge.v`**: 16-byte packet to TileLink frame conversion with proper `tl_host.py` format handling
-- **`tilelink_to_uart_bridge.v`**: TileLink frame to 16-byte packet conversion with little-endian byte ordering
-
-#### 6.1.3 ASC Implementation (Completed)
-- **`scanchain_uart_client.v`**: Modified to use FIFO interface instead of direct UART, maintains original packet parsing logic
-
-#### 6.1.4 Test Infrastructure (Completed)
-- **`tl_host_sim.py`**: Modified version of `tl_host.py` that generates UART byte streams to files for RTL simulation
-- **`scumv_controller_integration_tb.v`**: Comprehensive integration testbench with TileLink echo and inspection functionality
-- **TileLink Echo Architecture**: TL_OUT → GenericDeserializer (inspection) → GenericSerializer → TL_IN
-- **Packet Validation**: Complete packet field inspection with content-based assertions
-- **Test Vectors**: Generated binary files with real STL command sequences for simulation validation
-
-#### 6.1.5 Remaining Tasks
-- **Constraint File**: Add SerialTL pin constraints for TL_CLK, TL_IN_*, TL_OUT_* (Priority: Medium)
-- **Hardware Validation**: Test with actual SCuM-V hardware (Priority: High)
-
-### 6.2 Design Principles
-
-1. **Clean Hierarchy**: Three-level architecture (top → subsystem → implementation)
-2. **Standard Interfaces**: All subsystems use identical FIFO interfaces
-3. **Protocol Fidelity**: STL implementation uses unmodified ASIC serializer/deserializer
-4. **Separation of Concerns**: Protocol detection separate from protocol implementation
-5. **Reusability**: Maximum reuse of existing scanchain modules
-
-### 6.3 Clocking Strategy
-
-- **System Clock (FPGA_CLK)**: 100MHz for all FPGA logic
-- **UART Clock**: Derived from system clock (115.2kbaud default, configurable)
-- **Scan Clock**: 1kHz generated from system clock (existing implementation)
-- **TileLink Clock (TL_CLK)**: External clock from SCuM-V, requires clock domain crossing
-
-### 6.4 Reset and Error Handling
-
-- **Global Reset**: Active-high reset (inverted from RESET button)
-- **Subsystem Isolation**: Each subsystem handles its own reset domain
-- **Protocol Errors**: UART handler enters ERROR state on invalid prefixes
-- **Timeout Handling**: Each subsystem responsible for internal timeouts
-
-### 6.5 Interface Standards
-
-#### 6.5.1 FIFO Interface Convention
-All internal interfaces follow the standard ready/valid handshake:
-```verilog
-// Producer → Consumer
-output wire       data_valid,     // Data is valid and available
-input  wire       data_ready,     // Consumer ready to accept data  
-output wire [7:0] data_out,       // Data payload
-
-// Consumer → Producer (for responses)
-input  wire       response_valid, // Response data is valid
-output wire       response_ready, // Producer ready for response
-input  wire [7:0] response_data   // Response payload
-```
-
-#### 6.5.2 Debug and Status Outputs
-- **LED[0]**: System reset status (n_reset)
-- **LED[1]**: ASC mode active (active_mode[0])
-- **LED[2]**: STL mode active (active_mode[1])  
-- **LED[3]**: TileLink input valid (TL_IN_VALID)
-
-## 7. Next Implementation Steps
-
-### 7.1 Priority Order
-
-1. **Modify `scanchain_uart_client.v`** 
-   - Replace direct UART interface with FIFO interface
-   - Maintain existing packet parsing and response generation logic
-   - Test ASC functionality with modified interface
-
-2. **Implement `stl_uart_client.v`**
-   - 16-byte packet buffering using internal FIFOs
-   - Byte-to-packet and packet-to-byte conversion
-   - Flow control between UART handler and TileLink bridges
-
-3. **Implement `uart_to_tilelink_bridge.v`**
-   - Unpack 16-byte packets according to `tl_host.py` format
-   - Generate proper TileLink frame signals for GenericSerializer
-   - Handle little-endian byte ordering correctly
-
-4. **Implement `tilelink_to_uart_bridge.v`**
-   - Pack TileLink frames into 16-byte packets for `tl_host.py`
-   - Handle response buffering and flow control
-   - Maintain correct byte ordering
-
-5. **Add Constraint File Updates**
-   - Pin assignments for TL_CLK, TL_IN_VALID, TL_IN_READY, TL_IN_DATA
-   - Pin assignments for TL_OUT_VALID, TL_OUT_READY, TL_OUT_DATA
-   - Timing constraints for clock domain crossing
-
-### 7.2 Testbench Architecture
-
-#### 7.2.1 TileLink Echo and Inspection System
+### 6.1 TileLink Echo and Inspection System
 
 The integration testbench implements a sophisticated TileLink echo and inspection system for comprehensive validation:
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                    Integration Testbench Architecture                   │
-│                                                                         │
-│  ┌──────────────┐    UART     ┌─────────────────────────────────────┐   │
-│  │ Test Vector  │ ────────────►│            a7top DUT               │   │
-│  │ Generator    │              │                                     │   │
-│  └──────────────┘              │  ┌─────────────────────────────────┐│   │
-│                                 │  │      serialtl_subsystem        ││   │
-│  ┌──────────────┐              │  └──────────┬──────────────────────┘│   │
-│  │ UART Response│◄─────────────│             │                       │   │
-│  │   Capture    │              └─────────────┼───────────────────────┘   │
-│  └──────────────┘                            │                           │
-│                                               │ TL_OUT                    │
-│  ┌─────────────────────────────────────────────┼─────────────────────────┐ │
-│  │              TileLink Echo & Inspection     ▼                         │ │
-│  │                                                                       │ │
-│  │  TL_OUT ──► GenericDeserializer ──► GenericSerializer ──► TL_IN      │ │
-│  │                       │                                               │ │
-│  │                       ▼                                               │ │
-│  │              ┌─────────────────┐                                      │ │
-│  │              │ Packet Inspector│                                      │ │
-│  │              │  & Validator    │                                      │ │
-│  │              │                 │                                      │ │
-│  │              │ - Display all   │                                      │ │
-│  │              │   packet fields │                                      │ │
-│  │              │ - Content       │                                      │ │
-│  │              │   assertions    │                                      │ │
-│  │              │ - Pass/fail     │                                      │ │
-│  │              │   tracking      │                                      │ │
-│  │              └─────────────────┘                                      │ │
-│  └───────────────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                      Integration Testbench Architecture                    │
+│                                                                          │
+│  ┌────────────────┐      UART       ┌──────────────────────────────────┐   │
+│  │  Test Vector   │ ───────────────►│             a7top DUT            │   │
+│  │   Generator    │                 │                                  │   │
+│  └────────────────┘                 │   ┌────────────────────────────┐ │   │
+│                                     │   │   serialtl_subsystem       │ │   │
+│  ┌────────────────┐                 │   └─────────────┬──────────────┘ │   │
+│  │ UART Response  │◄────────────────│                 │                │   │
+│  │    Capture     │                 └─────────────────┼────────────────┘   │
+│  └────────────────┘                                   │ TL_OUT           │
+│                                                       ▼                  │
+│  ┌─────────────────────────────────────────────────────────────────────┐ │
+│  │                    TileLink Echo & Inspection                       │ │
+│  │                                                                     │ │
+│  │    TL_OUT ──► GenericDeserializer ──► Packet ──► GenericSerializer ──► TL_IN │
+│  │                                        │                            │ │
+│  │                                        │                            │ │
+│  │                                        ▼                            │ │
+│  │                              ┌─────────────────┐                      │ │
+│  │                              │ Packet Inspector│                      │ │
+│  │                              │   & Validator   │                      │ │
+│  │                              └─────────────────┘                      │ │
+│  └─────────────────────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
 **Key Features:**
@@ -535,7 +398,7 @@ The integration testbench implements a sophisticated TileLink echo and inspectio
 - **Content Validation**: Assertions verify packet field validity (size, channel, opcode)
 - **Pass/Fail Criteria**: Comprehensive validation including UART responses, packet counts, and assertion results
 
-#### 7.2.2 Validation Methodology
+### 6.2 Validation Methodology
 
 The testbench provides multi-level validation:
 
@@ -550,9 +413,9 @@ The testbench provides multi-level validation:
 - Packet count tracking for echo verification
 - Graceful error reporting with detailed failure information
 
-#### 7.2.3 Verification Strategy
+### 6.3 Verification Strategy
 
-#### 7.2.3.1 Module-Level Testing
+#### 6.3.1 Module-Level Testing
 - **UART Handler**: Test prefix detection state machine with various input sequences
 - **ASC Subsystem**: Validate against existing `hw/client.py` without modifications
 - **STL Bridges**: Unit tests for packet ↔ TileLink frame conversion
@@ -560,41 +423,16 @@ The testbench provides multi-level validation:
 
 #### 7.2.2 System-Level Testing  
 - **Protocol Switching**: Send alternating "asc+" and "stl+" commands
-- **Error Handling**: Test invalid prefixes, incomplete packets, timeouts
+- **Error Handling**: Test invalid prefixes, incomplete packets, and timeouts
 - **End-to-End**: Full transactions through both ASC and STL paths
-- **Performance**: Verify throughput and latency requirements
+- **Performance**: Verify throughput and latency requirements meet specifications
 
 #### 7.2.3 Hardware Validation
 - **SCuM-V Integration**: Test with actual SCuM-V24B hardware
 - **Host Compatibility**: Validate with unmodified `hw/client.py` and `sw/tl_host.py`
-- **LED Indicators**: Verify debug outputs match expected system state
+- **LED Indicators**: Verify that debug outputs on the FPGA board match the expected system state
 
-### 7.3 Key Design Decisions Made
+### 7.3 Key Design Decisions
 
-1. **Three-Level Hierarchy**: Clean separation between top-level, subsystem, and implementation
-2. **Standard FIFO Interfaces**: Consistent ready/valid handshake throughout
-3. **Protocol Isolation**: Each subsystem independent and testable
-4. **Prefix-Based Routing**: Simple and reliable protocol detection
-5. **ASIC Module Reuse**: Exact GenericSerializer/Deserializer from SCuM-V24B
+The final architecture was shaped by several key design decisions. A three-level hierarchy (top-level, subsystem, and implementation) was chosen to create a clean separation of concerns. Standardizing on a ready/valid FIFO handshake provides a consistent and reliable interface pattern throughout the design. This modularity also ensures that the ASC and STL subsystems are fully independent and can be tested in isolation. The simple and reliable prefix-based routing mechanism was selected for protocol detection. Finally, to guarantee correctness, the design reuses the exact `GenericSerializer` and `GenericDeserializer` modules from the SCuM-V24B ASIC without modification.
 
-### 7.4 Resource Estimates
-
-Based on similar FPGA implementations:
-- **LUTs**: ~2000-3000 (small fraction of Artix-7 100T)
-- **FFs**: ~1500-2500 (small fraction of Artix-7 100T)  
-- **Block RAM**: 2-4 blocks for FIFOs and buffering
-- **Clock Domains**: 2 (FPGA_CLK @ 100MHz, TL_CLK from SCuM-V)
-
-### 7.5 Critical Success Factors
-
-1. **Protocol Compatibility**: Must work with existing Python scripts unchanged
-2. **Timing Closure**: Meet timing requirements across clock domains
-3. **Error Recovery**: Graceful handling of malformed packets and errors
-4. **Resource Efficiency**: Fit comfortably within Artix-7 100T constraints
-5. **Maintainability**: Clear, well-documented code for future modifications
-
----
-
-## 8. Conclusion
-
-This design specification provides a complete blueprint for implementing the dual-mode SCuM-V controller. The hierarchical architecture with standardized FIFO interfaces ensures clean modularity while maintaining compatibility with existing host software. The implementation skeleton is complete and ready for detailed module development following the specified priority order.
