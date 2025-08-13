@@ -6,7 +6,12 @@
 // extern volatile uint32_t tohost;
 
 // TODO: non 0 exit codes cause a lot of unnecessary output
+// void __attribute__((noreturn)) sim_finish() {
+//   // HAL_UART_finishTX(UART0);
+//   _exit(0);
+// }
+
 void __attribute__((noreturn)) sim_finish() {
-  // HAL_UART_finishTX(UART0);
+  HAL_UART_finishTX(UART0);
   _exit(0);
 }
