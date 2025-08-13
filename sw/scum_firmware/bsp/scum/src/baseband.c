@@ -30,23 +30,23 @@ uint32_t baseband_status0() {
 }
 
 void baseband_get_status0(baseband_status0_t* status) {
-    uint32_t status0 = baseband_status0();
-    status->assembler_state = (status0 >> 0) & 0x7;
-    status->disassembler_state = (status0 >> 3) & 0x7;
-    status->tx_state = (status0 >> 6) & 0x3;
-    status->rx_controller_state = (status0 >> 8) & 0x7;
-    status->tx_controller_state = (status0 >> 11) & 0x3;
-    status->controller_state = (status0 >> 13) & 0x7;
-    status->adc_i_data = (status0 >> 16) & 0xFF;
-    status->adc_q_data = (status0 >> 24) & 0xFF;
+  uint32_t status0 = baseband_status0();
+  status->assembler_state = (status0 >> 29) & 0x7;
+  status->disassembler_state = (status0 >> 26) & 0x7;
+  status->tx_state = (status0 >> 24) & 0x3;
+  status->rx_controller_state = (status0 >> 21) & 0x7;
+  status->tx_controller_state = (status0 >> 19) & 0x3;
+  status->controller_state = (status0 >> 16) & 0x7;
+  status->adc_i_data = (status0 >> 8) & 0xFF;
+  status->adc_q_data = (status0 >> 0) & 0xFF;
 }
 
 uint8_t baseband_read_adc_i() {
-    return (baseband_status0() >> 16) & 0xFF;
+  return (baseband_status0() >> 8) & 0xFF;
 }
 
 uint8_t baseband_read_adc_q() {
-    return (baseband_status0() >> 24) & 0xFF;
+  return (baseband_status0() >> 0) & 0xFF;
 }
 
 uint32_t baseband_status1() {

@@ -123,14 +123,14 @@
 
 /*
     STATUS 0
-    [2:0] Assembler State
-    [5:3] Disassembler State
-    [7:6] TX State
-    [10:8] RX Controller State
-    [12:11] TX Controller State
-    [15:13] Controller State
-    [23:16] ADC I data
-    [31:24] ADC Q data
+    [7:0] ADC Q data
+    [15:8] ADC I data
+    [18:16] Controller State
+    [20:19] TX Controller State
+    [23:21] RX Controller State
+    [25:24] TX State
+    [28:26] Disassembler State
+    [31:29] Assembler State
 */
 typedef struct {
     uint8_t assembler_state;
