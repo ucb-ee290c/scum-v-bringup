@@ -42,7 +42,7 @@ int main() {
   HAL_UART_init(UART0, &UART_init_config);
 
   // print_baseband_status0();
-  sprintf(str, "SCuM-V25 says, 'I'm alive!'\r\n");
+  sprintf(str, "SCuM-V24B says, 'I'm alive!'\r\n");
   HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
 
   // Set SCuM-V tuning registers.
