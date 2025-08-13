@@ -100,6 +100,16 @@ class TileLinkHost:
     def __init__(self, serial: serial.Serial) -> None:
         self.serial = serial
 
+    def _read_exactly(self, num_bytes: int) -> bytes:
+        """Reads exactly num_bytes or returns fewer if timeout occurs."""
+        buffer = bytearray()
+        while len(buffer) < num_bytes:
+            chunk = self.serial.read(num_bytes - len(buffer))
+            if not chunk:
+                break
+            buffer.extend(chunk)
+        return bytes(buffer)
+
     def read_address(self, address: int, verbose: bool = True) -> int:
         """Reads the data at the given address."""
         # Pack opcode and other fields into a single byte as the firmware expects
@@ -116,7 +126,7 @@ class TileLinkHost:
         #     print(f"[STL Command] Full command: {' '.join([f'{b:02X}' for b in full_command])}")
         self.serial.write(full_command)
 
-        buffer = self.serial.read(16)
+        buffer = self._read_exactly(16)
         # print_tilelink_packet(buffer, "RX")
         
         # Unpack the response, decoding the packed opcode byte
@@ -154,7 +164,7 @@ class TileLinkHost:
         #     print(f"[STL Command] Full command: {' '.join([f'{b:02X}' for b in full_command])}")
         self.serial.write(full_command)
 
-        buffer = self.serial.read(16)
+        buffer = self._read_exactly(16)
         # print_tilelink_packet(buffer, "RX")
         
         # Unpack the response, decoding the packed opcode byte
@@ -168,8 +178,12 @@ class TileLinkHost:
             return
         print("[TL PutFullData] <ERROR!>")
 
-    def flash_binary(self, binary_path: str) -> None:
-        """Flashes the given binary to the chip."""
+    def flash_binary(self, binary_path: str, batch_size: int = 256) -> None:
+        """Flashes the given binary to the chip.
+
+        Uses batched writes and a single bulk read of acks per batch to reduce
+        Python/pyserial overhead substantially.
+        """
         with open(binary_path, "rb") as f:
             binary = f.read()
 
@@ -180,12 +194,49 @@ class TileLinkHost:
 
         num_words = binary_size // 4
         words = struct.unpack("<" + "L" * num_words, binary)
-        for address, instruction in enumerate(words):
-            print(f"{(address / num_words) * 100:.2f}%\t"
-                  f"{address} / {num_words}")
-            self.write_address(DTIM_BASE + address * 4,
-                               instruction,
-                               verbose=False)
+
+        # Clear any stale data
+        try:
+            self.serial.reset_input_buffer()
+        except Exception:
+            pass
+
+        last_reported_percent = -1
+        for base in range(0, num_words, batch_size):
+            count = min(batch_size, num_words - base)
+
+            # Build one large buffer with many back-to-back packets
+            send_buffer = bytearray()
+            for i in range(count):
+                address = DTIM_BASE + (base + i) * 4
+                data_word = words[base + i]
+                # Prefix per packet and then TL packet
+                send_buffer.extend(b"stl+")
+                send_buffer.extend(struct.pack(
+                    "<BBBBLQ",
+                    TL_CHANID_CH_A,
+                    TL_OPCODE_A_PUTFULLDATA & 0b111,
+                    2,
+                    0b11111111,
+                    address,
+                    data_word,
+                ))
+            # Single write syscall
+            self.serial.write(send_buffer)
+
+            # Bulk read of acks (16 bytes per response)
+            expected = 16 * count
+            received = self._read_exactly(expected)
+            if len(received) != expected:
+                print(f"ERROR: Expected {expected} bytes, received {len(received)}")
+                exit()
+                
+
+            # Throttled progress: update when percentage changes
+            percent = int(((base + count) / num_words) * 100)
+            if percent != last_reported_percent:
+                print(f"{percent}%\t{base + count} / {num_words}")
+                last_reported_percent = percent
 
         time.sleep(0.01)
         self.write_address(CLINT_BASE, 1)
@@ -250,12 +301,20 @@ if __name__ == "__main__":
         description="Script for the TileLink host.")
     parser.add_argument("-p", "--port", default="COM6")
     parser.add_argument("-t", "--target", default="template")
+    parser.add_argument("--baud", type=int, default=SERIAL_INTERFACE_BAUD_RATE)
+    parser.add_argument("--batch", type=int, default=1, help="Number of words per write batch during flashing")
     args = parser.parse_args()
 
     serial = serial.Serial(args.port,
-                           baudrate=SERIAL_INTERFACE_BAUD_RATE,
+                           baudrate=args.baud,
                            timeout=SERIAL_INTERFACE_TIMEOUT)
     if isWindows():
+        # Increase Windows COM buffers if supported to better absorb batched traffic
+        try:
+            if hasattr(serial, "set_buffer_size"):
+                serial.set_buffer_size(rx_size=1 << 20, tx_size=1 << 20)
+        except Exception:
+            pass
         binary_path = rf".\scum_firmware\build\{args.target}.bin"
     else:
         binary_path = f"./scum_firmware/build/{args.target}.bin"
@@ -266,6 +325,6 @@ if __name__ == "__main__":
     #tl_host.send_hello_world()
     #tl_host.read_uart_registers()
     time.sleep(0.1)
-    tl_host.flash_binary(binary_path)
-    time.sleep(0.02)
-    tl_host.trigger_software_interrupt()
+    tl_host.flash_binary(binary_path, batch_size=args.batch)
+    # time.sleep(0.02)
+    # tl_host.trigger_software_interrupt()

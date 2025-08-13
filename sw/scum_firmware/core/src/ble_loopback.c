@@ -101,31 +101,28 @@ int main() {
   HAL_init();
   HAL_CORE_enableGlobalInterrupt();
   HAL_CORE_enableInterrupt(MachineExternalInterrupt);
-  // HAL_CORE_enableIRQ(MachineExternal_IRQn);
-
-  // system_init();
   
   //HAL_GPIO_init(GPIOA, GPIO_PIN_0);
   //HAL_GPIO_writePin(GPIOA, GPIO_PIN_0, 0);
 
   UART_InitTypeDef UART_init_config;
-  UART_init_config.baudrate = 921600;
+  UART_init_config.baudrate = 115200;
   UART_init_config.mode = UART_MODE_TX_RX;
-  UART_init_config.stopbits = UART_STOPBITS_2;
+  UART_init_config.stopbits = UART_STOPBITS_1;
   HAL_UART_init(UART0, &UART_init_config);  
 
   sprintf(str, "SCuM-V25 says, 'I'm alive!'\r\n");
   HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
 
-  // print_baseband_status0();
+  print_baseband_status0();
 
   // Set scum-v tuning registers
   // rtc_tune_in<3> CPU oscillator - 1 exterior / 0 interior
   // rtc_tune_in<2> ADC/RTC oscillator - 1 exterior / 0 interior
   // rtc_tune_in<1:0> MUX_CLK_OUT - 00 CPU / 01 RTC / 11 ADC
   #define SCUM_TUNING 0xA000
-  uint16_t rtc_tune_in = 0b1000;
-  reg_write16(SCUM_TUNING + 0x04, rtc_tune_in);
+  // uint16_t rtc_tune_in = 0b1000;
+  // reg_write16(SCUM_TUNING + 0x04, rtc_tune_in);
   
   uint8_t counter = 0;
   uint8_t adc_i_data = 0;
