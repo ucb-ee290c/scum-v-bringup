@@ -6,7 +6,7 @@ The SCuM-V Controller is a dual-mode FPGA implementation that provides UART-base
 
 ### 1.1 System Requirements
 
-The controller must support both the Analog Scan Chain (ASC) and Serial TileLink (STL) protocols. It will multiplex between them by detecting a 4-byte prefix (`"asc+"` or `"stl+"`) at the start of each incoming UART command. The design must maintain compatibility with the existing Python host scripts (`hw/client.py` and `sw/tl_host.py`) and support configurable baud rates up to 115.2kbaud. To ensure compliance with the SCuM-V24B ASIC, the implementation will reuse the exact `GenericSerializer` and `GenericDeserializer` modules. Architecturally, the design will follow a clean, hierarchical structure with well-defined FIFO-based interfaces between modules.
+The controller must support both the Analog Scan Chain (ASC) and Serial TileLink (STL) protocols. It will multiplex between them by detecting a 4-byte prefix (`"asc+"` or `"stl+"`) at the start of each incoming UART command. The design must maintain compatibility with the existing Python host scripts (`hw/client.py` and `sw/tl_host.py`) and support configurable baud rates up to 2 MBaud. To ensure compliance with the SCuM-V24B ASIC, the implementation will reuse the exact `GenericSerializer` and `GenericDeserializer` modules. Architecturally, the design will follow a clean, hierarchical structure with well-defined FIFO-based interfaces between modules.
 
 ## 2. System Architecture
 
