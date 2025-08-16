@@ -32,21 +32,30 @@
 
 `timescale 1ns / 1ps
 
+// Dual logging implemented explicitly at each callsite using $display and $fdisplay
+
 module scumv_controller_integration_tb();
 
     // Test parameters
     parameter CLOCK_FREQ = 100_000_000;  // 100 MHz system clock
-    parameter BAUD_RATE = 1_000_000;       // UART baud rate
-    parameter TEST_VECTOR_FILE = "C:/Projects/Repositories/scum-v-bringup/hw/scumv-controller/sim/sim_input.bin";  // Input file from tl_host_sim.py
-    parameter MAX_BYTES = 1024;          // Maximum test vector size
+    parameter BAUD_RATE = 2_000_000;     // UART baud rate
+    parameter TEST_VECTOR_FILE = "C:/Projects/Repositories/scum-v-bringup/hw/scumv-controller/sim/single_read_test.bin";  // Input file from tl_host_sim.py
+    parameter MAX_BYTES = 1048576;       // Maximum test vector size (1 MiB)
     parameter TIMEOUT_CYCLES = 5000000;  // Timeout for waiting operations
-    parameter BUNDLE_SIZE = 20;          // Number of bytes to send per bundle
-    parameter BUNDLE_DELAY_TL_CYCLES = 500;  // TL clock cycles to wait between bundles
+
+    // STL batching parameters to mimic tl_host.py batched streaming
+    parameter PACKET_LEN_STL = 20;            // 4-byte "stl+" prefix + 16-byte TL payload
+    parameter PACKETS_PER_BATCH = 64;         // Number of STL packets per batch
+    parameter INTER_BYTE_GAP_CYCLES = 0;      // Extra gaps beyond UART stop bit (keep 0)
+    parameter BATCH_DELAY_TL_CYCLES = 0;      // TL clock cycles to wait between batches
     
     // Clock and reset
     reg clk;
     reg reset_n;
     wire reset = ~reset_n;
+
+    // Log file descriptor for mirroring $display output to a file
+    integer tb_log_fd;
     
     // Test control
     reg [7:0] test_vectors [0:MAX_BYTES-1];  // Test vector memory
@@ -54,6 +63,8 @@ module scumv_controller_integration_tb();
     integer current_byte;                     // Current byte being sent
     reg test_active;                          // Test is running
     reg [31:0] timeout_counter;               // Timeout counter
+    integer stl_packet_count_total;           // Count of STL packets detected in input
+    integer packet_offsets [0:MAX_BYTES-1];   // Byte offsets for each detected STL packet
     
     // UART stimulus generation
     reg [7:0] uart_tx_data;
@@ -138,8 +149,36 @@ module scumv_controller_integration_tb();
         .io_out_bits(tl_in_data)                 // Output to DUT TL_IN
     );
     
-    // TL_OUT_READY comes from the deserializer (when it can accept more data)
-    assign tl_out_ready = tl_inspector_ready;
+    // Backpressure modeling for TL_OUT_READY (DUT -> TB deserializer path)
+    // Deassert READY one out of every 4 consumed bits to mimic real hardware
+    reg [1:0] tl_out_bp_count;   // counts consumed bits (0..2), then schedules a stall
+    reg tl_out_bp_stall;         // when 1, deassert READY for exactly one tl_clk cycle
+    wire tl_out_consumed;        // actual bit consumption this cycle
+
+    assign tl_out_consumed = tl_out_valid && tl_inspector_ready && (tl_out_ready); // with gating
+
+    // READY to DUT: deserializer readiness gated by backpressure stall
+    assign tl_out_ready = tl_inspector_ready && ~tl_out_bp_stall;
+
+    always @(posedge tl_clk or posedge reset) begin
+        if (reset) begin
+            tl_out_bp_count <= 2'd0;
+            tl_out_bp_stall <= 1'b0;
+        end else begin
+            if (tl_out_bp_stall) begin
+                // Hold stall for exactly one tl_clk cycle
+                tl_out_bp_stall <= 1'b0;
+            end else if (tl_out_consumed) begin
+                if (tl_out_bp_count == 2'd2) begin
+                    // After 3 consumed bits, insert a one-cycle stall
+                    tl_out_bp_stall <= 1'b1;
+                    tl_out_bp_count <= 2'd0;
+                end else begin
+                    tl_out_bp_count <= tl_out_bp_count + 2'd1;
+                end
+            end
+        end
+    end
     
     // Test validation variables
     integer packets_sent_count;
@@ -223,8 +262,12 @@ module scumv_controller_integration_tb();
     
     // Main test procedure
     initial begin
+        // Open log file early so all subsequent TB_LOG messages are mirrored
+        tb_log_fd = $fopen("scumv_controller_integration_tb.log", "w");
         $display("[TB] Starting SCuM-V Controller Integration Test");
+        if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Starting SCuM-V Controller Integration Test");
         $display("[TB] Clock Freq: %0d Hz, BAUD Rate: %0d", CLOCK_FREQ, BAUD_RATE);
+        if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Clock Freq: %0d Hz, BAUD Rate: %0d", CLOCK_FREQ, BAUD_RATE);
         
         // Initialize signals
         reset_n = 0;
@@ -250,10 +293,12 @@ module scumv_controller_integration_tb();
         
         // Reset sequence
         $display("[TB] Applying reset...");
+        if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Applying reset...");
         #12000;
         reset_n = 1;
         #12000;
         $display("[TB] Reset released, starting test sequence");
+        if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Reset released, starting test sequence");
         
         // Wait for system to settle
         #1000;
@@ -269,6 +314,8 @@ module scumv_controller_integration_tb();
         analyze_results();
         
         $display("[TB] Test completed");
+        if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Test completed");
+        if (tb_log_fd) $fclose(tb_log_fd);
         $finish;
     end
     
@@ -277,11 +324,14 @@ module scumv_controller_integration_tb();
         integer file_handle, byte_val, i;
         begin
             $display("[TB] Loading test vectors from %s", TEST_VECTOR_FILE);
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Loading test vectors from %s", TEST_VECTOR_FILE);
             
             file_handle = $fopen(TEST_VECTOR_FILE, "rb");
             if (file_handle == 0) begin
                 $display("[TB] ERROR: Could not open test vector file %s", TEST_VECTOR_FILE);
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] ERROR: Could not open test vector file %s", TEST_VECTOR_FILE);
                 $display("[TB] Please run: python tl_host_sim.py --generate-test-vectors -o %s", TEST_VECTOR_FILE);
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Please run: python tl_host_sim.py --generate-test-vectors -o %s", TEST_VECTOR_FILE);
                 $finish;
             end
             
@@ -298,6 +348,7 @@ module scumv_controller_integration_tb();
             
             $fclose(file_handle);
             $display("[TB] Loaded %0d bytes from test vector file", test_vector_size);
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Loaded %0d bytes from test vector file", test_vector_size);
             
             // Display first few bytes for debugging
             $write("[TB] First 16 bytes: ");
@@ -308,56 +359,98 @@ module scumv_controller_integration_tb();
         end
     endtask
     
-    // Send test vectors byte by byte through UART
-    task send_test_vectors;
-        integer i, bundle_start, bundle_end, bundle_count, tl_cycle_count;
+    // Count STL packets by scanning for "stl+" prefix every PACKET_LEN_STL bytes
+    task count_stl_packets;
+        integer i, j, preview_end, base0;
         begin
-            $display("[TB] Sending %0d test vector bytes in bundles of %0d...", test_vector_size, BUNDLE_SIZE);
-            
-            bundle_count = 0;
+            stl_packet_count_total = 0;
             i = 0;
-            
-            while (i < test_vector_size) begin
-                bundle_start = i;
-                bundle_end = (i + BUNDLE_SIZE < test_vector_size) ? i + BUNDLE_SIZE : test_vector_size;
-                bundle_count = bundle_count + 1;
-                
-                $display("[TB] Sending bundle %0d: bytes %0d-%0d", bundle_count, bundle_start, bundle_end-1);
-                
-                // Send bytes in current bundle
-                for (i = bundle_start; i < bundle_end; i = i + 1) begin
-                    // Wait for UART transmitter to be ready
-                    wait_for_uart_ready();
-                    
-                    // Send next byte
-                    uart_tx_data = test_vectors[i];
-                    uart_tx_valid = 1'b1;
-                    @(posedge clk);
-                    @(posedge clk);
-                    // Wait for byte to be accepted
-                    wait (uart_tx_ready);
-                    uart_tx_valid = 1'b0;
-                    @(posedge clk);
-                    
-                    $display("[TB] Sent byte %0d: 0x%02X", i, test_vectors[i]);
-                    
-                    // Small delay between bytes within bundle
-                    repeat(10) @(posedge clk);
-                end
-                
-                // Wait for BUNDLE_DELAY_TL_CYCLES tl_clk cycles before next bundle (unless this was the last bundle)
-                if (i < test_vector_size) begin
-                    $display("[TB] Bundle %0d complete, waiting %0d TL clock cycles...", bundle_count, BUNDLE_DELAY_TL_CYCLES);
-                    tl_cycle_count = 0;
-                    while (tl_cycle_count < BUNDLE_DELAY_TL_CYCLES) begin
-                        @(posedge tl_clk);
-                        tl_cycle_count = tl_cycle_count + 1;
-                    end
-                    $display("[TB] Bundle delay complete, continuing with next bundle");
+            while (i + 3 < test_vector_size) begin
+                if (test_vectors[i]   == 8'h73 && // 's'
+                    test_vectors[i+1] == 8'h74 && // 't'
+                    test_vectors[i+2] == 8'h6C && // 'l'
+                    test_vectors[i+3] == 8'h2B)   // '+'
+                begin
+                    packet_offsets[stl_packet_count_total] = i;
+                    stl_packet_count_total = stl_packet_count_total + 1;
+                    i = i + PACKET_LEN_STL;
+                end else begin
+                    // Advance by one to allow misalignment detection
+                    i = i + 1;
                 end
             end
-            
-            $display("[TB] All test vector bytes sent in %0d bundles", bundle_count);
+            $display("[TB] Detected %0d STL packets (PACKET_LEN_STL=%0d)", stl_packet_count_total, PACKET_LEN_STL);
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Detected %0d STL packets (PACKET_LEN_STL=%0d)", stl_packet_count_total, PACKET_LEN_STL);
+            if (stl_packet_count_total > 0) begin
+                base0 = packet_offsets[0];
+                preview_end = (base0 + 8 <= test_vector_size) ? base0 + 8 : test_vector_size;
+                $write("[TB] First packet bytes at offset %0d: ", base0);
+                for (j = base0; j < preview_end; j = j + 1) $write("%02X ", test_vectors[j]);
+                $write("\n");
+            end
+        end
+    endtask
+    
+    // Send a batch of STL packets continuously over UART (mimics tl_host batched streaming)
+    task send_stl_batch(input integer start_packet_idx, input integer num_packets);
+        integer pkt, byte_idx, base_idx, tl_pause_cnt;
+        begin
+            for (pkt = 0; pkt < num_packets; pkt = pkt + 1) begin
+                base_idx = packet_offsets[start_packet_idx + pkt];
+                // Send one full 20-byte STL command: "stl+" + 16B TL payload
+                for (byte_idx = 0; byte_idx < PACKET_LEN_STL; byte_idx = byte_idx + 1) begin
+                    // Ensure transmitter is ready before presenting the byte
+                    wait_for_uart_ready();
+                    uart_tx_data  = test_vectors[base_idx + byte_idx];
+                    uart_tx_valid = 1'b1;
+                    @(posedge clk);
+                    // Confirm transmitter has started (ready dropped), then release VALID
+                    wait (!uart_tx_ready);
+                    uart_tx_valid = 1'b0;
+                    // Wait until transmitter finishes current byte (ready high again)
+                    wait (uart_tx_ready);
+                    // Optional minimal gap between bytes (keep 0 to stress DUT)
+                    repeat(INTER_BYTE_GAP_CYCLES) @(posedge clk);
+                end
+                packets_sent_count = packets_sent_count + 1;
+            $display("[TB] Sent STL packet #%0d (byte range %0d..%0d)",
+                         start_packet_idx + pkt,
+                         base_idx,
+                         base_idx + PACKET_LEN_STL - 1);
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Sent STL packet #%0d (byte range %0d..%0d)",
+                         start_packet_idx + pkt,
+                         base_idx,
+                         base_idx + PACKET_LEN_STL - 1);
+            end
+            // Optional pause between batches to emulate host think time
+            if (BATCH_DELAY_TL_CYCLES > 0) begin
+                for (tl_pause_cnt = 0; tl_pause_cnt < BATCH_DELAY_TL_CYCLES; tl_pause_cnt = tl_pause_cnt + 1)
+                    @(posedge tl_clk);
+            end
+        end
+    endtask
+
+    // Send test vectors as STL packets in batches (no artificial per-byte delays)
+    task send_test_vectors;
+        integer total_batches, b, remaining, count_this_batch, start_pkt;
+        begin
+            $display("[TB] Preparing to send STL packets in batches of %0d", PACKETS_PER_BATCH);
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Preparing to send STL packets in batches of %0d", PACKETS_PER_BATCH);
+            count_stl_packets();
+
+            total_batches = (stl_packet_count_total + PACKETS_PER_BATCH - 1) / PACKETS_PER_BATCH;
+            for (b = 0; b < total_batches; b = b + 1) begin
+                start_pkt = b * PACKETS_PER_BATCH;
+                remaining = stl_packet_count_total - start_pkt;
+                count_this_batch = (remaining > PACKETS_PER_BATCH) ? PACKETS_PER_BATCH : remaining;
+                $display("[TB] Sending batch %0d/%0d: %0d packets (start index %0d)",
+                         b+1, total_batches, count_this_batch, start_pkt);
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Sending batch %0d/%0d: %0d packets (start index %0d)",
+                         b+1, total_batches, count_this_batch, start_pkt);
+                send_stl_batch(start_pkt, count_this_batch);
+            end
+            $display("[TB] All STL packets sent: %0d", stl_packet_count_total);
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] All STL packets sent: %0d", stl_packet_count_total);
         end
     endtask
     
@@ -371,7 +464,8 @@ module scumv_controller_integration_tb();
             end
             
             if (timeout_counter >= TIMEOUT_CYCLES) begin
-                $display("[TB] ERROR: Timeout waiting for UART TX ready");
+            $display("[TB] ERROR: Timeout waiting for UART TX ready");
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] ERROR: Timeout waiting for UART TX ready");
                 $finish;
             end
         end
@@ -379,25 +473,25 @@ module scumv_controller_integration_tb();
     
     // Wait for responses from DUT
     task wait_for_responses;
+        integer expected_bytes;
         begin
-            $display("[TB] Waiting for responses...");
+            expected_bytes = packets_sent_count * 16; // 16 bytes per STL response
+            $display("[TB] Waiting for %0d response bytes (for %0d packets)", expected_bytes, packets_sent_count);
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Waiting for %0d response bytes (for %0d packets)", expected_bytes, packets_sent_count);
             timeout_counter = 0;
-            
-            // Wait for some time to collect responses
-            // In a real test, you'd wait for specific response patterns
-            while (timeout_counter < TIMEOUT_CYCLES) begin
+
+            while ((response_count < expected_bytes) && (timeout_counter < TIMEOUT_CYCLES)) begin
                 @(posedge clk);
                 timeout_counter = timeout_counter + 1;
-                
-                // Check if we have reasonable amount of processing time
-                if (timeout_counter > TIMEOUT_CYCLES/2 && response_count > 0) begin
-                    $display("[TB] Received %0d response bytes, ending wait", response_count);
-                    timeout_counter = TIMEOUT_CYCLES;  // Exit loop
-                end
             end
-            
-            if (timeout_counter >= TIMEOUT_CYCLES) begin
-                $display("[TB] Timeout waiting for responses (received %0d bytes)", response_count);
+
+            if (response_count < expected_bytes) begin
+                $display("[TB] ERROR: Expected %0d response bytes, got %0d", expected_bytes, response_count);
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] ERROR: Expected %0d response bytes, got %0d", expected_bytes, response_count);
+                assertion_failures = assertion_failures + 1;
+            end else begin
+                $display("[TB] Collected expected %0d response bytes", response_count);
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Collected expected %0d response bytes", response_count);
             end
         end
     endtask
@@ -407,8 +501,11 @@ module scumv_controller_integration_tb();
         integer i;
         begin
             $display("[TB] ========== TEST RESULTS ==========");
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] ========== TEST RESULTS ==========");
             $display("[TB] Test vectors sent: %0d bytes", test_vector_size);
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Test vectors sent: %0d bytes", test_vector_size);
             $display("[TB] Response bytes received: %0d", response_count);
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Response bytes received: %0d", response_count);
             
             if (response_count > 0) begin
                 $write("[TB] Response bytes: ");
@@ -421,47 +518,63 @@ module scumv_controller_integration_tb();
             
             // TileLink packet validation results
             $display("[TB] TileLink packets received: %0d", packets_received_count);
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] TileLink packets received: %0d", packets_received_count);
             $display("[TB] Assertion failures: %0d", assertion_failures);
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Assertion failures: %0d", assertion_failures);
             
             // Check LED status
             $display("[TB] Final LED status: %b", led);
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Final LED status: %b", led);
             $display("[TB] LED[0] (n_reset): %b", led[0]);
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] LED[0] (n_reset): %b", led[0]); 
             $display("[TB] LED[1] (ASC active): %b", led[1]); 
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] LED[1] (ASC active): %b", led[1]); 
             $display("[TB] LED[2] (STL active): %b", led[2]);
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] LED[2] (STL active): %b", led[2]);
             $display("[TB] LED[3] (TL_IN_VALID): %b", led[3]);
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] LED[3] (TL_IN_VALID): %b", led[3]);
             
             // Comprehensive pass/fail criteria
             test_passed = 1'b1;  // Start with pass assumption
             
             if (response_count == 0) begin
                 $display("[TB] FAIL: No UART response data received");
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] FAIL: No UART response data received");
                 test_passed = 1'b0;
             end else begin
                 $display("[TB] PASS: Received %0d UART response bytes", response_count);
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] PASS: Received %0d UART response bytes", response_count);
             end
             
             if (packets_received_count == 0) begin
                 $display("[TB] FAIL: No TileLink packets captured");
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] FAIL: No TileLink packets captured");
                 test_passed = 1'b0;
             end else begin
                 $display("[TB] PASS: Captured %0d TileLink packets", packets_received_count);
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] PASS: Captured %0d TileLink packets", packets_received_count);
             end
             
             if (assertion_failures > 0) begin
                 $display("[TB] FAIL: %0d assertion failures detected", assertion_failures);
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] FAIL: %0d assertion failures detected", assertion_failures);
                 test_passed = 1'b0;
             end else begin
                 $display("[TB] PASS: No assertion failures");
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] PASS: No assertion failures");
             end
             
             // Final test result
             if (test_passed) begin
                 $display("[TB] OVERALL RESULT: PASS - Echo functionality working correctly");
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] OVERALL RESULT: PASS - Echo functionality working correctly");
             end else begin
                 $display("[TB] OVERALL RESULT: FAIL - Test validation failed");
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] OVERALL RESULT: FAIL - Test validation failed");
             end
             
             $display("[TB] ===================================");
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] ===================================");
         end
     endtask
     
@@ -474,6 +587,7 @@ module scumv_controller_integration_tb();
                 response_buffer[response_count] <= uart_rx_data;
                 response_count <= response_count + 1;
                 $display("[TB] Captured response byte %0d: 0x%02X", response_count, uart_rx_data);
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Captured response byte %0d: 0x%02X", response_count, uart_rx_data);
             end
         end
     end
@@ -484,22 +598,39 @@ module scumv_controller_integration_tb();
             packets_received_count = packets_received_count + 1;
             
             $display("[TB] ========== TILELINK PACKET CAPTURED ==========");
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] ========== TILELINK PACKET CAPTURED ==========");
             $display("[TB] Packet #%0d", packets_received_count);
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Packet #%0d", packets_received_count);
             $display("[TB] Channel ID: 0x%01X", tl_inspector_chanId);
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Channel ID: 0x%01X", tl_inspector_chanId);
             $display("[TB] Opcode:     0x%01X (%s)", tl_inspector_opcode, 
                      tl_inspector_opcode == 3'h0 ? "PutFullData" :
                      tl_inspector_opcode == 3'h1 ? "PutPartialData" :
                      tl_inspector_opcode == 3'h4 ? "Get" :
                      tl_inspector_opcode == 3'h0 ? "AccessAck" :
                      tl_inspector_opcode == 3'h1 ? "AccessAckData" : "Unknown");
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Opcode:     0x%01X (%s)", tl_inspector_opcode, 
+                       tl_inspector_opcode == 3'h0 ? "PutFullData" :
+                       tl_inspector_opcode == 3'h1 ? "PutPartialData" :
+                       tl_inspector_opcode == 3'h4 ? "Get" :
+                       tl_inspector_opcode == 3'h0 ? "AccessAck" :
+                       tl_inspector_opcode == 3'h1 ? "AccessAckData" : "Unknown");
             $display("[TB] Param:      0x%01X", tl_inspector_param);
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Param:      0x%01X", tl_inspector_param);
             $display("[TB] Size:       0x%02X (%0d bytes)", tl_inspector_size, 1 << tl_inspector_size);
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Size:       0x%02X (%0d bytes)", tl_inspector_size, 1 << tl_inspector_size);
             $display("[TB] Source:     0x%02X", tl_inspector_source);
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Source:     0x%02X", tl_inspector_source);
             $display("[TB] Address:    0x%016X", tl_inspector_address);
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Address:    0x%016X", tl_inspector_address);
             $display("[TB] Data:       0x%016X", tl_inspector_data);
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Data:       0x%016X", tl_inspector_data);
             $display("[TB] Corrupt:    %b", tl_inspector_corrupt);
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Corrupt:    %b", tl_inspector_corrupt);
             $display("[TB] Union:      0x%03X", tl_inspector_union);
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Union:      0x%03X", tl_inspector_union);
             $display("[TB] =============================================");
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] =============================================");
             
             // Basic packet validation assertions (content only, not timing)
             if (tl_inspector_size > 8'h06) begin

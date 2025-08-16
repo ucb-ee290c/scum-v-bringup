@@ -8,7 +8,7 @@
     parameter ADDR_BITS = 12,
     parameter PAYLOAD_BITS = 160,
 
-    parameter BAUD_RATE = 1_000_000,
+    parameter BAUD_RATE = 2_000_000,
     
     // Sample the button signal every 500us
     parameter integer B_SAMPLE_CNT_MAX = 0.0005 * CLOCK_FREQ,
