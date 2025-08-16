@@ -63,6 +63,8 @@ Status HAL_UART_receive(UART_TypeDef *UARTx, uint8_t *data, uint16_t size, uint3
 
 Status HAL_UART_transmit(UART_TypeDef *UARTx, uint8_t *data, uint16_t size, uint32_t timeout);
 
+void HAL_UART_finishTX(UART_TypeDef *UARTx);
+
 #ifdef __cplusplus
 }
 #endif

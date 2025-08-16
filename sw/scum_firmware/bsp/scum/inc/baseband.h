@@ -167,7 +167,7 @@ void baseband_receive(uint32_t addr);
 void baseband_receive_exit();
 
 // Function that tests (send + check) the baseband debug command
-void baseband_debug(uint32_t addr, uint8_t num_bytes);
+void baseband_debug(uint8_t *addr, uint8_t num_bytes);
 
 uint8_t baseband_read_adc_i();
 uint8_t baseband_read_adc_q();

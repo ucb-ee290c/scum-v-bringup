@@ -101,7 +101,7 @@ void baseband_tuning_set(uint32_t addr, uint32_t data, uint32_t bit_size, uint32
 }
 
 // Function that tests (send + check) the baseband debug command
-void baseband_debug(uint32_t addr, uint8_t byte_size) {
+void baseband_debug(uint8_t *addr, uint8_t byte_size) {
   /* Debug command:
     Turns on both the RX and TX paths according to the loopback mask and passes the specified number of PDU
     header and data bytes in a loop. For simplicity the return data is stored at <load address + total bytes>,
@@ -110,7 +110,7 @@ void baseband_debug(uint32_t addr, uint8_t byte_size) {
     [ additionalData = <load address> ]
   */
   // Sending baseband DEBUG instruction
-  reg_write32(BASEBAND_ADDITIONAL_DATA, addr);
+  reg_write32(BASEBAND_ADDITIONAL_DATA, (uint32_t)addr);
   
   reg_write32(BASEBAND_INST, BASEBAND_INSTRUCTION(BASEBAND_DEBUG, 0b11, byte_size));
 }
