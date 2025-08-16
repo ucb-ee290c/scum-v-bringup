@@ -150,6 +150,42 @@ class TileLinkHostSim:
     
     def __init__(self, output_file: str):
         self.serial = SimulatedSerial(output_file)
+    
+    def generate_flash_vectors(self,
+                               base_addr: int,
+                               num_words: int,
+                               data_mode: str = "addr",
+                               start_data: int = 0,
+                               verbose: bool = True) -> None:
+        """Generate a long, flash-like stream of STL write packets.
+
+        - Writes num_words consecutive 32-bit words
+        - Address increments by 4 each packet starting at base_addr
+        - Data pattern:
+          - data_mode == 'addr': data equals address (easy to correlate)
+          - data_mode == 'seq':  data equals (start_data + i)
+        """
+        if verbose:
+            print(f"[SIM] Generating flash-like STL stream: base=0x{base_addr:08X}, words={num_words}, data_mode={data_mode}, start_data=0x{start_data:08X}")
+
+        stl_prefix = b"stl+"
+        opcode_packed = TL_OPCODE_A_PUTFULLDATA & 0b111
+        size_field = 2  # 2^2 = 4 bytes
+        union_mask = 0xFF
+
+        for i in range(num_words):
+            address = base_addr + i * 4
+            if data_mode == "addr":
+                data = address
+            else:  # 'seq'
+                data = (start_data + i) & 0xFFFFFFFF
+            # Pack into 16B TL payload, then prepend 'stl+'
+            tl_packet = struct.pack("<BBBBLQ", 0, opcode_packed, size_field, union_mask, address, data)
+            self.serial.write(stl_prefix + tl_packet)
+
+        if verbose:
+            total_bytes = num_words * (4 + 16)
+            print(f"[SIM] Generated {num_words} STL writes ({total_bytes} bytes)")
         
     def read_address(self, address: int, verbose: bool = True) -> int:
         """Simulate reading data at the given address."""
@@ -252,11 +288,21 @@ def main():
                        help="Output file for UART byte stream")
     parser.add_argument("--generate-test-vectors", action="store_true",
                        help="Generate comprehensive test vector sequence")
+    parser.add_argument("--generate-flash-vectors", action="store_true",
+                       help="Generate a long, flash-like STL write stream")
     parser.add_argument("--test-read", type=lambda x: int(x, 0), 
                        help="Test single read from address (hex format: 0x12345678)")
     parser.add_argument("--test-write", nargs=2, metavar=('ADDR', 'DATA'),
                        type=lambda x: int(x, 0),
                        help="Test single write to address with data (hex format)")
+    parser.add_argument("--num-words", type=int, default=1024,
+                       help="Number of 32-bit words to generate for flash vectors")
+    parser.add_argument("--base-addr", type=lambda x: int(x, 0), default=DTIM_BASE,
+                       help="Base address for flash vectors (default DTIM_BASE)")
+    parser.add_argument("--data-mode", choices=['addr', 'seq'], default='addr',
+                       help="Data pattern: 'addr' to mirror address, 'seq' for sequential")
+    parser.add_argument("--start-data", type=lambda x: int(x, 0), default=0,
+                       help="Starting value for 'seq' data pattern")
     
     args = parser.parse_args()
     
@@ -264,6 +310,13 @@ def main():
     
     if args.generate_test_vectors:
         tl_sim.generate_test_sequence()
+    elif args.generate_flash_vectors:
+        tl_sim.generate_flash_vectors(
+            base_addr=args.base_addr,
+            num_words=args.num_words,
+            data_mode=args.data_mode,
+            start_data=args.start_data,
+        )
     elif args.test_read is not None:
         tl_sim.read_address(args.test_read)
     elif args.test_write is not None:
