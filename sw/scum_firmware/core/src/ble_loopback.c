@@ -126,7 +126,25 @@ int main() {
   
   uint8_t counter = 0;
   uint8_t adc_i_data = 0;
-  run_ble_loopback();
+
+  int i;
+  // Set the channel tuning LUTs
+  for (i = 0; i < 40; i++) {
+    baseband_set_lut(LUT_VCO_CT_BLE, i, i*1638);
+  }
+
+  int j;
+  while(1){
+    baseband_configure(BASEBAND_CONFIG_BLE_CHANNEL_INDEX, j++);
+    if (j >= 40) {
+      j = 0;
+    }
+    HAL_delay(2000);
+    sprintf(str, "Channel %d\r\n", j);
+    HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+  }
+
+  // run_ble_loopback();
 }
 
 void __attribute__((weak, noreturn)) __main(void) {
