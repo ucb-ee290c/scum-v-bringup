@@ -6,7 +6,7 @@ The SCuM-V Controller is a dual-mode FPGA implementation that provides UART-base
 
 ### 1.1 System Requirements
 
-The controller must support both the Analog Scan Chain (ASC) and Serial TileLink (STL) protocols. It will multiplex between them by detecting a 4-byte prefix (`"asc+"` or `"stl+"`) at the start of each incoming UART command. The design must maintain compatibility with the existing Python host scripts (`hw/client.py` and `sw/tl_host.py`) and support configurable baud rates up to 2 MBaud. To ensure compliance with the SCuM-V24B ASIC, the implementation will reuse the exact `GenericSerializer` and `GenericDeserializer` modules. Architecturally, the design will follow a clean, hierarchical structure with well-defined FIFO-based interfaces between modules.
+The controller must support both the Analog Scan Chain (ASC) and Serial TileLink (STL) protocols. It will multiplex between them by detecting a 4-byte prefix (`"asc+"` or `"stl+"`) at the start of each incoming UART command. The design must maintain compatibility with the existing Python host scripts (`hw/client.py` and `sw/tl_host.py`) and support configurable baud rates up to and including 2 MBaud. To ensure compliance with the SCuM-V24B ASIC, the implementation will reuse the exact `GenericSerializer` and `GenericDeserializer` modules. Architecturally, the design will follow a clean, hierarchical structure with well-defined FIFO-based interfaces between modules.
 
 ## 2. System Architecture
 
@@ -179,7 +179,7 @@ output wire TL_OUT_DATA    // Serial data coming from SCuM-V
 
 ### 4.2 Internal FIFO Interfaces
 
-The `scumvcontroller_uart_handler` module serves as the primary interface to the host. Because the TileLink clock (`TL_CLK`) runs much slower than a typical UART baud rate (e.g., 200kHz vs. 1Mbaud+), internal FIFOs are essential for flow control. They prevent data loss by buffering incoming and outgoing data, allowing the different clock domains to operate without dropping packets. The handler's architecture ensures that complete packets are buffered before being processed and that both subsystems see a consistent data flow regardless of UART timing.
+The `scumvcontroller_uart_handler` module serves as the primary interface to the host. Because the TileLink clock (`TL_CLK`) runs much slower than a typical UART baud rate (e.g., 200kHz vs. 2Mbaud), internal FIFOs are essential for flow control. They prevent data loss by buffering incoming and outgoing data, allowing the different clock domains to operate without dropping packets. The handler's architecture ensures that complete packets are buffered before being processed and that both subsystems see a consistent data flow regardless of UART timing.
 
 UART Handler Internal Architecture:
 ┌─────────────────────────────────────────────────────────────────┐

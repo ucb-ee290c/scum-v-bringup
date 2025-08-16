@@ -34,7 +34,9 @@ Want to contribute to the documentation? Start here: [Contributing to the specif
     - proxyFESVR/
         - **Not functional**. Fork of Franklin Huang's proxyFESVR library, modified to support SCuM-V. See the [README](sw/proxyFESVR/README.md) for more details.
     - tl_host.py
-        - Python script for use with the STM32F446RE or STM32H723ZG to translate UART to SCuM's TSI bus.
+        - Python script for use with the STM32F446RE or STM32H723ZG to translate UART to SCuM's TSI bus. Default baud may differ; for the FPGA controller simulations and host simulators use 2,000,000 baud.
+    - tl_host_sim.py
+        - Simulation-oriented generator for `stl+` UART byte streams. Produces vector files used by `hw/scumv-controller/sim/scumv_controller_integration_tb.v`.
 
 ## Hardware Setup
 
@@ -122,7 +124,7 @@ If using another level shifter, bandwidth should be >1 MHz and unidirectional sh
 - Clock <> J20, bypass 0
 - dDebug <> J19 
 
-## FPGA Setup
+## FPGA Setup & Simulation
 
 ### Programming the FPGA with the bitstream
 
@@ -160,6 +162,13 @@ https://digilent.com/reference/learn/programmable-logic/tutorials/arty-programmi
 For most new Arty A7-100T boards, the QSPI flash device that should be selected as a configuration memory device is `s25fl128sxxxxxx0-spi-x1_x2_x4`. However, some boards may have a different flash device.
 
 ### Making changes to the FPGA design
+### Running the SCuM-V Controller simulation
+
+- Testbench: `hw/scumv-controller/sim/scumv_controller_integration_tb.v`
+- UART baud: 2,000,000
+- Test vectors: generate with `sw/tl_host_sim.py` (see `hw/scumv-controller/sim/TEST_VECTORS_README.md`)
+- Logging: TB mirrors console prints to `hw/scumv-controller/sim/scumv_controller_integration_tb.log`
+- Flow control: TB models backpressure by deasserting TL input ready one of every four consumed bits
 
 Working with Vivado and Git can be very painful. For this project, we've opted to use Vivado's Tcl scripting capabilities to generate the Vivado project.
 

@@ -262,7 +262,7 @@ module scumv_controller_integration_tb();
     
     // Main test procedure
     initial begin
-        // Open log file early so all subsequent TB_LOG messages are mirrored
+        // Open log file early so all subsequent messages are mirrored to file as well
         tb_log_fd = $fopen("scumv_controller_integration_tb.log", "w");
         $display("[TB] Starting SCuM-V Controller Integration Test");
         if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Starting SCuM-V Controller Integration Test");
