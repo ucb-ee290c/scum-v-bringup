@@ -39,15 +39,16 @@ module scumv_controller_integration_tb();
     // Test parameters
     parameter CLOCK_FREQ = 100_000_000;  // 100 MHz system clock
     parameter BAUD_RATE = 2_000_000;     // UART baud rate
-    parameter TEST_VECTOR_FILE = "C:/Projects/Repositories/scum-v-bringup/hw/scumv-controller/sim/single_read_test.bin";  // Input file from tl_host_sim.py
+    parameter TEST_VECTOR_FILE = "C:/Projects/Repositories/scum-v-bringup/hw/scumv-controller/sim/stl_flash_stress_4096pkts.bin";  // Input file from tl_host_sim.py
     parameter MAX_BYTES = 1048576;       // Maximum test vector size (1 MiB)
     parameter TIMEOUT_CYCLES = 5000000;  // Timeout for waiting operations
+    parameter STOP_ON_FAIL   = 1;        // Pause simulation on first assertion failure
 
     // STL batching parameters to mimic tl_host.py batched streaming
     parameter PACKET_LEN_STL = 20;            // 4-byte "stl+" prefix + 16-byte TL payload
     parameter PACKETS_PER_BATCH = 64;         // Number of STL packets per batch
     parameter INTER_BYTE_GAP_CYCLES = 0;      // Extra gaps beyond UART stop bit (keep 0)
-    parameter BATCH_DELAY_TL_CYCLES = 0;      // TL clock cycles to wait between batches
+    parameter BATCH_DELAY_TL_CYCLES = 16;      // TL clock cycles to wait between batches
     
     // Clock and reset
     reg clk;
@@ -104,6 +105,8 @@ module scumv_controller_integration_tb();
     wire [63:0] tl_inspector_data;
     wire tl_inspector_corrupt;
     wire [8:0] tl_inspector_union;
+    // Simple ready/valid handshake between deserializer (producer) and serializer (consumer)
+    wire ser_in_ready; // serializer input readiness fed back to deserializer
     
     // Mock ASC interface
     wire scan_clk, scan_en, scan_in, scan_reset;
@@ -115,7 +118,7 @@ module scumv_controller_integration_tb();
         .io_in_ready(tl_inspector_ready),    // Output - not used
         .io_in_valid(tl_out_valid),          // Input from DUT TL_OUT
         .io_in_bits(tl_out_data),            // Input from DUT TL_OUT
-        .io_out_ready(1'b1),                 // Always ready to accept packets
+        .io_out_ready(ser_in_ready),         // Ready from serializer (simple loopback handshake)
         .io_out_valid(tl_inspector_valid),
         .io_out_bits_chanId(tl_inspector_chanId),
         .io_out_bits_opcode(tl_inspector_opcode),
@@ -132,7 +135,7 @@ module scumv_controller_integration_tb();
     GenericSerializer tl_echo_serializer (
         .clock(tl_clk),
         .reset(reset),
-        .io_in_ready(),                          // Not used - serializer always ready when not sending
+        .io_in_ready(ser_in_ready),              // Feed back to deserializer for proper handshake
         .io_in_valid(tl_inspector_valid),        // Input from deserializer
         .io_in_bits_chanId(tl_inspector_chanId),
         .io_in_bits_opcode(tl_inspector_opcode),
@@ -149,42 +152,26 @@ module scumv_controller_integration_tb();
         .io_out_bits(tl_in_data)                 // Output to DUT TL_IN
     );
     
-    // Backpressure modeling for TL_OUT_READY (DUT -> TB deserializer path)
-    // Deassert READY one out of every 4 consumed bits to mimic real hardware
-    reg [1:0] tl_out_bp_count;   // counts consumed bits (0..2), then schedules a stall
-    reg tl_out_bp_stall;         // when 1, deassert READY for exactly one tl_clk cycle
-    wire tl_out_consumed;        // actual bit consumption this cycle
-
-    assign tl_out_consumed = tl_out_valid && tl_inspector_ready && (tl_out_ready); // with gating
-
-    // READY to DUT: deserializer readiness gated by backpressure stall
-    assign tl_out_ready = tl_inspector_ready && ~tl_out_bp_stall;
-
-    always @(posedge tl_clk or posedge reset) begin
-        if (reset) begin
-            tl_out_bp_count <= 2'd0;
-            tl_out_bp_stall <= 1'b0;
-        end else begin
-            if (tl_out_bp_stall) begin
-                // Hold stall for exactly one tl_clk cycle
-                tl_out_bp_stall <= 1'b0;
-            end else if (tl_out_consumed) begin
-                if (tl_out_bp_count == 2'd2) begin
-                    // After 3 consumed bits, insert a one-cycle stall
-                    tl_out_bp_stall <= 1'b1;
-                    tl_out_bp_count <= 2'd0;
-                end else begin
-                    tl_out_bp_count <= tl_out_bp_count + 2'd1;
-                end
-            end
-        end
-    end
+    // READY to DUT (TL_OUT): directly use deserializer input readiness (no TB backpressure)
+    assign tl_out_ready = tl_inspector_ready;
     
     // Test validation variables
     integer packets_sent_count;
     integer packets_received_count;
     integer assertion_failures;
+    integer prev_assertion_failures;
     reg test_passed;
+    integer expected_pkt_index;               // Index into expected STL packets for comparisons
+    // Expected-packet scratch registers (declared at module scope for Verilog-2001 compatibility)
+    integer base_idx;
+    reg [7:0] chanid_b, opcode_packed_b, size_b, union_b;
+    reg [31:0] addr32_le;
+    reg [63:0] data64_le;
+    reg [2:0] exp_chanid, exp_opcode, exp_param;
+    reg [7:0] exp_size, exp_source;
+    reg [63:0] exp_addr64, exp_data64;
+    reg       exp_corrupt;
+    reg [8:0] exp_union9;
     
     // UART stimulus generator (transmitter to feed data to DUT)
     uart #(
@@ -283,7 +270,9 @@ module scumv_controller_integration_tb();
         packets_sent_count = 0;
         packets_received_count = 0;
         assertion_failures = 0;
+        prev_assertion_failures = 0;
         test_passed = 1'b0;
+        expected_pkt_index = 0;
         
         // TileLink interface is now active with loopback connections
         // (no initialization needed - handled by assign statements)
@@ -318,7 +307,17 @@ module scumv_controller_integration_tb();
         if (tb_log_fd) $fclose(tb_log_fd);
         $finish;
     end
-    
+
+    // Optional: pause simulation on the first assertion failure to aid debugging
+    always @(posedge tl_clk) begin
+        if (STOP_ON_FAIL && (assertion_failures > prev_assertion_failures)) begin
+            $display("[TB] STOP_ON_FAIL: Pausing on first assertion failure at time %0t", $time);
+            if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] STOP_ON_FAIL: Pausing on first assertion failure at time %0t", $time);
+            $stop; // Pause simulation for interactive debug
+        end
+        prev_assertion_failures <= assertion_failures;
+    end
+
     // Load test vectors from file
     task load_test_vectors;
         integer file_handle, byte_val, i;
@@ -645,6 +644,92 @@ module scumv_controller_integration_tb();
             
             if (tl_inspector_opcode > 3'h6) begin
                 $error("[TB] ASSERTION FAILED: Invalid opcode: 0x%01X (max 0x6)", tl_inspector_opcode);
+                assertion_failures = assertion_failures + 1;
+            end
+
+            // Compare deserialized packet against what was sent in the UART STL vector
+            // Reconstruct expected fields directly from test_vectors using packet_offsets[]
+            // STL packet format: 'stl+' (4B) + 16B TL payload packed as <BBBBLQ>
+            //   Byte 0: chanid (3 LSBs used)
+            //   Byte 1: opcode_packed = {corrupt[7], param[6:4], 1'b0, opcode[2:0]}
+            //   Byte 2: size
+            //   Byte 3: union_field (mask for Ch A, denied for Ch D)
+            //   Bytes 4..7: address (LE, 32-bit)
+            //   Bytes 8..15: data (LE, 64-bit)
+            if (expected_pkt_index < stl_packet_count_total) begin
+                base_idx = packet_offsets[expected_pkt_index] + 4; // skip 'stl+'
+                chanid_b         = test_vectors[base_idx + 0];
+                opcode_packed_b  = test_vectors[base_idx + 1];
+                size_b           = test_vectors[base_idx + 2];
+                union_b          = test_vectors[base_idx + 3];
+                addr32_le        = { test_vectors[base_idx + 7], test_vectors[base_idx + 6],
+                                      test_vectors[base_idx + 5], test_vectors[base_idx + 4] };
+                data64_le        = { test_vectors[base_idx + 15], test_vectors[base_idx + 14],
+                                      test_vectors[base_idx + 13], test_vectors[base_idx + 12],
+                                      test_vectors[base_idx + 11], test_vectors[base_idx + 10],
+                                      test_vectors[base_idx + 9],  test_vectors[base_idx + 8] };
+
+                exp_chanid  = chanid_b[2:0];
+                exp_opcode  = opcode_packed_b[2:0];
+                exp_param   = opcode_packed_b[6:4];
+                exp_corrupt = opcode_packed_b[7];
+                exp_size    = size_b;
+                exp_source  = 8'h00; // host transactions default source
+                exp_union9  = {1'b0, union_b}; // zero-extend to 9 bits
+                exp_addr64  = {32'h0, addr32_le};
+                exp_data64  = data64_le;
+
+                // Field-by-field comparisons
+                if (tl_inspector_chanId !== exp_chanid) begin
+                    $error("[TB] ASSERTION FAILED: Packet #%0d chanId mismatch: got 0x%0X expected 0x%0X", expected_pkt_index+1, tl_inspector_chanId, exp_chanid);
+                    if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] ASSERTION FAILED: Packet #%0d chanId mismatch: got 0x%0X expected 0x%0X", expected_pkt_index+1, tl_inspector_chanId, exp_chanid);
+                    assertion_failures = assertion_failures + 1;
+                end
+                if (tl_inspector_opcode !== exp_opcode) begin
+                    $error("[TB] ASSERTION FAILED: Packet #%0d opcode mismatch: got 0x%0X expected 0x%0X", expected_pkt_index+1, tl_inspector_opcode, exp_opcode);
+                    if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] ASSERTION FAILED: Packet #%0d opcode mismatch: got 0x%0X expected 0x%0X", expected_pkt_index+1, tl_inspector_opcode, exp_opcode);
+                    assertion_failures = assertion_failures + 1;
+                end
+                if (tl_inspector_param !== exp_param) begin
+                    $error("[TB] ASSERTION FAILED: Packet #%0d param mismatch: got 0x%0X expected 0x%0X", expected_pkt_index+1, tl_inspector_param, exp_param);
+                    if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] ASSERTION FAILED: Packet #%0d param mismatch: got 0x%0X expected 0x%0X", expected_pkt_index+1, tl_inspector_param, exp_param);
+                    assertion_failures = assertion_failures + 1;
+                end
+                if (tl_inspector_size !== exp_size) begin
+                    $error("[TB] ASSERTION FAILED: Packet #%0d size mismatch: got 0x%0X expected 0x%0X", expected_pkt_index+1, tl_inspector_size, exp_size);
+                    if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] ASSERTION FAILED: Packet #%0d size mismatch: got 0x%0X expected 0x%0X", expected_pkt_index+1, tl_inspector_size, exp_size);
+                    assertion_failures = assertion_failures + 1;
+                end
+                if (tl_inspector_source !== exp_source) begin
+                    $error("[TB] ASSERTION FAILED: Packet #%0d source mismatch: got 0x%0X expected 0x%0X", expected_pkt_index+1, tl_inspector_source, exp_source);
+                    if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] ASSERTION FAILED: Packet #%0d source mismatch: got 0x%0X expected 0x%0X", expected_pkt_index+1, tl_inspector_source, exp_source);
+                    assertion_failures = assertion_failures + 1;
+                end
+                if (tl_inspector_address !== exp_addr64) begin
+                    $error("[TB] ASSERTION FAILED: Packet #%0d address mismatch: got 0x%016X expected 0x%016X", expected_pkt_index+1, tl_inspector_address, exp_addr64);
+                    if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] ASSERTION FAILED: Packet #%0d address mismatch: got 0x%016X expected 0x%016X", expected_pkt_index+1, tl_inspector_address, exp_addr64);
+                    assertion_failures = assertion_failures + 1;
+                end
+                if (tl_inspector_data !== exp_data64) begin
+                    $error("[TB] ASSERTION FAILED: Packet #%0d data mismatch: got 0x%016X expected 0x%016X", expected_pkt_index+1, tl_inspector_data, exp_data64);
+                    if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] ASSERTION FAILED: Packet #%0d data mismatch: got 0x%016X expected 0x%016X", expected_pkt_index+1, tl_inspector_data, exp_data64);
+                    assertion_failures = assertion_failures + 1;
+                end
+                if (tl_inspector_corrupt !== exp_corrupt) begin
+                    $error("[TB] ASSERTION FAILED: Packet #%0d corrupt mismatch: got %0d expected %0d", expected_pkt_index+1, tl_inspector_corrupt, exp_corrupt);
+                    if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] ASSERTION FAILED: Packet #%0d corrupt mismatch: got %0d expected %0d", expected_pkt_index+1, tl_inspector_corrupt, exp_corrupt);
+                    assertion_failures = assertion_failures + 1;
+                end
+                if (tl_inspector_union !== exp_union9) begin
+                    $error("[TB] ASSERTION FAILED: Packet #%0d union mismatch: got 0x%03X expected 0x%03X", expected_pkt_index+1, tl_inspector_union, exp_union9);
+                    if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] ASSERTION FAILED: Packet #%0d union mismatch: got 0x%03X expected 0x%03X", expected_pkt_index+1, tl_inspector_union, exp_union9);
+                    assertion_failures = assertion_failures + 1;
+                end
+
+                expected_pkt_index = expected_pkt_index + 1;
+            end else begin
+                $display("[TB] WARN: Received more TL packets than STL vectors (%0d > %0d)", expected_pkt_index+1, stl_packet_count_total);
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] WARN: Received more TL packets than STL vectors (%0d > %0d)", expected_pkt_index+1, stl_packet_count_total);
                 assertion_failures = assertion_failures + 1;
             end
         end
