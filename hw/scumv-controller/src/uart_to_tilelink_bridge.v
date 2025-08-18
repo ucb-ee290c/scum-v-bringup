@@ -65,26 +65,38 @@ module uart_to_tilelink_bridge (
     wire [2:0] param;
     wire corrupt;
     
+    // CDC synchronizers for cross-domain signals
+    wire tl_ser_in_ready_sync;
+    wire tl_clk_posedge;
+    
+    // Synchronize tl_ser_in_ready from tl_clk domain to sysclk domain
+    simple_synchronizer #(.WIDTH(1)) ready_sync (
+        .clk(sysclk),
+        .async_in(tl_ser_in_ready),
+        .sync_out(tl_ser_in_ready_sync)
+    );
+    
+    // Edge detector for tl_clk in sysclk domain
+    cdc_edge_detector edge_detect (
+        .clk(sysclk),
+        .async_reset_n(~reset), // Convert active-high to active-low
+        .async_clk(tl_clk),
+        .posedge_pulse(tl_clk_posedge),
+        .negedge_pulse() // Unused
+    );
+
     // State machine
-    reg tl_ser_in_ready_buf;
-    reg tl_clk_buf;
     always @(posedge sysclk) begin
         if (reset) begin
             state <= STATE_IDLE;
-            tl_ser_in_ready_buf <= 1'b0;
         end else begin
             state <= next_state;
-            tl_ser_in_ready_buf <= tl_ser_in_ready;
         end
-        tl_clk_buf <= tl_clk;
     end
-
-    reg tl_clk_posedge;
 
     // Next state logic
     always @(*) begin
         next_state = state;
-        tl_clk_posedge = tl_clk && !tl_clk_buf;
         case (state)
             STATE_IDLE: begin
                 if (packet_valid) begin
@@ -93,7 +105,8 @@ module uart_to_tilelink_bridge (
             end
             
             STATE_FRAME_READY: begin
-                if (~tl_ser_in_ready && tl_clk_posedge && tl_ser_in_valid) begin
+                // Wait for TL serializer to accept the frame and tl_clk posedge
+                if (tl_ser_in_ready_sync && tl_ser_in_valid && tl_clk_posedge) begin
                     next_state = STATE_IDLE;
                 end
             end
@@ -109,7 +122,7 @@ module uart_to_tilelink_bridge (
             // Capture incoming packet
             packet_buffer <= packet_data;
             frame_valid_reg <= 1'b1;
-        end else if (state == STATE_FRAME_READY && tl_ser_in_ready) begin
+        end else if (state == STATE_FRAME_READY && tl_ser_in_ready_sync && tl_clk_posedge) begin
             // Frame consumed, clear valid
             frame_valid_reg <= 1'b0;
         end

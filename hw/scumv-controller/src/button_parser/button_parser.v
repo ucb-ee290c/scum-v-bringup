@@ -11,12 +11,12 @@ module button_parser #(
 
   wire [WIDTH-1:0] synchronized_signals;
 
-  synchronizer # (
+  simple_synchronizer # (
     .WIDTH(WIDTH)
   ) button_synchronizer (
     .clk(clk),
-    .async_signal(in),
-    .sync_signal(synchronized_signals)
+    .async_in(in),
+    .sync_out(synchronized_signals)
   );
 
   debouncer # (

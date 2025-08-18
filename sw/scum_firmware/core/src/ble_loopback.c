@@ -69,14 +69,14 @@ void run_ble_loopback()
     if (ms_count > TIMEOUT_MS) {
       sprintf(str, "Timeout!\r\n");
       HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-      sim_finish();
+      //sim_finish();
       return;
     }
     switch (debug_status) {
       case DEBUG_TX_FAIL:
       case DEBUG_RX_FAIL:
         // TODO: Exit with error code
-        sim_finish();
+        //sim_finish();
         return;
 
       case DEBUG_RX_FINISH:
@@ -87,7 +87,7 @@ void run_ble_loopback()
         }
         sprintf(str, "\r\n");
         HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-        sim_finish();
+        //sim_finish();
         return;
       
       default:
@@ -106,9 +106,9 @@ int main() {
   //HAL_GPIO_writePin(GPIOA, GPIO_PIN_0, 0);
 
   UART_InitTypeDef UART_init_config;
-  UART_init_config.baudrate = 115200;
+  UART_init_config.baudrate = 921600; // Use 115200 in post-silicon bringup, 921600 in simulation
   UART_init_config.mode = UART_MODE_TX_RX;
-  UART_init_config.stopbits = UART_STOPBITS_1;
+  UART_init_config.stopbits = UART_STOPBITS_2; // Use 1 in post-silicon bringup, 2 in simulation
   HAL_UART_init(UART0, &UART_init_config);  
 
   sprintf(str, "SCuM-V24B says, 'I'm alive!'\r\n");
@@ -125,7 +125,6 @@ int main() {
   // reg_write16(SCUM_TUNING + 0x04, rtc_tune_in);
   
   uint8_t counter = 0;
-  uint8_t adc_i_data = 0;
 
   int i;
   // Set the channel tuning LUTs
@@ -139,12 +138,12 @@ int main() {
     if (j >= 40) {
       j = 0;
     }
-    HAL_delay(2000);
+    HAL_delay(1);
     sprintf(str, "Channel %d\r\n", j);
     HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
   }
 
-  // run_ble_loopback();
+  run_ble_loopback();
 }
 
 void __attribute__((weak, noreturn)) __main(void) {
