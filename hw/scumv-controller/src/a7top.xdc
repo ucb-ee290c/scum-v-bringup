@@ -39,6 +39,9 @@ create_clock -period 10.000 -name sys_clk_pin -waveform {0.000 5.000} -add [get_
 # 10 MHz clock constraint on the TL_CLK pin
 create_clock -period 100.000 -name tl_clk_pin -waveform {0.000 5.000} -add [get_ports TL_CLK]
 
+# Clock groups - declare sys_clk_pin and tl_clk_pin as asynchronous
+set_clock_groups -asynchronous -group [get_clocks sys_clk_pin] -group [get_clocks tl_clk_pin]
+
 
 #set_property -dict { PACKAGE_PIN T16   IOSTANDARD LVCMOS33 } [get_ports { ck_io7  }]; #IO_L15N_T2_DQS_DOUT_CSO_B_14 Sch=ck_io[7]
 #set_property -dict { PACKAGE_PIN N15   IOSTANDARD LVCMOS33 } [get_ports { ck_io8  }]; #IO_L11P_T1_SRCC_14 Sch=ck_io[8]
