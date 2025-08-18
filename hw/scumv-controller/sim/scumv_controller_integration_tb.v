@@ -1,3 +1,69 @@
+`timescale 1ns / 1ps
+
+// Helper module: Ready/Valid backpressure ready gater with pattern
+module rv_ready_gate #(parameter integer PATTERN_LEN = 9) (
+    input  wire        clock,
+    input  wire        reset,
+    input  wire        enable,
+    input  wire [8:0]  pattern,
+    input  wire        valid_in,
+    input  wire        raw_ready_in,
+    output reg  [3:0]  index,
+    output wire        ready_gated_out
+);
+    always @(posedge clock) begin
+        if (reset) begin
+            index <= 4'd0;
+        end else if (enable) begin
+            // Advance index only when there is an actual transaction attempt (valid & raw ready)
+            if (valid_in && raw_ready_in) begin
+                if (index >= PATTERN_LEN - 1)
+                    index <= 4'd0;
+                else
+                    index <= index + 1'b1;
+            end
+        end
+    end
+
+    assign ready_gated_out = enable ? (raw_ready_in & pattern[index]) : raw_ready_in;
+endmodule
+
+// Helper module: Backpressure counters and event logging
+module rv_bp_counters (
+    input  wire        clock,
+    input  wire        reset,
+    input  wire        enable,
+    input  wire        valid_in,
+    input  wire        raw_ready_in,
+    input  wire        ready_gated_in,
+    input  integer     tb_log_fd,
+    output reg  [31:0] backpressure_events,
+    output reg  [31:0] transactions_accepted,
+    output reg  [31:0] transactions_stalled
+);
+    always @(posedge clock) begin
+        if (reset) begin
+            backpressure_events   <= 32'd0;
+            transactions_accepted <= 32'd0;
+            transactions_stalled  <= 32'd0;
+        end else if (enable) begin
+            // Backpressure event when raw ready is high, but gated ready is low while valid is asserted
+            if (valid_in && raw_ready_in && !ready_gated_in) begin
+                backpressure_events <= backpressure_events + 1'b1;
+                $display("[TB] Backpressure event at time %0t", $time);
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] Backpressure event at time %0t", $time);
+            end
+            // Account transactions
+            if (valid_in) begin
+                if (ready_gated_in)
+                    transactions_accepted <= transactions_accepted + 1'b1;
+                else
+                    transactions_stalled  <= transactions_stalled + 1'b1;
+            end
+        end
+    end
+endmodule
+
 /*
  * SCuM-V Controller Integration Testbench with TileLink Echo & Inspection
  * 
@@ -30,8 +96,6 @@
  * 2. Run simulation with: sim:/scumv_controller_integration_tb
  */
 
-`timescale 1ns / 1ps
-
 // Dual logging implemented explicitly at each callsite using $display and $fdisplay
 
 module scumv_controller_integration_tb();
@@ -49,6 +113,10 @@ module scumv_controller_integration_tb();
     parameter PACKETS_PER_BATCH = 64;         // Number of STL packets per batch
     parameter INTER_BYTE_GAP_CYCLES = 0;      // Extra gaps beyond UART stop bit (keep 0)
     parameter BATCH_DELAY_TL_CYCLES = 16;      // TL clock cycles to wait between batches
+
+    // SerDes backpressure modeling parameters
+    parameter SERDES_BACKPRESSURE_ENABLE = 1;  // Enable/disable backpressure modeling
+    parameter SERDES_PATTERN_LEN = 9;          // Length of the backpressure pattern
     
     // Clock and reset
     reg clk;
@@ -107,18 +175,43 @@ module scumv_controller_integration_tb();
     wire [8:0] tl_inspector_union;
     // Simple ready/valid handshake between deserializer (producer) and serializer (consumer)
     wire ser_in_ready; // serializer input readiness fed back to deserializer
+
+    // SerDes backpressure modeling: patterns and intermediate signals
+    reg [8:0] tl_in_ready_pattern;
+    reg [8:0] tl_out_ready_pattern;
+    wire [3:0] tl_in_ready_cnt_idx;
+    wire [3:0] tl_out_ready_cnt_idx;
+    wire tl_in_ready_gated;      // Gated ready seen by serializer output
+    wire tl_out_ready_gated;     // Gated ready seen by DUT on TL_OUT
+    wire ser_to_dut_valid;       // Serializer to DUT valid
+    wire ser_to_dut_ready;       // DUT actual ready (raw)
+    wire dut_to_deser_ready;     // Deserializer actual ready (raw)
+
+    // Backpressure counters (exposed for reporting)
+    wire [31:0] tl_in_backpressure_events;
+    wire [31:0] tl_out_backpressure_events;
+    wire [31:0] tl_in_transactions_accepted;
+    wire [31:0] tl_in_transactions_stalled;
+    wire [31:0] tl_out_transactions_accepted;
+    wire [31:0] tl_out_transactions_stalled;
     
     // Mock ASC interface
     wire scan_clk, scan_en, scan_in, scan_reset;
+
+    // Initialize backpressure patterns
+    initial begin
+        tl_in_ready_pattern  = 9'b111111110;   // 8 cycles accept, 1 cycle backpressure
+        tl_out_ready_pattern = 9'b111111110;   // 8 cycles accept, 1 cycle backpressure
+    end
     
     // TileLink packet inspector (deserializer for monitoring)
     GenericDeserializer tl_inspector (
         .clock(tl_clk),
         .reset(reset),
-        .io_in_ready(tl_inspector_ready),    // Output - not used
-        .io_in_valid(tl_out_valid),          // Input from DUT TL_OUT
+        .io_in_ready(tl_inspector_ready),    // Deserializer raw ready
+        .io_in_valid(tl_out_valid),          // Direct from DUT TL_OUT
         .io_in_bits(tl_out_data),            // Input from DUT TL_OUT
-        .io_out_ready(ser_in_ready),         // Ready from serializer (simple loopback handshake)
+        .io_out_ready(ser_in_ready),         // Serializer's actual ready signal
         .io_out_valid(tl_inspector_valid),
         .io_out_bits_chanId(tl_inspector_chanId),
         .io_out_bits_opcode(tl_inspector_opcode),
@@ -147,14 +240,66 @@ module scumv_controller_integration_tb();
         .io_in_bits_corrupt(tl_inspector_corrupt),
         .io_in_bits_union(tl_inspector_union),
         .io_in_bits_last(1'b1),                 // Always last bit for single packets
-        .io_out_ready(tl_in_ready),              // Ready signal from DUT
-        .io_out_valid(tl_in_valid),              // Output to DUT TL_IN
+        .io_out_ready(tl_in_ready_gated),       // Gated ready towards serializer output
+        .io_out_valid(ser_to_dut_valid),        // Serializer's valid output
         .io_out_bits(tl_in_data)                 // Output to DUT TL_IN
     );
     
-    // READY to DUT (TL_OUT): directly use deserializer input readiness (no TB backpressure)
-    assign tl_out_ready = tl_inspector_ready;
-    
+    // Ready gating and counters: TL_IN path (Serializer → DUT)
+    assign ser_to_dut_ready = tl_in_ready;  // DUT actual ready (raw)
+    rv_ready_gate #(.PATTERN_LEN(SERDES_PATTERN_LEN)) gate_tl_in (
+        .clock(tl_clk),
+        .reset(reset),
+        .enable(SERDES_BACKPRESSURE_ENABLE),
+        .pattern(tl_in_ready_pattern),
+        .valid_in(ser_to_dut_valid),
+        .raw_ready_in(ser_to_dut_ready),
+        .index(tl_in_ready_cnt_idx),
+        .ready_gated_out(tl_in_ready_gated)
+    );
+    rv_bp_counters cnt_tl_in (
+        .clock(tl_clk),
+        .reset(reset),
+        .enable(SERDES_BACKPRESSURE_ENABLE),
+        .valid_in(ser_to_dut_valid),
+        .raw_ready_in(ser_to_dut_ready),
+        .ready_gated_in(tl_in_ready_gated),
+        .tb_log_fd(tb_log_fd),
+        .backpressure_events(tl_in_backpressure_events),
+        .transactions_accepted(tl_in_transactions_accepted),
+        .transactions_stalled(tl_in_transactions_stalled)
+    );
+
+    // Ready gating and counters: TL_OUT path (DUT → Deserializer)
+    assign dut_to_deser_ready = tl_inspector_ready; // Deserializer actual raw ready
+    rv_ready_gate #(.PATTERN_LEN(SERDES_PATTERN_LEN)) gate_tl_out (
+        .clock(tl_clk),
+        .reset(reset),
+        .enable(SERDES_BACKPRESSURE_ENABLE),
+        .pattern(tl_out_ready_pattern),
+        .valid_in(tl_out_valid),
+        .raw_ready_in(dut_to_deser_ready),
+        .index(tl_out_ready_cnt_idx),
+        .ready_gated_out(tl_out_ready_gated)
+    );
+    rv_bp_counters cnt_tl_out (
+        .clock(tl_clk),
+        .reset(reset),
+        .enable(SERDES_BACKPRESSURE_ENABLE),
+        .valid_in(tl_out_valid),
+        .raw_ready_in(dut_to_deser_ready),
+        .ready_gated_in(tl_out_ready_gated),
+        .tb_log_fd(tb_log_fd),
+        .backpressure_events(tl_out_backpressure_events),
+        .transactions_accepted(tl_out_transactions_accepted),
+        .transactions_stalled(tl_out_transactions_stalled)
+    );
+
+    // Final connections to DUT with gated ready
+    assign tl_in_valid = ser_to_dut_valid;       // Direct connection (no masking)
+    assign tl_out_ready = tl_out_ready_gated;    // What DUT sees on TL_OUT ready
+    // Valid is not gated into deserializer; only ready is patterned
+
     // Test validation variables
     integer packets_sent_count;
     integer packets_received_count;
@@ -532,6 +677,52 @@ module scumv_controller_integration_tb();
             if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] LED[2] (STL active): %b", led[2]);
             $display("[TB] LED[3] (TL_IN_VALID): %b", led[3]);
             if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] LED[3] (TL_IN_VALID): %b", led[3]);
+            
+            // Backpressure statistics
+            if (SERDES_BACKPRESSURE_ENABLE) begin
+                $display("[TB] ========== BACKPRESSURE STATISTICS ==========");
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] ========== BACKPRESSURE STATISTICS ==========");
+                
+                $display("[TB] TL_IN Path (Serializer → DUT):");
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] TL_IN Path (Serializer → DUT):");
+                $display("[TB]   Pattern: %b", tl_in_ready_pattern);
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB]   Pattern: %b", tl_in_ready_pattern);
+                $display("[TB]   Transactions accepted: %0d", tl_in_transactions_accepted);
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB]   Transactions accepted: %0d", tl_in_transactions_accepted);
+                $display("[TB]   Transactions stalled: %0d", tl_in_transactions_stalled);
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB]   Transactions stalled: %0d", tl_in_transactions_stalled);
+                $display("[TB]   Backpressure events: %0d", tl_in_backpressure_events);
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB]   Backpressure events: %0d", tl_in_backpressure_events);
+                
+                $display("[TB] TL_OUT Path (DUT → Deserializer):");
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB] TL_OUT Path (DUT → Deserializer):");
+                $display("[TB]   Pattern: %b", tl_out_ready_pattern);
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB]   Pattern: %b", tl_out_ready_pattern);
+                $display("[TB]   Transactions accepted: %0d", tl_out_transactions_accepted);
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB]   Transactions accepted: %0d", tl_out_transactions_accepted);
+                $display("[TB]   Transactions stalled: %0d", tl_out_transactions_stalled);
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB]   Transactions stalled: %0d", tl_out_transactions_stalled);
+                $display("[TB]   Backpressure events: %0d", tl_out_backpressure_events);
+                if (tb_log_fd) $fdisplay(tb_log_fd, "[TB]   Backpressure events: %0d", tl_out_backpressure_events);
+                
+                // Calculate effective throughput
+                if (tl_in_transactions_accepted + tl_in_transactions_stalled > 0) begin
+                    $display("[TB]   TL_IN Throughput: %0.1f%%", 
+                        100.0 * tl_in_transactions_accepted / 
+                        (tl_in_transactions_accepted + tl_in_transactions_stalled));
+                    if (tb_log_fd) $fdisplay(tb_log_fd, "[TB]   TL_IN Throughput: %0.1f%%", 
+                        100.0 * tl_in_transactions_accepted / 
+                        (tl_in_transactions_accepted + tl_in_transactions_stalled));
+                end
+                if (tl_out_transactions_accepted + tl_out_transactions_stalled > 0) begin
+                    $display("[TB]   TL_OUT Throughput: %0.1f%%", 
+                        100.0 * tl_out_transactions_accepted / 
+                        (tl_out_transactions_accepted + tl_out_transactions_stalled));
+                    if (tb_log_fd) $fdisplay(tb_log_fd, "[TB]   TL_OUT Throughput: %0.1f%%", 
+                        100.0 * tl_out_transactions_accepted / 
+                        (tl_out_transactions_accepted + tl_out_transactions_stalled));
+                end
+            end
             
             // Comprehensive pass/fail criteria
             test_passed = 1'b1;  // Start with pass assumption
