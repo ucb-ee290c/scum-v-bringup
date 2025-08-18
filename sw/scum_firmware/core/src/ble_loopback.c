@@ -63,7 +63,7 @@ void run_ble_loopback()
 
   while (1) {
     printf("-1-\r\n");
-    // HAL_delay(1);
+    // HAL_delay(1); // 1 microsecond
     printf("-2-\r\n");
     ms_count++;
     if (ms_count > TIMEOUT_MS) {
@@ -138,7 +138,7 @@ int main() {
     if (j >= 40) {
       j = 0;
     }
-    HAL_delay(1);
+    HAL_delay(1); // 1 microsecond
     sprintf(str, "Channel %d\r\n", j);
     HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
   }
