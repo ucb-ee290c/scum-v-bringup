@@ -122,7 +122,7 @@ module scumvcontroller_uart_handler #(
     // Buffers incoming UART data for protocol detection and forwarding
     fifo #(
         .WIDTH(8),
-        .DEPTH(128)
+        .DEPTH(16384)
     ) incoming_fifo (
         .clk(clk),
         .rst(reset),
@@ -138,7 +138,7 @@ module scumvcontroller_uart_handler #(
     // Buffers response data before UART transmission
     fifo #(
         .WIDTH(8),
-        .DEPTH(128)
+        .DEPTH(16384)
     ) outgoing_fifo (
         .clk(clk),
         .rst(reset),
