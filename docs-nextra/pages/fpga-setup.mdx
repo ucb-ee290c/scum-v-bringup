@@ -1,0 +1,192 @@
+# FPGA Programming
+
+Complete guide for programming and configuring the FPGA for SCuM-V development.
+
+## Prerequisites
+
+- Vivado 2025.1 (Recommended and tested)
+- Arty A7-100T FPGA board
+- Proper hardware connections (see [Hardware Setup](/hardware-setup))
+
+import { Callout } from 'nextra/components'
+
+<Callout type="info">
+This guide is tested with **Vivado 2025.1** on Windows. Other versions may work but compatibility is not guaranteed.
+</Callout>
+
+## SCuM-V Controller Setup (Recommended)
+
+The SCuM-V Controller FPGA implementation supports both **SerialTL** (digital interface) and **Analog Scan Chain** (ASC) for comprehensive chip communication.
+
+### Quick Start
+
+1. **Open Vivado 2025.1**
+
+2. **Navigate to Project Directory**
+   ```bash
+   cd C:/path/to/scum-v-bringup/hw/scumv-controller
+   ```
+
+3. **Generate Vivado Project**
+   ```tcl
+   source create_project.tcl
+   ```
+
+4. **Build Bitstream**
+   - In Flow Navigator: `Generate Bitstream`
+   - Wait for compilation to complete
+
+5. **Program Device**
+   - Connect Arty A7-100T via USB
+   - Flow Navigator → `Open Target` → Select Arty A7-100T
+   - `Program Device`
+   - **Verification**: LED2 should turn on (indicates SCAN_CLK activity)
+
+### Alternative: Vivado GUI Workflow
+
+If you prefer the graphical interface:
+
+```bash
+cd hw/scumv-controller
+source create_project.tcl
+```
+
+Then use the Vivado GUI for synthesis, implementation, and programming.
+
+## Legacy Scanchain Implementation
+
+<Callout type="warning">
+The scanchain-only implementation is **legacy/optional**. Use SCuM-V Controller for full functionality.
+</Callout>
+
+For ASC-only UART adapter:
+
+1. **Navigate to Legacy Project**
+   ```bash
+   cd C:/path/to/scum-v-bringup/hw/scanchain
+   ```
+
+2. **Generate Project**
+   ```tcl
+   source create_project.tcl
+   ```
+
+3. **Follow same build and programming steps as above**
+
+## Simulation Environment
+
+### SCuM-V Controller Simulation
+
+**Primary Testbench**: `hw/scumv-controller/sim/scumv_controller_integration_tb.v`
+
+**Configuration**:
+- **UART Baud Rate**: 2,000,000
+- **Test Vectors**: Generated with `sw/tl_host_sim.py`
+- **Documentation**: See `hw/scumv-controller/sim/TEST_VECTORS_README.md`
+
+**Features**:
+- **Console Logging**: Testbench mirrors prints to `scumv_controller_integration_tb.log`
+- **Flow Control**: Models backpressure by deasserting TL input ready intermittently
+- **Comprehensive Testing**: Supports read/write/mixed transaction patterns
+
+### Test Vector Generation
+
+Generate custom test patterns:
+
+```bash
+cd sw
+python tl_host_sim.py
+```
+
+This creates binary test files for simulation:
+- `single_read_test.bin` - Basic read operations
+- `single_write_test.bin` - Basic write operations  
+- `stl_mixed_5pkts.bin` - Mixed read/write transactions
+- `stl_flash_stress_4096pkts.bin` - Stress testing
+
+## QSPI Flash Programming (Optional)
+
+For persistent FPGA configuration across power cycles:
+
+### Prerequisites
+- Successful bitstream generation
+- Reference: [Arty Programming Guide](https://digilent.com/reference/learn/programmable-logic/tutorials/arty-programming-guide/start)
+
+### Flash Device Selection
+
+<Callout type="warning">
+**Important**: Most new Arty A7-100T boards use `s25fl128sxxxxxx0-spi-x1_x2_x4` flash device. Verify your specific board's flash type.
+</Callout>
+
+### Programming Steps
+
+1. **Generate Configuration File**
+   - In Vivado: `Tools` → `Generate Memory Configuration File`
+   - Select appropriate flash device
+   - Generate `.bin` file
+
+2. **Program Flash**
+   - `Tools` → `Program Flash`
+   - Select generated `.bin` file
+   - Program and verify
+
+## Version Control Integration
+
+### Tcl Script Generation
+
+For maintaining version control compatibility:
+
+1. **Generate Project Script**
+   - `File` → `Project` → `Write Tcl...`
+   - **Uncheck** "Copy sources to new project"
+   - Save as `create_project.tcl`
+
+2. **Clean Generated Script**
+   - Remove references to `*.dcp` files
+   - Remove `utils_1` folder references
+   - Fix file paths: `${origin_dir}/../../[path]` → `${origin_dir}/[path]`
+
+<Callout type="info">
+This workflow based on [FPGA Developer's Version Control Guide](https://www.fpgadeveloper.com/2014/08/version-control-for-vivado-projects.html/) with updates for current Vivado versions.
+</Callout>
+
+## Testing & Verification
+
+### Basic Functionality Test
+
+1. **Program FPGA** with SCuM-V Controller bitstream
+2. **Verify LED2** activation (SCAN_CLK indicator)
+3. **Check UART Interface** - ensure COM port is detected
+
+<Callout type="info">
+For detailed communication testing and firmware loading, proceed to the [Bootloading Guide →](/bootloading-guide).
+</Callout>
+
+## Troubleshooting
+
+### Common Build Issues
+
+**Synthesis Failures**:
+- Check Vivado version compatibility
+- Verify all source files are present
+- Review synthesis warnings for timing violations
+
+**Programming Issues**:
+- Ensure FPGA is properly connected via USB
+- Check driver installation for Arty A7-100T
+- Verify correct device selection in Vivado
+
+**Simulation Problems**:
+- Generate test vectors with `tl_host_sim.py`
+- Check testbench parameters match your configuration
+- Review simulation logs for timing issues
+
+### Getting Help
+
+- **Design Documentation**: `hw/scumv-controller/DESIGN_SPECIFICATION.md`
+- **Implementation Plans**: `hw/scumv-controller/UART_PASSTHROUGH_IMPLEMENTATION_PLAN.md`
+- **GitHub Issues**: [Report problems](https://github.com/ucb-ee290c/scum-v-bringup/issues)
+
+---
+
+**Next Steps**: [Bootloading Guide →](/bootloading-guide) - Load and execute firmware on SCuM-V

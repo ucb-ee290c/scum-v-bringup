@@ -1,0 +1,179 @@
+/* UC Berkeley Brand Colors */
+:root {
+  --berkeley-blue: #003262;
+  --california-gold: #FDB515;
+  --pacific-blue: #46535E;
+  --golden-gate-orange: #ED4E33;
+  --sather-gate-brass: #D9661F;
+  --berkeley-blue-light: #6C9BD1;
+  --california-gold-light: #FFE066;
+}
+
+/* Minimal font improvements - let Nextra handle layout */
+html {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Noto Sans, "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+}
+
+/* Subtle brand accent for headers */
+.nextra-content h2 {
+  border-bottom: 2px solid var(--california-gold);
+  padding-bottom: 0.5rem;
+}
+
+/* Better blockquote styling */
+.nextra-content blockquote {
+  border-left-color: var(--california-gold);
+  background-color: #fef7e0;
+}
+
+[data-theme="dark"] .nextra-content blockquote {
+  background-color: rgba(253, 181, 21, 0.1);
+}
+
+/* Custom theme overrides */
+[data-theme="light"] {
+  --nextra-primary-hue: 215deg;
+  --nextra-primary-saturation: 100%;
+}
+
+[data-theme="dark"] {
+  --nextra-primary-hue: 215deg;
+  --nextra-primary-saturation: 80%;
+}
+
+/* UC Berkeley branded elements */
+.nextra-nav-container {
+  border-bottom: 1px solid var(--california-gold);
+}
+
+/* Custom callout styling */
+.nextra-callout-info {
+  border-left-color: var(--berkeley-blue);
+}
+
+.nextra-callout-warning {
+  border-left-color: var(--golden-gate-orange);
+}
+
+/* Code block improvements */
+.nextra-code-block {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Courier New', monospace;
+}
+
+/* Table styling */
+.nextra-content table {
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+.nextra-content table th {
+  background-color: var(--berkeley-blue);
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.nextra-content table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+[data-theme="dark"] .nextra-content table td {
+  border-bottom-color: #374151;
+}
+
+/* Custom badge styling */
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-current {
+  background-color: var(--california-gold);
+  color: var(--berkeley-blue);
+}
+
+.badge-archive {
+  background-color: var(--pacific-blue);
+  color: white;
+}
+
+/* Memory map and register table styling */
+.memory-map-table {
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+
+.memory-map-table th,
+.memory-map-table td {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.memory-map-table .address {
+  font-family: 'SF Mono', monospace;
+  font-weight: 600;
+  color: var(--berkeley-blue);
+}
+
+[data-theme="dark"] .memory-map-table .address {
+  color: var(--berkeley-blue-light);
+}
+
+/* Pin diagram styling */
+.pin-diagram {
+  border: 2px solid var(--berkeley-blue);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin: 1rem 0;
+  background-color: #f8fafc;
+}
+
+[data-theme="dark"] .pin-diagram {
+  background-color: #1f2937;
+  border-color: var(--berkeley-blue-light);
+}
+
+/* Protocol frame styling */
+.protocol-frame {
+  font-family: monospace;
+  background-color: var(--berkeley-blue);
+  color: white;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  text-align: center;
+  margin: 1rem 0;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+  .nextra-content table {
+    font-size: 0.875rem;
+  }
+  
+  .nextra-content table th,
+  .nextra-content table td {
+    padding: 0.5rem;
+  }
+}
+
+/* Print styles */
+@media print {
+  .nextra-nav-container,
+  .nextra-sidebar,
+  .nextra-toc {
+    display: none !important;
+  }
+  
+  .nextra-content {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}

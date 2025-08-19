@@ -1,0 +1,368 @@
+# Firmware Development
+
+Guide for developing RISC-V firmware for the SCuM-V chip.
+
+## RISC-V Toolchain Setup
+
+### Windows Setup
+
+1. **Install MSYS2**
+   - Download from [https://www.msys2.org/](https://www.msys2.org/)
+   - Follow installation instructions
+
+2. **Install RISC-V Toolchain**
+   - Download xpack distribution: [RISC-V GCC xPack](https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/)
+   - Extract to desired location (e.g., `C:\riscv\`)
+
+3. **Configure MSYS2 Environment**
+   ```bash
+   export PATH=/c/riscv/xpack-riscv-none-elf-gcc-13.2.0-2/bin:$PATH
+   ```
+
+### Linux/macOS Setup
+
+Follow the comprehensive setup guide from the Baremetal-IDE documentation:
+
+**[Chipyard RISC-V Toolchain Setup](https://ucb-bar.gitbook.io/chipyard/quickstart/setting-up-risc-v-toolchain)**
+
+This guide covers:
+- Ubuntu/Debian package installation
+- macOS Homebrew setup  
+- Building from source
+- Environment configuration
+
+## Firmware Architecture
+
+### Project Structure
+
+```
+sw/scum_firmware/
+├── Makefile              # Build configuration
+├── bsp/scum/            # Board support package
+│   ├── inc/             # Header files
+│   └── src/             # BSP implementation
+├── core/                # Application code
+│   ├── inc/             # Application headers
+│   ├── src/             # Application sources
+│   └── startup/         # Boot code
+├── lib/htif/           # Host-Target Interface
+└── build/              # Build artifacts
+```
+
+### Build System
+
+The firmware uses a Makefile-based build system optimized for RISC-V cross-compilation.
+
+**Basic Build Commands**:
+```bash
+cd sw/scum_firmware
+make                    # Build default target (BRINGUP mode)
+make clean             # Clean build artifacts  
+make objdump           # Generate disassembly
+```
+
+#### Build Modes
+
+The build system supports two different modes optimized for different environments:
+
+| Build Mode | Usage | Description |
+|------------|-------|-------------|
+| **BRINGUP** | `BUILD_MODE=BRINGUP` (default) | Post-silicon hardware testing |
+| **SIM** | `BUILD_MODE=SIM` | RTL simulation environment |
+
+**Mode-Specific Build Commands**:
+```bash
+# Explicit mode specification
+make BUILD_MODE=SIM
+make BUILD_MODE=BRINGUP
+
+# Convenience targets
+make simple-sim         # Build simple.c for simulation
+make simple-bringup     # Build simple.c for hardware
+```
+
+#### Build Configuration (`build_config.h`)
+
+Each build mode uses different system parameters defined in `core/inc/build_config.h`:
+
+**SIM Mode Configuration**:
+- Clock frequency: `200 MHz` (fast simulation)
+- UART baud rate: `921600` (high-speed simulation)
+- UART stop bits: `2` (simulation robustness)
+
+**BRINGUP Mode Configuration**:  
+- Clock frequency: `1 MHz` (conservative hardware startup)
+- UART baud rate: `115200` (standard hardware rate)
+- UART stop bits: `1` (standard hardware setting)
+
+<Callout type="info">
+**Clock Frequency Tuning**: The `SYS_CLK_FREQ` setting in `build_config.h` must match your hardware's actual clock configuration. Update this value when changing PLL or oscillator settings.
+</Callout>
+
+## Board Support Package (BSP)
+
+### Core BSP Modules
+
+| Module | Description |
+|--------|-------------|
+| **scum_hal** | Hardware abstraction layer |
+| **scum_hal_clint** | Core Local Interrupt Controller |
+| **scum_hal_core** | RISC-V core utilities |
+| **scum_hal_gpio** | General purpose I/O |
+| **scum_hal_plic** | Platform-Level Interrupt Controller |
+| **scum_hal_rcc** | Reset and clock control |
+| **scum_hal_uart** | UART communication |
+
+### Peripheral Drivers
+
+| Driver | Header | Description |
+|--------|--------|-------------|
+| **AFE** | `afe.h` | Analog front-end control |
+| **Baseband** | `baseband.h` | Baseband processing |
+| **Sensor ADC** | `sensor_adc.h` | High-precision ADC interface |
+| **RTC Timer** | `rtc_timer.h` | Real-time clock and timers |
+| **SCuM-V Tuning** | `scumvtuning.h` | Chip tuning parameters |
+
+import { Callout } from 'nextra/components'
+
+<Callout type="info">
+All BSP headers include comprehensive register definitions and utility macros for efficient hardware interaction.
+</Callout>
+
+## Application Development
+
+### Available Test Applications
+
+The firmware includes several test and example applications:
+
+| Application | Header | Purpose |
+|-------------|--------|---------|
+| **AFE Test** | `afe_test.h` | Analog front-end validation |
+| **BLE Loopback** | `ble_loopback.h` | Bluetooth Low Energy testing |
+| **LRWPAN Loopback** | `lrwpan_loopback.h` | 802.15.4 protocol testing |
+| **NFC Test** | `nfc_test.h` | Near-field communication |
+| **Power Test** | `power_test.h` | Power system validation |
+| **Sensor ADC Test** | `sensor_adc_test.h` | ADC calibration and testing |
+| **RTC Timer Test** | `rtc_timer_test.h` | Timer and clock testing |
+
+### Creating New Applications
+
+1. **Create Source File**
+   ```c
+   // core/src/my_application.c
+   #include "scum_hal.h"
+   #include "my_application.h"
+   
+   int main(void) {
+       // Initialize hardware
+       scum_hal_init();
+       
+       // Your application logic
+       while(1) {
+           // Main loop
+       }
+       
+       return 0;
+   }
+   ```
+
+2. **Create Header File**
+   ```c
+   // core/inc/my_application.h
+   #ifndef MY_APPLICATION_H
+   #define MY_APPLICATION_H
+   
+   #include "scum_hal.h"
+   
+   // Function declarations
+   void my_function(void);
+   
+   #endif
+   ```
+
+3. **Update Makefile**
+   Add your source files to the build system configuration.
+
+## Hardware Abstraction Layer (HAL)
+
+### Core HAL Functions
+
+```c
+// System initialization
+void HAL_init(void);
+uint64_t HAL_getTick(void);
+void HAL_delay(uint64_t time_us);
+void HAL_delay_cycles(uint64_t cycles);
+
+// GPIO operations  
+void HAL_GPIO_init(GPIO_TypeDef *GPIOx, GPIO_Pin pin);
+void HAL_GPIO_writePin(GPIO_TypeDef *GPIOx, GPIO_Pin pin, uint8_t value);
+uint8_t HAL_GPIO_readPin(GPIO_TypeDef *GPIOx, GPIO_Pin pin);
+
+// UART communication
+void HAL_UART_init(UART_TypeDef *UARTx, UART_InitTypeDef *UART_init);
+Status HAL_UART_transmit(UART_TypeDef *UARTx, uint8_t *data, uint16_t size, uint32_t timeout);
+Status HAL_UART_receive(UART_TypeDef *UARTx, uint8_t *data, uint16_t size, uint32_t timeout);
+void HAL_UART_finishTX(UART_TypeDef *UARTx);
+
+// RTC Timer operations (low-level)
+int32_t rtc_timer_get_coutner(void);
+void rtc_timer_set_prescaler(int16_t prescaler);
+void rtc_timer_set_cc0(int32_t cc0);
+```
+
+### Memory-Mapped I/O (MMIO)
+
+Direct register access utilities:
+
+```c
+#include "mmio.h"
+
+// 32-bit register access
+uint32_t reg_value = reg_read32(BASE_ADDR + OFFSET);
+reg_write32(BASE_ADDR + OFFSET, value);
+
+// 16-bit register access  
+uint16_t reg_value = reg_read16(BASE_ADDR + OFFSET);
+reg_write16(BASE_ADDR + OFFSET, value);
+
+// 8-bit register access
+uint8_t reg_value = reg_read8(BASE_ADDR + OFFSET);
+reg_write8(BASE_ADDR + OFFSET, value);
+```
+
+## Communication Interfaces
+
+### SerialTL (TileLink over UART)
+
+High-level TileLink transactions:
+
+```c
+// Read from address
+uint32_t data = tl_read32(address);
+
+// Write to address  
+tl_write32(address, data);
+
+// Burst operations
+tl_burst_read(start_addr, buffer, length);
+tl_burst_write(start_addr, buffer, length);
+```
+
+### Analog Scan Chain
+
+Access analog configuration registers:
+
+```c
+// Configure analog block
+asc_write_register(block_id, reg_addr, value);
+
+// Read analog status
+uint32_t status = asc_read_register(block_id, reg_addr);
+```
+
+## Debugging and Testing
+
+### Printf Support
+
+<Callout type="warning">
+**BUILD_MODE Compatibility**: printf is ONLY supported in BUILD_MODE=SIM. Using printf in BUILD_MODE=BRINGUP will lock up the CPU because HTIF is not available on hardware.
+</Callout>
+
+The firmware includes printf support via HTIF (Host-Target Interface) for simulation only:
+
+```c
+#include "htif.h"
+
+// Only available in BUILD_MODE=SIM
+printf("Debug: value = %d\n", variable);
+printf("Status: 0x%08x\n", register_value);
+```
+
+### Simulation Utilities
+
+<Callout type="info">
+**BUILD_MODE Compatibility**: sim_utils functions are ONLY available in BUILD_MODE=SIM. These are not accessible in BUILD_MODE=BRINGUP.
+</Callout>
+
+```c
+#include "sim_utils.h"
+
+// Simulation-specific functions (SIM mode only)
+sim_exit(exit_code);
+sim_checkpoint("test_point_1");
+```
+
+### Memory Dump and Analysis
+
+Generate firmware analysis:
+```bash
+make objdump          # Create disassembly
+cat objdump.txt       # Review assembly output
+```
+
+## Best Practices
+
+### Memory Management
+
+<Callout type="warning">
+SCuM-V has limited memory resources. Optimize data structures and avoid dynamic allocation where possible.
+</Callout>
+
+- Use fixed-size buffers
+- Minimize stack usage in interrupt handlers
+- Leverage const data placement in ROM
+
+### Power Optimization
+
+```c
+// Use interrupt-driven UART I/O
+HAL_UART_enableRXInterrupt(UART0, 1);  // Enable RX interrupt when 1 byte available
+HAL_UART_enableTXInterrupt(UART0, 1);  // Enable TX interrupt when TX FIFO has space
+
+// Direct register access for power management
+reg_write32(PERIPHERAL_BASE + POWER_CTRL, POWER_DOWN_MODE);
+```
+
+### Interrupt Handling
+
+```c
+void uart_rx_handler(void) __attribute__((interrupt("machine")));
+
+void uart_rx_handler(void) {
+    // Check if RX data is available
+    if (HAL_UART_getRXFIFODepth(UART0) > 0) {
+        uint8_t data;
+        HAL_UART_receive(UART0, &data, 1, 0);  // Non-blocking read
+        
+        // Process received data
+        process_uart_data(data);
+    }
+}
+```
+
+## Deployment and Programming
+
+### Programming via FPGA Controller
+
+1. **Build Firmware**
+   ```bash
+   cd sw/scum_firmware
+   make
+   ```
+
+2. **Program via SerialTL**
+   ```bash
+   cd sw  
+   python tl_host.py --program firmware.bin
+   ```
+
+### Verification
+
+- Monitor UART output for debug messages
+- Use logic analyzer to verify communication protocols
+- Check power consumption during operation
+
+---
+
+**Next Steps**: [API Reference →](/api-reference)

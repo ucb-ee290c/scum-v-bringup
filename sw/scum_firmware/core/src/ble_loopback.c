@@ -104,6 +104,12 @@ int main() {
   HAL_init();
   HAL_CORE_enableGlobalInterrupt();
   HAL_CORE_enableInterrupt(MachineExternalInterrupt);
+  HAL_PLIC_enable(0, TX_FINISH);
+  HAL_PLIC_enable(0, RX_FINISH);
+  HAL_PLIC_enable(0, TX_ERROR);
+  HAL_PLIC_enable(0, RX_ERROR);
+  HAL_PLIC_enable(0, RX_START);
+
 
   UART_InitTypeDef UART_init_config;
   UART_init_config.baudrate = UART_BAUDRATE_DEFAULT;
@@ -116,11 +122,11 @@ int main() {
 
   print_baseband_status0();
   
-  // Set the channel tuning LUTs for BLE operation
-  int i;
-  for (i = 0; i < 40; i++) {
-    baseband_set_lut(LUT_VCO_CT_BLE, i, i*1638);
-  }
+  // // Set the channel tuning LUTs for BLE operation
+  // int i;
+  // for (i = 0; i < 40; i++) {
+  //   baseband_set_lut(LUT_VCO_CT_BLE, i, i*1638);
+  // }
 
   while(1) {
     run_ble_loopback();

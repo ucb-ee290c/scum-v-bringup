@@ -1,0 +1,358 @@
+# API Reference
+
+Comprehensive reference for SCuM-V software interfaces and protocols.
+
+## Python Host Interfaces
+
+### TileLink Host (`tl_host.py`)
+
+Primary interface for SerialTL communication with SCuM-V.
+
+#### Basic Usage
+
+```python
+from tl_host import TileLinkHost
+
+# Initialize connection
+tl = TileLinkHost(port="/dev/ttyUSB0", baud=2000000)
+
+# Read from address
+data = tl.read32(address=0x1000)
+
+# Write to address  
+tl.write32(address=0x1000, data=0xDEADBEEF)
+
+# Close connection
+tl.close()
+```
+
+#### Class Methods
+
+```python
+class TileLinkHost:
+    def __init__(self, port: str, baud: int = 2000000)
+    def read32(self, address: int) -> int
+    def write32(self, address: int, data: int) -> None
+    def read_burst(self, start_addr: int, length: int) -> List[int]
+    def write_burst(self, start_addr: int, data: List[int]) -> None
+    def close(self) -> None
+```
+
+### Analog Scan Chain Client (`client.py`)
+
+Interface for programming the Analog Scan Chain via UART.
+
+#### Basic Usage
+
+```python
+from client import AnalogScanChain
+
+# Initialize ASC connection
+asc = AnalogScanChain(port="/dev/ttyUSB0", baud=115200)
+
+# Configure scan chain
+asc.configure_block(block_id=1, config_data=0x12345678)
+
+# Read status
+status = asc.read_status(block_id=1)
+```
+
+#### Protocol Details
+
+| Parameter | Value |
+|-----------|-------|
+| **Baud Rate** | 115200 |
+| **Data Bits** | 8 |
+| **Parity** | None |
+| **Stop Bits** | 1 |
+| **Flow Control** | None |
+
+### Sensor ADC Interface (`sensor_adc.py`)
+
+High-level interface for sensor ADC operations.
+
+```python
+from sensor_adc import SensorADC
+
+# Initialize ADC
+adc = SensorADC()
+
+# Configure sampling
+adc.configure(sample_rate=1000, resolution=16)
+
+# Read sensor data
+voltage = adc.read_voltage(channel=0)
+temperature = adc.read_temperature()
+```
+
+## RISC-V Firmware APIs
+
+### Hardware Abstraction Layer
+
+#### System Initialization
+
+```c
+#include "scum_hal.h"
+
+// Initialize all hardware subsystems
+void HAL_init(void);
+
+// Get monotonic tick counter (microsecond resolution)
+uint64_t HAL_getTick(void);
+
+// Delay functions
+void HAL_delay(uint64_t time_us);           // Delay in microseconds
+void HAL_delay_cycles(uint64_t cycles);     // Delay in CPU cycles
+```
+
+#### GPIO Interface
+
+```c
+#include "scum_hal_gpio.h"
+
+// GPIO pin enumeration
+typedef enum {
+    GPIO_PIN_0 = 0b0001U
+} GPIO_Pin;
+
+// GPIO operations
+void HAL_GPIO_init(GPIO_TypeDef *GPIOx, GPIO_Pin pin);
+void HAL_GPIO_writePin(GPIO_TypeDef *GPIOx, GPIO_Pin pin, uint8_t value);
+uint8_t HAL_GPIO_readPin(GPIO_TypeDef *GPIOx, GPIO_Pin pin);
+
+// Example usage:
+// HAL_GPIO_writePin(GPIO0, GPIO_PIN_0, 1);  // Set pin high
+// uint8_t state = HAL_GPIO_readPin(GPIO0, GPIO_PIN_0);  // Read pin
+```
+
+#### UART Interface
+
+```c
+#include "scum_hal_uart.h"
+
+// UART configuration structures
+typedef enum {
+    UART_MODE_RX = 0x01,
+    UART_MODE_TX = 0x02,
+    UART_MODE_TX_RX = 0x03,
+} UART_Mode;
+
+typedef enum {
+    UART_STOPBITS_1 = 0,
+    UART_STOPBITS_2 = UART_TXCTRL_NSTOP_MSK,
+} UART_StopBits;
+
+typedef struct {
+    uint32_t baudrate;
+    UART_Mode mode;
+    UART_StopBits stopbits;
+} UART_InitTypeDef;
+
+// UART operations
+void HAL_UART_init(UART_TypeDef *UARTx, UART_InitTypeDef *UART_init);
+Status HAL_UART_receive(UART_TypeDef *UARTx, uint8_t *data, uint16_t size, uint32_t timeout);
+Status HAL_UART_transmit(UART_TypeDef *UARTx, uint8_t *data, uint16_t size, uint32_t timeout);
+void HAL_UART_finishTX(UART_TypeDef *UARTx);
+
+// UART FIFO and interrupt functions
+uint8_t HAL_UART_getRXFIFODepth(UART_TypeDef *UARTx);
+uint8_t HAL_UART_getTXFIFODepth(UART_TypeDef *UARTx);
+void HAL_UART_enableRXInterrupt(UART_TypeDef *UARTx, uint16_t fifo_level);
+void HAL_UART_disableRXInterrupt(UART_TypeDef *UARTx);
+```
+
+#### RTC Timer Interface
+
+```c
+#include "rtc_timer.h"
+
+// Low-level RTC timer functions (register-based)
+int32_t rtc_timer_get_coutner(void);                    // Get current counter value
+void rtc_timer_set_task_start(int8_t task_start);       // Start timer task
+void rtc_timer_set_task_clear(int8_t task_clear);       // Clear timer task
+void rtc_timer_set_task_trigovrflw(int8_t task_trigovrflw); // Trigger overflow
+void rtc_timer_set_interrupt_set(int8_t interrupt_set); // Set interrupt
+void rtc_timer_set_prescaler(int16_t prescaler);        // Set prescaler
+void rtc_timer_set_cc0(int32_t cc0);                    // Set compare/capture 0
+void rtc_timer_set_cc1(int32_t cc1);                    // Set compare/capture 1
+void rtc_timer_set_cc2(int32_t cc2);                    // Set compare/capture 2
+void rtc_timer_set_cc3(int32_t cc3);                    // Set compare/capture 3
+
+// For high-level timing, use HAL_delay() or HAL_getTick() instead
+```
+
+### Peripheral APIs
+
+#### Analog Front-End (AFE)
+
+```c
+#include "afe.h"
+
+// AFE configuration
+typedef struct {
+    uint32_t gain;
+    uint32_t bandwidth;
+    bool enable_bias;
+} afe_config_t;
+
+// AFE operations
+void afe_init(afe_config_t *config);
+void afe_enable(void);
+void afe_disable(void);
+uint32_t afe_read_status(void);
+```
+
+#### Baseband Processor
+
+```c
+#include "baseband.h"
+
+// Baseband modes
+typedef enum {
+    BASEBAND_MODE_BLE,
+    BASEBAND_MODE_LRWPAN,
+    BASEBAND_MODE_PROPRIETARY
+} baseband_mode_t;
+
+// Baseband operations
+void baseband_init(baseband_mode_t mode);
+void baseband_start_rx(void);  
+void baseband_start_tx(uint8_t *data, uint32_t length);
+bool baseband_packet_ready(void);
+uint32_t baseband_read_packet(uint8_t *buffer, uint32_t max_length);
+```
+
+#### Sensor ADC
+
+```c
+#include "sensor_adc.h"
+
+// ADC configuration
+typedef struct {
+    uint32_t sample_rate;
+    uint8_t resolution;
+    uint8_t reference;
+} adc_config_t;
+
+// ADC operations
+void sensor_adc_init(adc_config_t *config);
+void sensor_adc_start_conversion(uint8_t channel);
+bool sensor_adc_conversion_complete(void);
+int32_t sensor_adc_read_result(void);
+float sensor_adc_read_voltage(uint8_t channel);
+```
+
+
+## SerialTL Protocol Specification
+
+### Frame Format
+
+```
+| SOF | LEN | CMD | ADDR | DATA | CRC |
+|  1  |  1  |  1  |  4   |  N   |  2  |
+```
+
+| Field | Size | Description |
+|-------|------|-------------|
+| **SOF** | 1 byte | Start of frame (0xAA) |
+| **LEN** | 1 byte | Payload length |
+| **CMD** | 1 byte | Command type |
+| **ADDR** | 4 bytes | Target address |
+| **DATA** | N bytes | Data payload |
+| **CRC** | 2 bytes | CRC-16 checksum |
+
+### Command Types
+
+| Command | Value | Description |
+|---------|-------|-------------|
+| **READ** | 0x01 | Memory read |
+| **WRITE** | 0x02 | Memory write |
+| **BURST_READ** | 0x03 | Burst read |
+| **BURST_WRITE** | 0x04 | Burst write |
+| **STATUS** | 0x05 | Status query |
+
+import { Callout } from 'nextra/components'
+
+<Callout type="info">
+Default baud rate is **2,000,000** for simulation and host communication. Hardware implementations may use different rates.
+</Callout>
+
+## Memory Map
+
+### Core System Addresses
+
+| Region | Start Address | End Address | Description |
+|--------|---------------|-------------|-------------|
+| **ROM** | 0x0000_0000 | 0x0000_FFFF | Boot ROM |
+| **RAM** | 0x8000_0000 | 0x8000_FFFF | System RAM |
+| **MMIO** | 0x1000_0000 | 0x1FFF_FFFF | Memory-mapped I/O |
+
+### Peripheral Base Addresses
+
+| Peripheral | Base Address | Size |
+|------------|--------------|------|
+| **UART** | 0x1000_0000 | 0x1000 |
+| **GPIO** | 0x1001_0000 | 0x1000 |
+| **Timer** | 0x1002_0000 | 0x1000 |
+| **AFE** | 0x1003_0000 | 0x1000 |
+| **Baseband** | 0x1004_0000 | 0x1000 |
+| **ADC** | 0x1005_0000 | 0x1000 |
+
+## Error Codes
+
+### System Error Codes
+
+| Code | Name | Description |
+|------|------|-------------|
+| **0x00** | SUCCESS | Operation completed successfully |
+| **0x01** | INVALID_PARAM | Invalid parameter provided |
+| **0x02** | TIMEOUT | Operation timed out |
+| **0x03** | NOT_READY | Hardware not ready |
+| **0x04** | BUSY | Resource is busy |
+| **0x05** | NOT_SUPPORTED | Feature not supported |
+
+### Communication Error Codes
+
+| Code | Name | Description |
+|------|------|-------------|
+| **0x10** | UART_ERROR | UART communication error |
+| **0x11** | CRC_ERROR | CRC checksum mismatch |
+| **0x12** | FRAME_ERROR | Invalid frame format |
+| **0x13** | OVERFLOW | Buffer overflow |
+| **0x14** | UNDERRUN | Buffer underrun |
+
+## Development Tools
+
+### Test Vector Generation
+
+```bash
+cd sw
+python tl_host_sim.py --output test_vectors.bin --commands read,write,burst
+```
+
+### Logic Analyzer Integration
+
+Pin assignments for debugging:
+- **SerialTL Clock**: Pin A1
+- **SerialTL Data**: Pin A2-A9  
+- **ASC Signals**: Pin B1-B4
+- **Debug UART**: Pin C1-C2
+
+### Performance Profiling
+
+```c
+#include "performance.h"
+
+// Start profiling
+perf_start_timer();
+
+// Your code here
+
+// Get elapsed time
+uint32_t elapsed_us = perf_get_elapsed_us();
+printf("Execution time: %d us\n", elapsed_us);
+```
+
+---
+
+For detailed register specifications, see the [SCuM-V23 Archive](/archive/scum-v23) or [SCuM-V24B](/scum-v24b) documentation.

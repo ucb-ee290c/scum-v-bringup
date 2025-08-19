@@ -57,3 +57,8 @@ build/
 **/__pycache__/
 .aider*
 *.wdf
+
+
+**/node_modules/*
+docs-nextra/out
+**/.next/*

@@ -1,0 +1,69 @@
+name: Deploy Nextra Documentation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs-nextra/**'
+      - '.github/workflows/docs-nextra.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs-nextra/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'docs-nextra/package-lock.json'
+      
+      - name: Install dependencies
+        working-directory: ./docs-nextra
+        run: npm ci
+      
+      - name: Build documentation
+        working-directory: ./docs-nextra
+        run: npm run build
+        env:
+          NODE_ENV: production
+      
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./docs-nextra/out
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

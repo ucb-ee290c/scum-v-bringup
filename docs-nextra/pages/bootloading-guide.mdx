@@ -1,0 +1,389 @@
+# Bootloading Guide
+
+Complete guide for loading and executing firmware on the SCuM-V chip through the FPGA controller.
+
+## Prerequisites
+
+- FPGA programmed with SCuM-V Controller bitstream (see [FPGA Programming Guide](/fpga-setup))
+- RISC-V firmware compiled (see [Firmware Development](/firmware-development))
+- Python 3.x with serial communication libraries
+- Proper hardware connections established
+
+import { Callout } from 'nextra/components'
+
+<Callout type="info">
+This guide assumes you have completed the [FPGA Programming](/fpga-setup) and have a working SCuM-V Controller bitstream loaded on your Arty A7-100T.
+</Callout>
+
+## Communication Interfaces
+
+The SCuM-V Controller supports two primary communication paths:
+
+### SerialTL (TileLink over UART)
+- **Purpose**: Digital subsystem communication
+- **Protocol**: TileLink transactions over UART
+- **Use Cases**: Memory access, register configuration, firmware loading
+
+### Analog Scan Chain (ASC)
+- **Purpose**: Analog subsystem configuration  
+- **Protocol**: Shift-register based scan chain
+- **Use Cases**: AFE tuning, power management, analog block configuration
+
+## Host Scripts Overview
+
+### `tl_host.py` - SerialTL Interface
+
+Primary script for SCuM-V digital communication:
+
+```bash
+cd sw
+python tl_host.py [options]
+```
+
+**Key Features**:
+- Firmware programming via SerialTL
+- Memory read/write operations
+- Register configuration and debugging
+- Burst transfer capabilities
+
+**Command Line Arguments**:
+- `-p/--port`: Serial port (default: COM6)
+- `-t/--target`: Target application name (default: template)  
+- `--baud`: Baud rate (default: 1,000,000)
+- `--batch`: Batch size during flashing (default: 1)
+
+**Configuration**:
+- **Default Baud Rate**: 1,000,000 (can be overridden)
+- **Protocol**: TileLink-UH (Uncached Heavyweight)
+- **Interface**: UART/SerialTL bridge
+
+### `client.py` - Analog Scan Chain Interface
+
+Script for analog subsystem control:
+
+```bash
+cd hw  
+python client.py [scan_chain_commands]
+```
+
+**Key Features**:
+- Analog front-end configuration
+- Power system control
+- Oscillator and PLL tuning
+- Sensor ADC calibration
+
+## Firmware Bootloading Process
+
+### Step 1: Prepare Firmware Binary
+
+1. **Build Firmware**
+   ```bash
+   cd sw/scum_firmware
+   make BUILD_MODE=BRINGUP
+   ```
+
+2. **Verify Binary Generation**
+   ```bash
+   ls build/*.bin
+   # Expected: build/simple.bin (or your target application)
+   ```
+
+### Step 2: Establish Communication
+
+1. **Identify COM Port**
+   - Windows: Check Device Manager for "USB Serial Port (COMx)"
+   - Linux/macOS: Look for `/dev/ttyUSBx` or `/dev/ttyACMx`
+
+2. **Test Basic Communication**
+   ```bash
+   cd sw
+   python tl_host.py -p COMx
+   ```
+
+### Step 3: Load Firmware
+
+**Basic Firmware Loading**:
+```bash
+# Default target (template)
+python tl_host.py -p COMx
+
+# Specify target application
+python tl_host.py -p COMx -t simple
+python tl_host.py -p COMx -t afe_test
+```
+
+**Advanced Loading Options**:
+```bash
+# Custom baud rate
+python tl_host.py -p COMx --baud 115200
+
+# Custom batch size for faster flashing
+python tl_host.py -p COMx --batch 512
+```
+
+### Step 4: Execute Firmware
+
+**Start Execution**:
+
+<Callout type="info">
+The tl_host.py script automatically flashes the binary and triggers execution. Firmware starts running immediately after flashing completes.
+</Callout>
+
+```bash
+# Firmware execution is automatic after flashing
+# No additional commands needed
+```
+
+## Advanced Bootloading Operations
+
+### Memory Operations
+
+**Memory Operations**:
+
+<Callout type="warning">
+The current tl_host.py script is primarily designed for firmware flashing. Advanced memory operations require modification of the script or direct use of the TileLinkHost class methods.
+</Callout>
+
+```python
+# Example using TileLinkHost class directly
+from tl_host import TileLinkHost
+import serial
+
+# Initialize connection
+ser = serial.Serial('COM6', 1000000, timeout=2)
+tl = TileLinkHost(ser)
+
+# Read from address
+data = tl.read_address(0x80000000)
+
+# Write to address
+tl.write_address(0x80000000, 0xDEADBEEF)
+```
+
+### Register Configuration
+
+**Digital Core Registers**:
+
+```python
+# Using TileLinkHost class for register access
+from tl_host import TileLinkHost
+import serial
+
+ser = serial.Serial('COM6', 1000000, timeout=2)
+tl = TileLinkHost(ser)
+
+# Read UART registers
+tl.read_uart_registers()
+
+# Read baseband registers
+tl.read_baseband_registers()
+```
+
+### Debugging Support
+
+**UART Console Monitoring**:
+
+<Callout type="info">
+For monitoring firmware output, use a standard terminal program (PuTTY, minicom, etc.) on the UART pins of your hardware setup.
+</Callout>
+
+```bash
+# Use external terminal for monitoring
+# Linux/macOS: minicom, screen
+# Windows: PuTTY, TeraTerm
+```
+
+**Memory Analysis**:
+
+```python
+# Using TileLinkHost for memory operations
+tl.memory_scan()  # Built-in memory scan function
+```
+
+## Analog Subsystem Configuration
+
+### AFE (Analog Front-End) Setup
+
+```bash
+cd hw
+python client.py --afe-config --gain 10 --bandwidth 1MHz
+```
+
+### Power System Configuration
+
+```bash
+# Configure power domains
+python client.py --power-config --domain digital --voltage 1.2V
+
+# Enable low-power modes
+python client.py --power-config --sleep-mode deep
+```
+
+### Oscillator Tuning
+
+```bash
+# Set reference oscillator frequency
+python client.py --osc-config --ref-freq 32.768kHz
+
+# Configure PLL settings
+python client.py --pll-config --target-freq 100MHz
+```
+
+## Communication Protocol Details
+
+### SerialTL Packet Format
+
+<Callout type="info">
+SerialTL uses a custom framing protocol over UART. Refer to `hw/scumv-controller/stl_packet_diagram.svg` for detailed packet structure.
+</Callout>
+
+**Packet Structure**:
+```
+[START] [LENGTH] [OPCODE] [ADDRESS] [DATA] [CHECKSUM] [END]
+```
+
+**Transaction Types**:
+- **Get**: Read operation (address → data)
+- **Put**: Write operation (address + data)
+- **PutPartial**: Partial write with byte enables
+
+### ASC Protocol Details
+
+**Scan Chain Structure**:
+- **Total Length**: Variable (depends on enabled blocks)
+- **Clock Domain**: Separate SCAN_CLK from system clock
+- **Data Format**: MSB-first shift register
+
+**Block Addressing**:
+```
+[BLOCK_ID] [REG_ADDR] [DATA_BITS]
+```
+
+## Troubleshooting
+
+### Communication Issues
+
+**UART Connection Problems**:
+```bash
+# Test raw UART connection
+python -c "import serial; s=serial.Serial('COMx', 1000000); print('Connected')"
+
+# Try different baud rates
+python tl_host.py -p COMx --baud 115200
+```
+
+**Protocol Errors**:
+- Verify baud rate matches FPGA configuration
+- Check for EMI/noise affecting signal integrity
+- Ensure proper ground connections
+
+### Firmware Loading Failures
+
+**Verification Errors**:
+```bash
+# Try smaller batch sizes for reliability
+python tl_host.py -p COMx --batch 64
+
+# Try lower baud rate
+python tl_host.py -p COMx --baud 115200
+```
+
+**Memory Access Issues**:
+- Verify target memory addresses are valid
+- Check for memory protection or bus errors
+- Ensure firmware size fits available memory
+
+### Analog Configuration Issues
+
+**Scan Chain Verification**:
+```bash
+# Test scan chain connectivity
+python client.py --scan-test --verbose
+
+# Verify block responses
+python client.py --block-test --all-blocks
+```
+
+**Configuration Validation**:
+- Check analog supply voltages
+- Verify reference clock stability
+- Ensure proper bias current settings
+
+## Performance Optimization
+
+### Transfer Speed
+
+**Optimal Baud Rates**:
+- **Simulation**: 2,000,000 bps (fast turnaround)
+- **Hardware**: 115,200 bps (reliable operation)
+- **Debug**: 9,600 bps (maximum compatibility)
+
+**Optimized Transfers**:
+```bash
+# Use larger batch sizes for faster transfers
+python tl_host.py -p COMx --batch 1024
+```
+
+### Power Considerations
+
+**Efficient Bootloading**:
+```bash
+# Use optimal batch size to minimize programming time
+python tl_host.py -p COMx --batch 256
+
+# Configure analog power states via scan chain
+python client.py [scan_chain_power_commands]
+```
+
+## Script Customization
+
+### Extending `tl_host.py`
+
+Example custom operations:
+
+```python
+# Add to tl_host.py
+def custom_test_sequence(port):
+    # Custom test implementation
+    write_register(0x40000000, 0x12345678)
+    result = read_register(0x40000004)
+    return validate_result(result)
+```
+
+### Batch Operations
+
+```bash
+# Create batch script for repeated operations
+cat > batch_program.sh << EOF
+#!/bin/bash
+python tl_host.py -p COM3 -t app1
+sleep 5
+python tl_host.py -p COM3 -t app2
+EOF
+```
+
+## Integration with Development Workflow
+
+### Automated Testing
+
+```bash
+# Continuous integration script
+make -C sw/scum_firmware clean all
+python tl_host.py -p COM3 -t test_suite
+# Use external terminal for monitoring output
+```
+
+### Debugging Integration
+
+**GDB Remote Debugging** (Future Enhancement):
+```bash
+# GDB integration not currently available
+# Consider using JTAG debugging through FPGA
+```
+
+---
+
+**Related Guides**:
+- [FPGA Programming →](/fpga-setup) - FPGA bitstream loading
+- [Firmware Development →](/firmware-development) - Firmware compilation  
+- [Hardware Setup →](/hardware-setup) - Physical connections

@@ -1,0 +1,71 @@
+---
+title: "SCuM-V24B Specification"
+description: "Complete specification for the SCuM-V24B system-on-chip"
+---
+
+import { Callout } from 'nextra/components'
+
+
+This document describes the Single-Chip Micro Mote V (SCuM-V), a 16nm system-on-chip (SoC) for internet-of-things (IoT) applications, developed as part of the 2022 offering of EE194/EE290C Special Topics in Circuit Design class.
+
+## Resource Index
+
+| Resource | Description | Link |
+|----------|-------------|------|
+| SCuM-V24B End of Semester Review | Final design review from Sp24 | [Google Slides](https://docs.google.com/presentation/d/12go3DiuhL_MuZc9lrPC-D9m9Jhr7LV5_/edit?usp=sharing) |
+| SCuM-V24B Mid-Semester Review | Mid-semester design review from Sp24 | [Google Slides](https://docs.google.com/presentation/d/1NwGTKHJewxJkg_gc0BDnHbPr_JOrNUo1XQNuW6IDmBM/edit?usp=sharing) |
+| Analog RF Simulations | Locations and information on running RF analog simulations | [Google Doc](https://docs.google.com/document/d/1AonYYLMqA6wxp_P3jY-1RgbcOX0xAsPm3z0Vx6l0DUo/edit?usp=sharing) |
+| SCuM-V22 Bringup Status | Archive of SCuM-V22 bringup measurements | [Google Slides](https://docs.google.com/presentation/d/1fyWcBpSb9hvuizlRUf65NovWjaN5w86_6e52kjnYkxQ/edit?usp=sharing) |
+
+## System Overview
+
+The SCuM-V24B chip offers several GPIO pins, a single UART bus, QSPI Flash, and an on-chip, crystal-free RTC with capture and compare registers. This iteration of the chip did not support I2C or cryptographic acceleration.
+
+SCuM-V24B has several new features introduced over its predecessor SCuM-V22:
+
+- 32-bit Rocket core
+- Switched capacitor DC-DC converter cascaded with LDOs  
+- 90 GHz FMCW radar transmitter
+- 18-bit µV-precision ADC
+
+## Architecture Sections
+
+<Callout type="info">
+Select from the navigation menu to explore detailed specifications for each subsystem.
+</Callout>
+
+### Core Systems
+- **[Overview](overview)** - System overview and block diagram
+- **[Digital Core](digital-core)** - 32-bit RISC-V processor and memory system
+- **[Digital Baseband](digital-baseband)** - Dual-mode BLE/IEEE 802.15.4 baseband-modem
+
+### Analog Systems
+- **[Power System](power-system)** - Switched capacitor converter, LDOs, and references
+- **[Oscillators](oscillators)** - Clock generation systems
+- **[2.4 GHz Transceiver](radio)** - Radio front-end for wireless communication
+- **[94 GHz Radar](radar)** - FMCW radar transmitter
+- **[µV-ADC](uv-adc)** - High-precision delta-sigma ADC for sensor applications
+
+
+## Electrical Characteristics
+
+<Callout type="warning">
+This section requires completion with detailed electrical specifications and performance parameters.
+</Callout>
+
+## Usage Scenarios
+
+<Callout type="warning">
+This section requires completion describing various application scenarios and operating modes.
+</Callout>
+
+## Revision History
+
+- v1.0 - Initial release
+- v0.9 - Preliminary draft
+
+## Appendix
+
+<Callout type="warning">
+This section requires completion with additional details, references, or supplementary material.
+</Callout>
