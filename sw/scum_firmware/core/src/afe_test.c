@@ -1,6 +1,7 @@
 #include "sim_utils.h"
 #include "afe.h"
 #include "afe_test.h"
+#include "build_config.h"
 
 #define BUF_SIZE 512
 char str[BUF_SIZE];
@@ -129,9 +130,9 @@ int main()
     // system_init();
 
     UART_InitTypeDef uart_cfg = {
-        .baudrate = 921600,
+        .baudrate = UART_BAUDRATE_DEFAULT,
         .mode     = UART_MODE_TX_RX,
-        .stopbits = UART_STOPBITS_2
+        .stopbits = UART_STOPBITS_DEFAULT
     };
     HAL_UART_init(UART0, &uart_cfg);
 

@@ -16,10 +16,7 @@ extern "C" {
 #include "scum_hal_plic.h"
 #include "scum_hal_rcc.h"
 #include "scum_hal_uart.h"
-
-
-// System clock frequency in Hz (update if the input clock changes)
-#define SYS_CLK_FREQ  200000000                 // Hz
+#include "build_config.h"
 
 /* CLINT mtime timebase
  * Design intent: at SYS_CLK_FREQ = 200 MHz, mtime advances every 1 microsecond.
@@ -44,6 +41,14 @@ uint64_t HAL_getTick();
  *   HAL_delay(100) ~ 100 us
  */
 void HAL_delay(uint64_t time_us);
+
+/* Busy-wait for the specified number of CPU clock cycles.
+ * Uses CPU cycle counter directly instead of CLINT mtime.
+ * Units: CPU clock cycles. Example (at 200 MHz):
+ *   HAL_delay_cycles(200)     ~ 1 us
+ *   HAL_delay_cycles(20000)   ~ 100 us
+ */
+void HAL_delay_cycles(uint64_t cycles);
 
 #ifdef __cplusplus
 }

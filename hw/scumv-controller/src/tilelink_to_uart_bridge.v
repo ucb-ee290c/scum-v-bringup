@@ -55,6 +55,8 @@ module tilelink_to_uart_bridge (
     wire [7:0] opcode_packed;
     wire [31:0] address_truncated;
     wire [7:0] union_truncated;
+    // Sink otherwise-unused input bits to avoid Vivado "no load" warnings
+    (* keep = "true" *) wire unused_inputs;
 
     // Industry-standard XPM_CDC for TileLink data crossing from tl_clk to clk domain
     wire tl_response_sync_valid;
@@ -154,6 +156,8 @@ module tilelink_to_uart_bridge (
     // Truncate wider fields to match tl_host.py packet size
     assign address_truncated = tl_out_bits_address[31:0];  // 64-bit -> 32-bit
     assign union_truncated = tl_out_bits_union[7:0];       // 9-bit -> 8-bit
+    // Reduction-OR of unused inputs creates a kept load
+    assign unused_inputs = |{ tl_out_bits_source, tl_out_bits_address[63:32], tl_out_bits_union[8] };
     
     // Response buffer management
     always @(posedge clk) begin

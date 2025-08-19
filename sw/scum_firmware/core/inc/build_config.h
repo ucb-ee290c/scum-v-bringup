@@ -1,0 +1,16 @@
+#ifndef __BUILD_CONFIG_H
+#define __BUILD_CONFIG_H
+
+#ifdef BUILD_MODE_SIM
+  #define UART_BAUDRATE_DEFAULT    921600
+  #define UART_STOPBITS_DEFAULT    UART_STOPBITS_2
+  #define SYS_CLK_FREQ            200000000
+#elif defined(BUILD_MODE_BRINGUP)
+  #define UART_BAUDRATE_DEFAULT    115200
+  #define UART_STOPBITS_DEFAULT    UART_STOPBITS_1
+  #define SYS_CLK_FREQ          1000000
+#else
+  #error "BUILD_MODE not defined. Use BUILD_MODE=SIM or BUILD_MODE=BRINGUP"
+#endif
+
+#endif

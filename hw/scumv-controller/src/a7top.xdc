@@ -50,7 +50,6 @@ set_clock_groups -asynchronous -group [get_clocks sys_clk_pin] -group [get_clock
 #set_property -dict { PACKAGE_PIN U18   IOSTANDARD LVCMOS33 } [get_ports { ck_io11 }]; #IO_L17N_T2_A13_D29_14 Sch=ck_io[11]
 #set_property -dict { PACKAGE_PIN R17   IOSTANDARD LVCMOS33 } [get_ports { ck_io12 }]; #IO_L12N_T1_MRCC_14 Sch=ck_io[12]
 
-
 # LEDS
 
 set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
@@ -61,3 +60,86 @@ set_property C_CLK_INPUT_FREQ_HZ 300000000 [get_debug_cores dbg_hub]
 set_property C_ENABLE_CLK_DIVIDER false [get_debug_cores dbg_hub]
 set_property C_USER_SCAN_CHAIN 1 [get_debug_cores dbg_hub]
 connect_debug_port dbg_hub/clk [get_nets CLK100MHZ_IBUF_BUFG]
+
+# ----------------------------------------------------------------------------
+# TL timing terms used below (for finding the right numbers in datasheet/PCB):
+#
+# - Tco_min / Tco_max (Clock-to-Output of external device)
+#     Time from the active TL_CLK edge at the external device to when it drives
+#     its outputs valid at the pins. Applies to signals the external device
+#     drives into the FPGA: TL_IN_DATA, TL_IN_VALID, TL_OUT_READY.
+#     Source: SCuM-V timing tables for the TL interface.
+#
+# - tSU (Setup time at external device)
+#     Time that signals driven by the FPGA (TL_OUT_DATA, TL_OUT_VALID, TL_IN_READY)
+#     must be stable BEFORE the external device’s capturing TL_CLK edge.
+#     Source: SCuM-V input timing requirements (setup time).
+#
+# - tH (Hold time at external device)
+#     Time that those same FPGA-driven signals must remain stable AFTER the
+#     external device’s capturing TL_CLK edge.
+#     Source: SCuM-V input timing requirements (hold time).
+#
+# - board_min / board_max (PCB propagation + skew between devices)
+#     The difference in propagation between TL_CLK and the data/control net,
+#     including trace delay and any length mismatch. Use layout data if
+#     available; a first-order FR-4 estimate is ~150–170 ps/inch (6–7 ps/mm).
+#
+# How these feed the constraints:
+#   Inputs TO FPGA (external drives):
+#     set_input_delay -max = Tco_max + board_max
+#     set_input_delay -min = Tco_min + board_min
+#
+#   Outputs FROM FPGA (external captures):
+#     set_output_delay -max = tSU + board_max
+#     set_output_delay -min = -tH + board_min   ; note the minus sign for hold
+#
+# Edge/polarity assumptions:
+#   Constraints below assume the external device launches and captures on the
+#   rising edge of TL_CLK. If the device uses the falling edge for launch or
+#   capture, add -clock_fall to the corresponding input/output delay commands.
+#
+# Where to get values:
+#   - SCuM-V datasheet: Tco_min/max for TL outputs; tSU/tH for TL inputs.
+#   - PCB/layout: length and skew between TL_CLK and each TL signal pair.
+#
+# Additional margin knobs:
+#   - set_clock_uncertainty can be used to budget for jitter/skew beyond the
+#     nominal numbers above. Tune per measurement or system budget.
+# ----------------------------------------------------------------------------
+
+# ============================================================================
+# TL bus I/O timing constraints (source-synchronous to TL_CLK)
+# NOTE: Placeholder numbers chosen conservatively; replace with measured/spec
+#       values from SCuM-V datasheet and PCB estimates when available.
+#       Inputs (to FPGA):  -max = Tco_max + board_max,  -min = Tco_min + board_min
+#       Outputs (from FPGA): -max = tSU + board_max,    -min = -tH + board_min
+# ============================================================================
+
+# Inputs to FPGA relative to tl_clk_pin: TL_IN_DATA, TL_IN_VALID, TL_OUT_READY
+set_input_delay  -clock [get_clocks tl_clk_pin] -max 3.500 [get_ports {TL_IN_DATA TL_IN_VALID TL_OUT_READY}]
+set_input_delay  -clock [get_clocks tl_clk_pin] -min 0.000 [get_ports {TL_IN_DATA TL_IN_VALID TL_OUT_READY}] -add_delay
+
+# Outputs from FPGA relative to tl_clk_pin: TL_OUT_DATA, TL_OUT_VALID, TL_IN_READY
+set_output_delay -clock [get_clocks tl_clk_pin] -max 2.500 [get_ports {TL_OUT_DATA TL_OUT_VALID TL_IN_READY}]
+set_output_delay -clock [get_clocks tl_clk_pin] -min -0.500 [get_ports {TL_OUT_DATA TL_OUT_VALID TL_IN_READY}] -add_delay
+
+# Optional margin for clock uncertainty (tune if desired)
+set_clock_uncertainty -setup 0.200 [get_clocks tl_clk_pin]
+set_clock_uncertainty -hold  0.100 [get_clocks tl_clk_pin]
+
+# ============================================================================
+# Mark truly asynchronous or non-timed external interfaces as false paths
+# (silences warnings for signals not intended to be timed to a created clock)
+# ============================================================================
+
+# Asynchronous inputs (debounced/synchronized in logic)
+set_false_path -from [get_ports {RESET BUTTON_0}]
+
+# Host UART is asynchronous to sys_clk
+set_false_path -from [get_ports UART_TXD_IN]
+set_false_path -to   [get_ports UART_RXD_IN]
+
+# Scan chain control and board LEDs are not timed to an external synchronous requirement
+set_false_path -to [get_ports {SCAN_CLK SCAN_EN SCAN_IN SCAN_RESET CHIP_RESET}]
+set_false_path -to [get_ports {led[*]}]

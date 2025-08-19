@@ -23,11 +23,21 @@ uint64_t HAL_getTick() {
  */
 void HAL_delay(uint64_t time_us) {
   uint64_t current_tick = HAL_getTick();
-  sprintf(strr, "current_tick: %llu\r\n", current_tick);
-  HAL_UART_transmit(UART0, (uint8_t *)strr, strlen(strr), 0);
+  // sprintf(strr, "current_tick: %lu\r\n", current_tick);
+  // HAL_UART_transmit(UART0, (uint8_t *)strr, strlen(strr), 0);
   uint64_t delta_ticks = (time_us * (uint64_t)MTIME_FREQ) / 1000000ULL;
   uint64_t target_tick = current_tick + delta_ticks;
   while (HAL_getTick() < target_tick) {
-    // asm("nop");
+    asm("nop");
+  }
+}
+
+/* Simple busy-wait delay using loop counter and NOPs.
+ * Not cycle-accurate but provides approximate timing.
+ */
+void HAL_delay_cycles(uint64_t cycles) {
+  volatile uint64_t i;
+  for (i = 0; i < cycles; i++) {
+    asm volatile ("nop");
   }
 }

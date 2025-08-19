@@ -1,5 +1,6 @@
 
 #include "template.h"
+#include "build_config.h"
 
 #define SCUM_TUNING 0xA000
 
@@ -36,9 +37,9 @@ int main() {
   // system_init();
 
   UART_InitTypeDef UART_init_config;
-  UART_init_config.baudrate = 115200;
+  UART_init_config.baudrate = UART_BAUDRATE_DEFAULT;
   UART_init_config.mode = UART_MODE_TX_RX;
-  UART_init_config.stopbits = UART_STOPBITS_1;
+  UART_init_config.stopbits = UART_STOPBITS_DEFAULT;
   HAL_UART_init(UART0, &UART_init_config);
 
   // print_baseband_status0();
