@@ -206,6 +206,9 @@ body::before {
 /* UC Berkeley branded elements */
 .nextra-nav-container {
   border-bottom: 1px solid var(--line);
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 999 !important;
 }
 
 /* Custom callout styling */

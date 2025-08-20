@@ -3,7 +3,7 @@ title: "SCuM-V Bringup & Development"
 description: "Complete toolkit for bringing up and developing with the Single-Chip Micro Mote V"
 ---
 
-import { Callout, Cards } from 'nextra/components'
+import { Callout, Cards, FileTree } from 'nextra/components'
 
 # SCuM-V Bringup & Development
 
@@ -75,15 +75,64 @@ This repository contains FPGA controllers, host software, firmware, and document
 
 ## Repository Structure
 
-- **`hw/`** - FPGA projects and Python host tools
-  - `scumv-controller/` - Main FPGA controller (SerialTL + ASC)
-  - `scanchain/` - Legacy scan chain adapter
-  - `client.py` - Analog scan chain programming
-  
-- **`sw/`** - Firmware and host software
-  - `scum_firmware/` - RISC-V firmware with BSP
-  - `tl_host.py` - SerialTL host interface
-  - `tl_host_sim.py` - Simulation test vectors
+<FileTree>
+  <FileTree.Folder name="hw" defaultOpen>
+    <FileTree.Folder name="scumv-controller" defaultOpen>
+      <FileTree.File name="src/" />
+      <FileTree.File name="sim/" />
+      <FileTree.File name="scripts/" />
+      <FileTree.File name="create_project.tcl" />
+    </FileTree.Folder>
+    <FileTree.Folder name="scanchain">
+      <FileTree.File name="src/" />
+      <FileTree.File name="sim/" />
+      <FileTree.File name="create_project.tcl" />
+    </FileTree.Folder>
+    <FileTree.Folder name="sensoradc-bringup">
+      <FileTree.File name="sensoradc-bringup.srcs/" />
+      <FileTree.File name="make_proj.tcl" />
+    </FileTree.Folder>
+    <FileTree.File name="client.py" />
+  </FileTree.Folder>
+  <FileTree.Folder name="sw" defaultOpen>
+    <FileTree.Folder name="scum_firmware" defaultOpen>
+      <FileTree.Folder name="bsp/">
+        <FileTree.File name="inc/" />
+        <FileTree.File name="src/" />
+      </FileTree.Folder>
+      <FileTree.Folder name="core/">
+        <FileTree.File name="inc/" />
+        <FileTree.File name="src/" />
+        <FileTree.File name="startup/" />
+      </FileTree.Folder>
+      <FileTree.Folder name="lib/">
+        <FileTree.File name="htif/" />
+      </FileTree.Folder>
+      <FileTree.File name="Makefile" />
+    </FileTree.Folder>
+    <FileTree.Folder name="TileLinkTrafficAdapter-H723">
+      <FileTree.File name="Core/" />
+      <FileTree.File name="Drivers/" />
+      <FileTree.File name="Debug/" />
+    </FileTree.Folder>
+    <FileTree.File name="tl_host.py" />
+    <FileTree.File name="tl_host_sim.py" />
+    <FileTree.File name="sensor_adc.py" />
+  </FileTree.Folder>
+  <FileTree.Folder name="pcb">
+    <FileTree.Folder name="pmod_lvl_shft">
+      <FileTree.File name="jlcpcb/" />
+      <FileTree.File name="pmod_lvl_shft.kicad_pcb" />
+      <FileTree.File name="pmod_lvl_shft.kicad_sch" />
+    </FileTree.Folder>
+  </FileTree.Folder>
+  <FileTree.Folder name="docs-nextra">
+    <FileTree.File name="pages/" />
+    <FileTree.File name="components/" />
+    <FileTree.File name="public/" />
+    <FileTree.File name="theme.config.tsx" />
+  </FileTree.Folder>
+</FileTree>
 
 ## Getting Help
 

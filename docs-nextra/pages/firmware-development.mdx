@@ -2,22 +2,25 @@
 
 Guide for developing RISC-V firmware for the SCuM-V chip.
 
+import { Callout, FileTree, Steps } from 'nextra/components'
+
 ## RISC-V Toolchain Setup
 
 ### Windows Setup
 
-1. **Install MSYS2**
-   - Download from [https://www.msys2.org/](https://www.msys2.org/)
-   - Follow installation instructions
+<Steps>
+### Install MSYS2
+Download from [https://www.msys2.org/](https://www.msys2.org/) and follow installation instructions
 
-2. **Install RISC-V Toolchain**
-   - Download xpack distribution: [RISC-V GCC xPack](https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/)
-   - Extract to desired location (e.g., `C:\riscv\`)
+### Install RISC-V Toolchain
+Download xpack distribution: [RISC-V GCC xPack](https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/)
+Extract to desired location (e.g., `C:\riscv\`)
 
-3. **Configure MSYS2 Environment**
-   ```bash
-   export PATH=/c/riscv/xpack-riscv-none-elf-gcc-13.2.0-2/bin:$PATH
-   ```
+### Configure MSYS2 Environment
+```bash
+export PATH=/c/riscv/xpack-riscv-none-elf-gcc-13.2.0-2/bin:$PATH
+```
+</Steps>
 
 ### Linux/macOS Setup
 
@@ -35,19 +38,26 @@ This guide covers:
 
 ### Project Structure
 
-```
-sw/scum_firmware/
-├── Makefile              # Build configuration
-├── bsp/scum/            # Board support package
-│   ├── inc/             # Header files
-│   └── src/             # BSP implementation
-├── core/                # Application code
-│   ├── inc/             # Application headers
-│   ├── src/             # Application sources
-│   └── startup/         # Boot code
-├── lib/htif/           # Host-Target Interface
-└── build/              # Build artifacts
-```
+<FileTree>
+  <FileTree.Folder name="sw/scum_firmware" defaultOpen>
+    <FileTree.File name="Makefile" />
+    <FileTree.Folder name="bsp/scum">
+      <FileTree.File name="inc/" />
+      <FileTree.File name="src/" />
+    </FileTree.Folder>
+    <FileTree.Folder name="core">
+      <FileTree.File name="inc/" />
+      <FileTree.File name="src/" />
+      <FileTree.File name="startup/" />
+    </FileTree.Folder>
+    <FileTree.Folder name="lib">
+      <FileTree.File name="htif/" />
+    </FileTree.Folder>
+    <FileTree.Folder name="build">
+      <FileTree.File name="*.bin" />
+    </FileTree.Folder>
+  </FileTree.Folder>
+</FileTree>
 
 ### Build System
 
@@ -123,8 +133,6 @@ Each build mode uses different system parameters defined in `core/inc/build_conf
 | **RTC Timer** | `rtc_timer.h` | Real-time clock and timers |
 | **SCuM-V Tuning** | `scumvtuning.h` | Chip tuning parameters |
 
-import { Callout } from 'nextra/components'
-
 <Callout type="info">
 All BSP headers include comprehensive register definitions and utility macros for efficient hardware interaction.
 </Callout>
@@ -147,41 +155,43 @@ The firmware includes several test and example applications:
 
 ### Creating New Applications
 
-1. **Create Source File**
-   ```c
-   // core/src/my_application.c
-   #include "scum_hal.h"
-   #include "my_application.h"
-   
-   int main(void) {
-       // Initialize hardware
-       scum_hal_init();
-       
-       // Your application logic
-       while(1) {
-           // Main loop
-       }
-       
-       return 0;
-   }
-   ```
+<Steps>
+### Create Source File
+```c
+// core/src/my_application.c
+#include "scum_hal.h"
+#include "my_application.h"
 
-2. **Create Header File**
-   ```c
-   // core/inc/my_application.h
-   #ifndef MY_APPLICATION_H
-   #define MY_APPLICATION_H
-   
-   #include "scum_hal.h"
-   
-   // Function declarations
-   void my_function(void);
-   
-   #endif
-   ```
+int main(void) {
+    // Initialize hardware
+    scum_hal_init();
+    
+    // Your application logic
+    while(1) {
+        // Main loop
+    }
+    
+    return 0;
+}
+```
 
-3. **Update Makefile**
-   Add your source files to the build system configuration.
+### Create Header File
+```c
+// core/inc/my_application.h
+#ifndef MY_APPLICATION_H
+#define MY_APPLICATION_H
+
+#include "scum_hal.h"
+
+// Function declarations
+void my_function(void);
+
+#endif
+```
+
+### Update Makefile
+Add your source files to the build system configuration.
+</Steps>
 
 ## Hardware Abstraction Layer (HAL)
 
@@ -345,17 +355,19 @@ void uart_rx_handler(void) {
 
 ### Programming via FPGA Controller
 
-1. **Build Firmware**
-   ```bash
-   cd sw/scum_firmware
-   make
-   ```
+<Steps>
+### Build Firmware
+```bash
+cd sw/scum_firmware
+make
+```
 
-2. **Program via SerialTL**
-   ```bash
-   cd sw  
-   python tl_host.py --program firmware.bin
-   ```
+### Program via SerialTL
+```bash
+cd sw  
+python tl_host.py --program firmware.bin
+```
+</Steps>
 
 ### Verification
 

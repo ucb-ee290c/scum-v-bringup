@@ -9,7 +9,7 @@ Complete guide for loading and executing firmware on the SCuM-V chip through the
 - Python 3.x with serial communication libraries
 - Proper hardware connections established
 
-import { Callout } from 'nextra/components'
+import { Callout, FileTree } from 'nextra/components'
 
 <Callout type="info">
 This guide assumes you have completed the [FPGA Programming](/fpga-setup) and have a working SCuM-V Controller bitstream loaded on your Arty A7-100T.
@@ -30,6 +30,18 @@ The SCuM-V Controller supports two primary communication paths:
 - **Use Cases**: AFE tuning, power management, analog block configuration
 
 ## Host Scripts Overview
+
+<FileTree>
+  <FileTree.Folder name="sw" defaultOpen>
+    <FileTree.File name="tl_host.py" />
+    <FileTree.File name="tl_host_sim.py" />
+    <FileTree.File name="sensor_adc.py" />
+    <FileTree.File name="hello_world.py" />
+  </FileTree.Folder>
+  <FileTree.Folder name="hw" defaultOpen>
+    <FileTree.File name="client.py" />
+  </FileTree.Folder>
+</FileTree>
 
 ### `tl_host.py` - SerialTL Interface
 

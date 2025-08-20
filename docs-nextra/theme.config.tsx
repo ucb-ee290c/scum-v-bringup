@@ -39,7 +39,7 @@ const config: DocsThemeConfig = {
     content: (
       <div className="site-footer-text">
         Single-Chip Micro Mote V (SCμM-V) Documentation. {" "}
-        © {new Date().getFullYear()} UC Berkeley EECS Department. All rights reserved.
+        © {new Date().getFullYear()} UC Berkeley EECS Department.
       </div>
     )
   }

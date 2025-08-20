@@ -8,7 +8,7 @@ Complete guide for programming and configuring the FPGA for SCuM-V development.
 - Arty A7-100T FPGA board
 - Proper hardware connections (see [Hardware Setup](/hardware-setup))
 
-import { Callout } from 'nextra/components'
+import { Callout, FileTree, Steps } from 'nextra/components'
 
 <Callout type="info">
 This guide is tested with **Vivado 2025.1** on Windows. Other versions may work but compatibility is not guaranteed.
@@ -18,29 +18,49 @@ This guide is tested with **Vivado 2025.1** on Windows. Other versions may work 
 
 The SCuM-V Controller FPGA implementation supports both **SerialTL** (digital interface) and **Analog Scan Chain** (ASC) for comprehensive chip communication.
 
+### Project Structure
+
+<FileTree>
+  <FileTree.Folder name="hw/scumv-controller" defaultOpen>
+    <FileTree.File name="create_project.tcl" />
+    <FileTree.Folder name="src">
+      <FileTree.File name="*.v, *.xdc" />
+    </FileTree.Folder>
+    <FileTree.Folder name="sim">
+      <FileTree.File name="*_tb.sv" />
+    </FileTree.Folder>
+    <FileTree.Folder name="scripts">
+      <FileTree.File name="*.tcl" />
+    </FileTree.Folder>
+  </FileTree.Folder>
+</FileTree>
+
 ### Quick Start
 
-1. **Open Vivado 2025.1**
+<Steps>
+### Open Vivado 2025.1
+Launch Vivado and prepare for project creation
 
-2. **Navigate to Project Directory**
-   ```bash
-   cd C:/path/to/scum-v-bringup/hw/scumv-controller
-   ```
+### Navigate to Project Directory
+```bash
+cd C:/path/to/scum-v-bringup/hw/scumv-controller
+```
 
-3. **Generate Vivado Project**
-   ```tcl
-   source create_project.tcl
-   ```
+### Generate Vivado Project
+```tcl
+source create_project.tcl
+```
 
-4. **Build Bitstream**
-   - In Flow Navigator: `Generate Bitstream`
-   - Wait for compilation to complete
+### Build Bitstream
+In Flow Navigator: `Generate Bitstream`
+Wait for compilation to complete
 
-5. **Program Device**
-   - Connect Arty A7-100T via USB
-   - Flow Navigator → `Open Target` → Select Arty A7-100T
-   - `Program Device`
-   - **Verification**: LED2 should turn on (indicates SCAN_CLK activity)
+### Program Device
+- Connect Arty A7-100T via USB
+- Flow Navigator → `Open Target` → Select Arty A7-100T
+- `Program Device`
+- **Verification**: LED2 should turn on (indicates SCAN_CLK activity)
+</Steps>
 
 ### Alternative: Vivado GUI Workflow
 
@@ -61,17 +81,35 @@ The scanchain-only implementation is **legacy/optional**. Use SCuM-V Controller 
 
 For ASC-only UART adapter:
 
-1. **Navigate to Legacy Project**
-   ```bash
-   cd C:/path/to/scum-v-bringup/hw/scanchain
-   ```
+<FileTree>
+  <FileTree.Folder name="hw/scanchain">
+    <FileTree.File name="create_project.tcl" />
+    <FileTree.Folder name="src">
+      <FileTree.File name="*.v, *.xdc" />
+    </FileTree.Folder>
+    <FileTree.Folder name="sim">
+      <FileTree.File name="*_tb.v" />
+    </FileTree.Folder>
+    <FileTree.Folder name="scripts">
+      <FileTree.File name="*.tcl" />
+    </FileTree.Folder>
+  </FileTree.Folder>
+</FileTree>
 
-2. **Generate Project**
-   ```tcl
-   source create_project.tcl
-   ```
+<Steps>
+### Navigate to Legacy Project
+```bash
+cd C:/path/to/scum-v-bringup/hw/scanchain
+```
 
-3. **Follow same build and programming steps as above**
+### Generate Project
+```tcl
+source create_project.tcl
+```
+
+### Follow Build and Programming
+Follow same build and programming steps as above
+</Steps>
 
 ## Simulation Environment
 
@@ -120,15 +158,17 @@ For persistent FPGA configuration across power cycles:
 
 ### Programming Steps
 
-1. **Generate Configuration File**
-   - In Vivado: `Tools` → `Generate Memory Configuration File`
-   - Select appropriate flash device
-   - Generate `.bin` file
+<Steps>
+### Generate Configuration File
+- In Vivado: `Tools` → `Generate Memory Configuration File`
+- Select appropriate flash device
+- Generate `.bin` file
 
-2. **Program Flash**
-   - `Tools` → `Program Flash`
-   - Select generated `.bin` file
-   - Program and verify
+### Program Flash
+- `Tools` → `Program Flash`
+- Select generated `.bin` file
+- Program and verify
+</Steps>
 
 ## Version Control Integration
 
@@ -154,9 +194,16 @@ This workflow based on [FPGA Developer's Version Control Guide](https://www.fpga
 
 ### Basic Functionality Test
 
-1. **Program FPGA** with SCuM-V Controller bitstream
-2. **Verify LED2** activation (SCAN_CLK indicator)
-3. **Check UART Interface** - ensure COM port is detected
+<Steps>
+### Program FPGA
+Load SCuM-V Controller bitstream onto the device
+
+### Verify LED2 Activation
+Confirm SCAN_CLK indicator LED2 turns on
+
+### Check UART Interface
+Ensure COM port is detected by your system
+</Steps>
 
 <Callout type="info">
 For detailed communication testing and firmware loading, proceed to the [Bootloading Guide →](/bootloading-guide).
