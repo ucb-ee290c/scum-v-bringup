@@ -1,71 +1,96 @@
 ---
-title: "SCuM-V24B Specification"
-description: "Complete specification for the SCuM-V24B system-on-chip"
+title: "SCuM-V Bringup & Development"
+description: "Complete toolkit for bringing up and developing with the Single-Chip Micro Mote V"
 ---
 
-import { Callout } from 'nextra/components'
+import { Callout, Cards } from 'nextra/components'
 
+# SCuM-V Bringup & Development
 
-This document describes the Single-Chip Micro Mote V (SCuM-V), a 16nm system-on-chip (SoC) for internet-of-things (IoT) applications, developed as part of the 2022 offering of EE194/EE290C Special Topics in Circuit Design class.
+Development toolkit for the **Single-Chip Micro Mote V (SCμM-V)** - a 16nm system-on-chip for IoT applications.
 
-## Resource Index
+This repository contains FPGA controllers, host software, firmware, and documentation for bringing up the SCuM-V chip.
+
+## Quick Start
+
+<Cards num={2}>
+  <Cards.Card 
+    href="/hardware-setup"
+  >
+    **Hardware Setup →**
+    
+    Complete guide for setting up your SCuM-V development environment with FPGA boards and level shifters. Includes equipment checklist, PCB connections, and power supply configuration.
+  </Cards.Card>
+  
+  <Cards.Card 
+    href="/fpga-setup"
+  >
+    **FPGA Programming →**
+    
+    Program the Arty A7 FPGA with SerialTL controller and analog scan chain interfaces. Covers Vivado project setup, bitstream generation, and simulation.
+  </Cards.Card>
+  
+  <Cards.Card 
+    href="/firmware-development"
+  >
+    **Firmware Development →**
+    
+    Develop and flash RISC-V firmware for the SCuM-V chip using our BSP and examples. Includes toolchain setup and debugging tools.
+  </Cards.Card>
+  
+  <Cards.Card 
+    href="/bootloading-guide"
+  >
+    **Bootloading Guide →**
+    
+    Use Python host tools to communicate with SCuM-V via SerialTL and analog scan chain. Programming and debugging the chip.
+  </Cards.Card>
+</Cards>
+
+## Technical Documentation
+
+### Core Systems
+- **[System Overview](overview)** - Architecture and block diagrams
+- **[Digital Core](digital-core)** - RISC-V processor and memory system
+- **[Digital Baseband](digital-baseband)** - Wireless communication modem
+
+### Analog Subsystems  
+- **[Power System](power-system)** - DC-DC converters and voltage regulation
+- **[Clock Generation](oscillators)** - Oscillators and timing systems
+- **[2.4 GHz Radio](radio)** - Wireless transceiver front-end
+- **[94 GHz Radar](radar)** - High-frequency radar system
+- **[Precision ADC](uv-adc)** - Sensor interface and data acquisition
+
+### Development Resources
+- **[API Reference](api-reference)** - SerialTL commands and register maps
+
+## Design Resources
 
 | Resource | Description | Link |
 |----------|-------------|------|
-| SCuM-V24B End of Semester Review | Final design review from Sp24 | [Google Slides](https://docs.google.com/presentation/d/12go3DiuhL_MuZc9lrPC-D9m9Jhr7LV5_/edit?usp=sharing) |
-| SCuM-V24B Mid-Semester Review | Mid-semester design review from Sp24 | [Google Slides](https://docs.google.com/presentation/d/1NwGTKHJewxJkg_gc0BDnHbPr_JOrNUo1XQNuW6IDmBM/edit?usp=sharing) |
-| Analog RF Simulations | Locations and information on running RF analog simulations | [Google Doc](https://docs.google.com/document/d/1AonYYLMqA6wxp_P3jY-1RgbcOX0xAsPm3z0Vx6l0DUo/edit?usp=sharing) |
-| SCuM-V22 Bringup Status | Archive of SCuM-V22 bringup measurements | [Google Slides](https://docs.google.com/presentation/d/1fyWcBpSb9hvuizlRUf65NovWjaN5w86_6e52kjnYkxQ/edit?usp=sharing) |
+| **SCuM-V24B Final Review** | End of semester design presentation | [Google Slides](https://docs.google.com/presentation/d/12go3DiuhL_MuZc9lrPC-D9m9Jhr7LV5_/edit?usp=sharing) |
+| **SCuM-V24B Mid-term Review** | Mid-semester design checkpoint | [Google Slides](https://docs.google.com/presentation/d/1NwGTKHJewxJkg_gc0BDnHbPr_JOrNUo1XQNuW6IDmBM/edit?usp=sharing) |
+| **RF Simulation Guide** | Analog RF simulation setup and usage | [Google Doc](https://docs.google.com/document/d/1AonYYLMqA6wxp_P3jY-1RgbcOX0xAsPm3z0Vx6l0DUo/edit?usp=sharing) |
+| **SCuM-V22 Bringup** | Previous generation test results | [Google Slides](https://docs.google.com/presentation/d/1fyWcBpSb9hvuizlRUf65NovWjaN5w86_6e52kjnYkxQ/edit?usp=sharing) |
 
-## System Overview
+## Repository Structure
 
-The SCuM-V24B chip offers several GPIO pins, a single UART bus, QSPI Flash, and an on-chip, crystal-free RTC with capture and compare registers. This iteration of the chip did not support I2C or cryptographic acceleration.
+- **`hw/`** - FPGA projects and Python host tools
+  - `scumv-controller/` - Main FPGA controller (SerialTL + ASC)
+  - `scanchain/` - Legacy scan chain adapter
+  - `client.py` - Analog scan chain programming
+  
+- **`sw/`** - Firmware and host software
+  - `scum_firmware/` - RISC-V firmware with BSP
+  - `tl_host.py` - SerialTL host interface
+  - `tl_host_sim.py` - Simulation test vectors
 
-SCuM-V24B has several new features introduced over its predecessor SCuM-V22:
+## Getting Help
 
-- 32-bit Rocket core
-- Switched capacitor DC-DC converter cascaded with LDOs  
-- 90 GHz FMCW radar transmitter
-- 18-bit µV-precision ADC
-
-## Architecture Sections
+- **Issues**: Report bugs and request features on [GitHub](https://github.com/ucb-ee290c/scum-v-bringup/issues)
+- **Documentation**: Browse the navigation menu for detailed guides
+- **Legacy Docs**: [SCuM-V23 Archive](archive/scum-v23) for previous generation
 
 <Callout type="info">
-Select from the navigation menu to explore detailed specifications for each subsystem.
-</Callout>
-
-### Core Systems
-- **[Overview](overview)** - System overview and block diagram
-- **[Digital Core](digital-core)** - 32-bit RISC-V processor and memory system
-- **[Digital Baseband](digital-baseband)** - Dual-mode BLE/IEEE 802.15.4 baseband-modem
-
-### Analog Systems
-- **[Power System](power-system)** - Switched capacitor converter, LDOs, and references
-- **[Oscillators](oscillators)** - Clock generation systems
-- **[2.4 GHz Transceiver](radio)** - Radio front-end for wireless communication
-- **[94 GHz Radar](radar)** - FMCW radar transmitter
-- **[µV-ADC](uv-adc)** - High-precision delta-sigma ADC for sensor applications
-
-
-## Electrical Characteristics
-
-<Callout type="warning">
-This section requires completion with detailed electrical specifications and performance parameters.
-</Callout>
-
-## Usage Scenarios
-
-<Callout type="warning">
-This section requires completion describing various application scenarios and operating modes.
-</Callout>
-
-## Revision History
-
-- v1.0 - Initial release
-- v0.9 - Preliminary draft
-
-## Appendix
-
-<Callout type="warning">
-This section requires completion with additional details, references, or supplementary material.
+This project is developed as part of UC Berkeley's EE194/EE290C Special Topics in Circuit Design course.
 </Callout>

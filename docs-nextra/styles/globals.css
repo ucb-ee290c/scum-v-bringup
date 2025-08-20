@@ -14,10 +14,117 @@ html {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Noto Sans, "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
 }
 
-/* Subtle brand accent for headers */
+/* Clean header styling without dividers */
 .nextra-content h2 {
-  border-bottom: 2px solid var(--california-gold);
-  padding-bottom: 0.5rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.25rem;
+}
+
+/* Cards container styling - NO hover effects on container */
+.nextra-content [class*="cards"] {
+  gap: 1.5rem !important;
+  margin: 2rem 0 !important;
+}
+
+.nextra-content [class*="cards"]:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Individual card styling */
+.nextra-content [class*="card"]:not([class*="cards"]) {
+  padding: 1.5rem !important;
+  border-radius: 0.75rem !important;
+  border: 1px solid #e5e7eb !important;
+  min-height: 140px !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+}
+
+/* Individual card hover with nice pop effect */
+.nextra-content [class*="card"]:not([class*="cards"]):hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 4px 16px rgba(0, 50, 98, 0.15) !important;
+  border-color: var(--berkeley-blue) !important;
+}
+
+/* Dark mode cards */
+.dark .nextra-content [class*="card"]:not([class*="cards"]) {
+  border-color: #4b5563 !important;
+  background: rgba(31, 41, 55, 0.95) !important;
+  color: #f9fafb !important;
+}
+
+.dark .nextra-content [class*="card"]:not([class*="cards"]):hover {
+  transform: translateY(-3px) !important;
+  border-color: var(--berkeley-blue-light) !important;
+  box-shadow: 0 4px 16px rgba(108, 155, 209, 0.15) !important;
+}
+
+/* Card title improvements */
+.nextra-content [class*="card"] h3,
+.nextra-content [class*="card"] [class*="title"],
+.nextra-content [class*="card"] strong {
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+  color: var(--berkeley-blue) !important;
+  margin-bottom: 0.75rem !important;
+  line-height: 1.4 !important;
+}
+
+.dark .nextra-content [class*="card"] h3,
+.dark .nextra-content [class*="card"] [class*="title"],
+.dark .nextra-content [class*="card"] strong {
+  color: var(--berkeley-blue-light) !important;
+}
+
+/* Card content text */
+.nextra-content [class*="card"] p {
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
+  color: #6b7280 !important;
+  margin-bottom: 0.5rem !important;
+  flex-grow: 1 !important;
+}
+
+.dark .nextra-content [class*="card"] p {
+  color: #d1d5db !important;
+}
+
+/* Arrow and link styling */
+.nextra-content [class*="card"] [class*="arrow"] {
+  color: var(--berkeley-blue) !important;
+  font-weight: 500 !important;
+  font-size: 0.875rem !important;
+}
+
+.dark .nextra-content [class*="card"] [class*="arrow"] {
+  color: var(--berkeley-blue-light) !important;
+}
+
+/* Site logo styling with dark mode support */
+.nextra-logo {
+  font-weight: 600;
+  color: var(--berkeley-blue);
+  font-size: 1.25rem;
+  letter-spacing: -0.025em;
+}
+
+.nextra-logo-docs {
+  opacity: 0.7;
+  font-weight: 500;
+  color: var(--pacific-blue);
+}
+
+/* Dark mode logo styling */
+.dark .nextra-logo {
+  color: var(--berkeley-blue-light);
+}
+
+.dark .nextra-logo-docs {
+  color: #9ca3af;
 }
 
 /* Better blockquote styling */
@@ -26,7 +133,7 @@ html {
   background-color: #fef7e0;
 }
 
-[data-theme="dark"] .nextra-content blockquote {
+.dark .nextra-content blockquote {
   background-color: rgba(253, 181, 21, 0.1);
 }
 
@@ -36,7 +143,7 @@ html {
   --nextra-primary-saturation: 100%;
 }
 
-[data-theme="dark"] {
+.dark {
   --nextra-primary-hue: 215deg;
   --nextra-primary-saturation: 80%;
 }
@@ -79,7 +186,7 @@ html {
   border-bottom: 1px solid #e5e7eb;
 }
 
-[data-theme="dark"] .nextra-content table td {
+.dark .nextra-content table td {
   border-bottom-color: #374151;
 }
 
@@ -122,7 +229,7 @@ html {
   color: var(--berkeley-blue);
 }
 
-[data-theme="dark"] .memory-map-table .address {
+.dark .memory-map-table .address {
   color: var(--berkeley-blue-light);
 }
 
@@ -135,7 +242,7 @@ html {
   background-color: #f8fafc;
 }
 
-[data-theme="dark"] .pin-diagram {
+.dark .pin-diagram {
   background-color: #1f2937;
   border-color: var(--berkeley-blue-light);
 }

@@ -4,17 +4,8 @@ import { DocsThemeConfig } from 'nextra-theme-docs'
 const config: DocsThemeConfig = {
   docsRepositoryBase: 'https://github.com/ucb-ee290c/scum-v-bringup/tree/main/docs-nextra',
   logo: (
-    <span style={{ 
-      fontWeight: 600, 
-      color: '#003262', 
-      fontSize: '1.25rem',
-      letterSpacing: '-0.025em'
-    }}>
-      SCuM-V <span style={{ 
-        opacity: 0.7, 
-        fontWeight: 500,
-        color: '#46535E'
-      }}>Documentation</span>
+    <span className="nextra-logo">
+      SCuM-V <span className="nextra-logo-docs">Documentation</span>
     </span>
   ),
   faviconGlyph: '📟',
