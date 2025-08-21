@@ -1,0 +1,123 @@
+<svg width="1000" height="450" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1000" height="450" fill="#f8f9fa"/>
+  
+  <!-- Title -->
+  <text x="500" y="30" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#333">TileLink Frame V2 Structure (123 bits total)</text>
+  
+  <!-- Bit scale at top -->
+  <text x="50" y="60" font-family="Arial, sans-serif" font-size="10" fill="#666">Bit:</text>
+  <text x="950" y="60" font-family="Arial, sans-serif" font-size="10" text-anchor="end" fill="#666">122</text>
+  <text x="90" y="60" font-family="Arial, sans-serif" font-size="10" fill="#666">0</text>
+  
+  <!-- Main frame box -->
+  <rect x="50" y="70" width="900" height="50" fill="none" stroke="#333" stroke-width="2"/>
+  
+  <!-- Field divisions with minimum widths for readability -->
+  <!-- CHANID: 3 bits (120-122) - minimum 60px -->
+  <rect x="50" y="70" width="60" height="50" fill="#FF6B6B" stroke="#333"/>
+  <text x="80" y="100" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="white" font-weight="bold">CHANID</text>
+  
+  <!-- OPCODE: 3 bits (117-119) - minimum 60px -->
+  <rect x="110" y="70" width="60" height="50" fill="#4ECDC4" stroke="#333"/>
+  <text x="140" y="100" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="white" font-weight="bold">OPCODE</text>
+  
+  <!-- PARAM: 3 bits (114-116) - minimum 60px -->
+  <rect x="170" y="70" width="60" height="50" fill="#45B7D1" stroke="#333"/>
+  <text x="200" y="100" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="white" font-weight="bold">PARAM</text>
+  
+  <!-- SIZE: 4 bits (110-113) - 60px -->
+  <rect x="230" y="70" width="60" height="50" fill="#96CEB4" stroke="#333"/>
+  <text x="260" y="100" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#333" font-weight="bold">SIZE</text>
+  
+  <!-- SOURCE: 4 bits (106-109) - 60px -->
+  <rect x="290" y="70" width="60" height="50" fill="#FFEAA7" stroke="#333"/>
+  <text x="320" y="100" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#333" font-weight="bold">SOURCE</text>
+  
+  <!-- ADDRESS: 32 bits (74-105) - 140px -->
+  <rect x="350" y="70" width="140" height="50" fill="#DDA0DD" stroke="#333"/>
+  <text x="420" y="100" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333" font-weight="bold">ADDRESS (32 bits)</text>
+  
+  <!-- DATA: 64 bits (10-73) - 280px -->
+  <rect x="490" y="70" width="280" height="50" fill="#F0E68C" stroke="#333"/>
+  <text x="630" y="100" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333" font-weight="bold">DATA (64 bits)</text>
+  
+  <!-- CORRUPT: 1 bit (9) - minimum 50px -->
+  <rect x="770" y="70" width="50" height="50" fill="#FF9999" stroke="#333"/>
+  <text x="795" y="95" font-family="Arial, sans-serif" font-size="8" text-anchor="middle" fill="#333" font-weight="bold">COR</text>
+  <text x="795" y="105" font-family="Arial, sans-serif" font-size="8" text-anchor="middle" fill="#333" font-weight="bold">RUPT</text>
+  
+  <!-- MASK: 8 bits (1-8) - 80px -->
+  <rect x="820" y="70" width="80" height="50" fill="#B19CD9" stroke="#333"/>
+  <text x="860" y="100" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#333" font-weight="bold">MASK</text>
+  
+  <!-- LAST: 1 bit (0) - minimum 50px -->
+  <rect x="900" y="70" width="50" height="50" fill="#FFB6C1" stroke="#333"/>
+  <text x="925" y="100" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#333" font-weight="bold">LAST</text>
+  
+  <!-- Field labels below with better spacing -->
+  <g font-family="Arial, sans-serif" font-size="10" fill="#333">
+    <!-- Bit positions -->
+    <text x="80" y="140" text-anchor="middle">122-120</text>
+    <text x="140" y="140" text-anchor="middle">119-117</text>
+    <text x="200" y="140" text-anchor="middle">116-114</text>
+    <text x="260" y="140" text-anchor="middle">113-110</text>
+    <text x="320" y="140" text-anchor="middle">109-106</text>
+    <text x="420" y="140" text-anchor="middle">105-74</text>
+    <text x="630" y="140" text-anchor="middle">73-10</text>
+    <text x="795" y="140" text-anchor="middle">9</text>
+    <text x="860" y="140" text-anchor="middle">8-1</text>
+    <text x="925" y="140" text-anchor="middle">0</text>
+    
+    <!-- Field names -->
+    <text x="80" y="155" text-anchor="middle" font-weight="bold">CHANID</text>
+    <text x="140" y="155" text-anchor="middle" font-weight="bold">OPCODE</text>
+    <text x="200" y="155" text-anchor="middle" font-weight="bold">PARAM</text>
+    <text x="260" y="155" text-anchor="middle" font-weight="bold">SIZE</text>
+    <text x="320" y="155" text-anchor="middle" font-weight="bold">SOURCE</text>
+    <text x="420" y="155" text-anchor="middle" font-weight="bold">ADDRESS</text>
+    <text x="630" y="155" text-anchor="middle" font-weight="bold">DATA</text>
+    <text x="795" y="155" text-anchor="middle" font-weight="bold">CORRUPT</text>
+    <text x="860" y="155" text-anchor="middle" font-weight="bold">MASK</text>
+    <text x="925" y="155" text-anchor="middle" font-weight="bold">LAST</text>
+    
+    <!-- Sizes -->
+    <text x="80" y="170" text-anchor="middle" font-size="8" fill="#666">(3 bits)</text>
+    <text x="140" y="170" text-anchor="middle" font-size="8" fill="#666">(3 bits)</text>
+    <text x="200" y="170" text-anchor="middle" font-size="8" fill="#666">(3 bits)</text>
+    <text x="260" y="170" text-anchor="middle" font-size="8" fill="#666">(4 bits)</text>
+    <text x="320" y="170" text-anchor="middle" font-size="8" fill="#666">(4 bits)</text>
+    <text x="420" y="170" text-anchor="middle" font-size="8" fill="#666">(32 bits)</text>
+    <text x="630" y="170" text-anchor="middle" font-size="8" fill="#666">(64 bits)</text>
+    <text x="795" y="170" text-anchor="middle" font-size="8" fill="#666">(1 bit)</text>
+    <text x="860" y="170" text-anchor="middle" font-size="8" fill="#666">(8 bits)</text>
+    <text x="925" y="170" text-anchor="middle" font-size="8" fill="#666">(1 bit)</text>
+  </g>
+  
+  <!-- Legend -->
+  <text x="50" y="210" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#333">Field Descriptions:</text>
+  
+  <g font-family="Arial, sans-serif" font-size="10" fill="#333">
+    <text x="50" y="230">• CHANID: Channel identifier (3 bits) - Identifies the TileLink channel</text>
+    <text x="50" y="245">• OPCODE: Operation code (3 bits) - Specifies the transaction type</text>
+    <text x="50" y="260">• PARAM: Parameter field (3 bits) - Operation-specific parameters</text>
+    <text x="50" y="275">• SIZE: Transfer size (4 bits) - Size of the data transfer (reduced from 8 bits)</text>
+    <text x="50" y="290">• SOURCE: Source identifier (4 bits) - Transaction source (reduced from 8 bits)</text>
+    
+    <text x="50" y="320">• ADDRESS: Memory address (32 bits) - Target memory address (reduced from 64 bits)</text>
+    <text x="50" y="335">• DATA: Payload data (64 bits) - Data payload for write operations</text>
+    <text x="50" y="350">• CORRUPT: Data corruption flag (1 bit) - Indicates data integrity issues</text>
+    <text x="50" y="365">• MASK: Byte mask (8 bits) - Byte enable mask for partial writes (NEW)</text>
+    <text x="50" y="380">• LAST: Last beat indicator (1 bit) - Marks the final beat of a burst</text>
+  </g>
+  
+  <!-- Total size indicator -->
+  <text x="500" y="410" font-family="Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#333">Total Frame Size: 123 bits (15.375 bytes)</text>
+  
+  <!-- MSB/LSB indicators -->
+  <text x="50" y="435" font-family="Arial, sans-serif" font-size="10" fill="#666">MSB (Most Significant Bit)</text>
+  <text x="950" y="435" font-family="Arial, sans-serif" font-size="10" text-anchor="end" fill="#666">LSB (Least Significant Bit)</text>
+  
+  <!-- Note about visual scaling -->
+  <text x="500" y="190" font-family="Arial, sans-serif" font-size="9" text-anchor="middle" fill="#888" font-style="italic">Note: Field widths are adjusted for readability and do not reflect actual bit proportions</text>
+</svg>
