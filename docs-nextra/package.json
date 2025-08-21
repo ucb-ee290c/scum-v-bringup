@@ -9,11 +9,11 @@
     "start": "next start"
   },
   "dependencies": {
+    "@tabler/icons-react": "^3.21.0",
     "glob": "^11.0.3",
-    "next": "14.2.5",
+    "next": "^14.2.32",
     "nextra": "3.2.4",
     "nextra-theme-docs": "3.2.4",
-    "@tabler/icons-react": "^3.21.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "rehype-katex": "^7.0.0",
