@@ -1,6 +1,13 @@
 # Created by https://www.toptal.com/developers/gitignore/api/linux,macos,xilinxvivado
 # Edit at https://www.toptal.com/developers/gitignore?templates=linux,macos,xilinxvivado
 
+## Common files
+CLAUDE.md
+AGENTS.md
+
+.claude/*
+**/.vscode/*
+
 ### Linux ###
 *~
 
@@ -52,12 +59,10 @@ build/
 *.mif
 *.fst
 *.tbi
-.vscode
 
 **/__pycache__/
 .aider*
 *.wdf
-
 
 **/node_modules/*
 docs-nextra/out
