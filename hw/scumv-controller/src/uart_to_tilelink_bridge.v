@@ -1,20 +1,26 @@
 /*
  * UART to TileLink Bridge
- * 
- * This module receives 16-byte TileLink packets from the STL UART client,
- * unpacks them according to the tl_host.py format, and generates TileLink
- * frame signals for the GenericSerializer module.
- * 
+ *
+ * Clean Mealy-style implementation with proper CDC.
+ *
+ * - Cross the 16-byte packet from sysclk -> tl_clk using a toggle-based
+ *   valid/ready CDC synchronizer (see cdc_synchronizer).
+ * - Unpack and present the TileLink frame entirely in the tl_clk domain.
+ * - Perform the valid/ready handshake locally with GenericSerializer.
+ *
+ * This guarantees stable data while valid is asserted and removes any
+ * dependency on sampling tl_clk in the sysclk domain. Since tl_clk is
+ * always slower than sysclk, this design naturally tolerates rate differences.
+ *
  * Packet format from tl_host.py struct.pack("<BBBBLQ", ...):
- * Byte 0: Channel ID (0=Ch A, 3=Ch D)
- * Byte 1: Packed opcode (opcode[2:0], param[6:4], corrupt[7])
- * Byte 2: Size (log2 of transfer size)
- * Byte 3: Union field (mask for Ch A, denied for Ch D)
- * Bytes 4-7: Address (32-bit little endian)
- * Bytes 8-15: Data (64-bit little endian)
- * 
- * NOTE: Potential inconsistency - tl_host.py sends 8-bit union field,
- * but FPGA interface expects 9-bit tl_in_bits_union. Zero-extending.
+ *  Byte 0: Channel ID (0=Ch A, 3=Ch D)
+ *  Byte 1: Packed opcode (opcode[2:0], param[6:4], corrupt[7])
+ *  Byte 2: Size (log2 of transfer size)
+ *  Byte 3: Union field (mask for Ch A, denied for Ch D)
+ *  Bytes 4-7: Address (32-bit little endian)
+ *  Bytes 8-15: Data (64-bit little endian)
+ *
+ * NOTE: tl_host.py sends 8-bit union; ASIC expects 9-bit union. We zero-extend.
  */
 
 module uart_to_tilelink_bridge (
@@ -22,12 +28,12 @@ module uart_to_tilelink_bridge (
     input wire reset,
     input wire tl_clk,
     
-    // Interface from STL UART client
+    // Interface from STL UART client (sysclk domain)
     input wire packet_valid,
     output wire packet_ready,
     input wire [127:0] packet_data, // 16 bytes
     
-    // Interface to GenericSerializer
+    // Interface to GenericSerializer (tl_clk domain)
     output wire tl_ser_in_valid,
     input wire tl_ser_in_ready,
     output wire [2:0] tl_in_bits_chanId,
@@ -42,121 +48,81 @@ module uart_to_tilelink_bridge (
     output wire tl_in_bits_last
 );
 
-    // State machine for packet processing
-    localparam STATE_IDLE = 1'b0;
-    localparam STATE_FRAME_READY = 1'b1;
-    
-    reg state, next_state;
-    
-    // Packet unpacking registers
-    reg [127:0] packet_buffer;
-    reg frame_valid_reg;
-    
-    // Unpacked fields
+    // --------------------------------------------------------------------
+    // CDC: move the 16-byte packet from sysclk -> tl_clk
+    // --------------------------------------------------------------------
+    wire [127:0] tl_pkt_data;   // tl_clk domain copy of the packet
+    wire         tl_pkt_valid;  // tl_clk domain valid for the packet
+    wire         tl_pkt_ready;  // tl_clk domain ready when consumed
+
+    cdc_synchronizer #(
+        .WIDTH(128)
+    ) packet_cdc (
+        .src_clk(sysclk),
+        .dst_clk(tl_clk),
+        .reset(reset),
+        .src_data(packet_data),
+        .src_valid(packet_valid),
+        .src_ready(packet_ready),
+        .dst_data(tl_pkt_data),
+        .dst_valid(tl_pkt_valid),
+        .dst_ready(tl_pkt_ready)
+    );
+
+    // --------------------------------------------------------------------
+    // tl_clk domain: Mealy-style single-beat frame issue to GenericSerializer
+    // --------------------------------------------------------------------
+    // Unpack fields from the CDC'd packet. While tl_pkt_valid is asserted,
+    // tl_pkt_data remains stable by construction of the CDC synchronizer.
     wire [7:0] channel_id;
     wire [7:0] opcode_packed;
     wire [7:0] size_field;
     wire [7:0] union_field;
     wire [31:0] address_field;
     wire [63:0] data_field;
-    
-    // Opcode field unpacking (from tl_host.py)
     wire [2:0] opcode;
     wire [2:0] param;
-    wire corrupt;
-    
-    // State machine
-    reg tl_ser_in_ready_buf;
-    reg tl_clk_buf;
-    always @(posedge sysclk) begin
-        if (reset) begin
-            state <= STATE_IDLE;
-            tl_ser_in_ready_buf <= 1'b0;
-        end else begin
-            state <= next_state;
-            tl_ser_in_ready_buf <= tl_ser_in_ready;
-        end
-        tl_clk_buf <= tl_clk;
-    end
+    wire       corrupt;
 
-    reg tl_clk_posedge;
+    // Byte lanes (little endian in packet)
+    assign channel_id   = tl_pkt_data[7:0];
+    assign opcode_packed= tl_pkt_data[15:8];
+    assign size_field   = tl_pkt_data[23:16];
+    assign union_field  = tl_pkt_data[31:24];
 
-    // Next state logic
-    always @(*) begin
-        next_state = state;
-        tl_clk_posedge = tl_clk && !tl_clk_buf;
-        case (state)
-            STATE_IDLE: begin
-                if (packet_valid) begin
-                    next_state = STATE_FRAME_READY;
-                end
-            end
-            
-            STATE_FRAME_READY: begin
-                if (~tl_ser_in_ready && tl_clk_posedge && tl_ser_in_valid) begin
-                    next_state = STATE_IDLE;
-                end
-            end
-        endcase
-    end
-    
-    // Packet buffer and unpacking
-    always @(posedge sysclk) begin
-        if (reset) begin
-            packet_buffer <= 128'h0;
-            frame_valid_reg <= 1'b0;
-        end else if (state == STATE_IDLE && packet_valid) begin
-            // Capture incoming packet
-            packet_buffer <= packet_data;
-            frame_valid_reg <= 1'b1;
-        end else if (state == STATE_FRAME_READY && tl_ser_in_ready) begin
-            // Frame consumed, clear valid
-            frame_valid_reg <= 1'b0;
-        end
-    end
-    
-    // Unpack packet fields (little endian format)
-    // Note: packet_buffer[7:0] is the first byte (channel_id)
-    assign channel_id = packet_buffer[7:0];           // Byte 0
-    assign opcode_packed = packet_buffer[15:8];       // Byte 1
-    assign size_field = packet_buffer[23:16];         // Byte 2
-    assign union_field = packet_buffer[31:24];        // Byte 3
-    
-    // Address: bytes 4-7 (little endian)
-    assign address_field = {packet_buffer[63:56],     // Byte 7 (MSB)
-                           packet_buffer[55:48],     // Byte 6
-                           packet_buffer[47:40],     // Byte 5
-                           packet_buffer[39:32]};    // Byte 4 (LSB)
-    
-    // Data: bytes 8-15 (little endian)
-    assign data_field = {packet_buffer[127:120],      // Byte 15 (MSB)
-                        packet_buffer[119:112],       // Byte 14
-                        packet_buffer[111:104],       // Byte 13
-                        packet_buffer[103:96],        // Byte 12
-                        packet_buffer[95:88],         // Byte 11
-                        packet_buffer[87:80],         // Byte 10
-                        packet_buffer[79:72],         // Byte 9
-                        packet_buffer[71:64]};        // Byte 8 (LSB)
-    
-    // Unpack opcode field (from tl_host.py opcode_packed format)
-    // Bit layout: corrupt[7], param[6:4], unused[3], opcode[2:0]
-    assign opcode = opcode_packed[2:0];               // Bits [2:0]
-    assign param = opcode_packed[6:4];                // Bits [6:4]
-    assign corrupt = opcode_packed[7];                // Bit [7]
-    
-    // Output assignments
-    assign packet_ready = (state == STATE_IDLE);
-    
-    assign tl_ser_in_valid = (state == STATE_FRAME_READY);
-    assign tl_in_bits_chanId = channel_id[2:0];       // Only 3 bits for channel ID
+    assign address_field = {tl_pkt_data[63:56],
+                            tl_pkt_data[55:48],
+                            tl_pkt_data[47:40],
+                            tl_pkt_data[39:32]};
+
+    assign data_field = {tl_pkt_data[127:120],
+                         tl_pkt_data[119:112],
+                         tl_pkt_data[111:104],
+                         tl_pkt_data[103:96],
+                         tl_pkt_data[95:88],
+                         tl_pkt_data[87:80],
+                         tl_pkt_data[79:72],
+                         tl_pkt_data[71:64]};
+
+    // opcode_packed layout: corrupt[7], param[6:4], unused[3], opcode[2:0]
+    assign opcode  = opcode_packed[2:0];
+    assign param   = opcode_packed[6:4];
+    assign corrupt = opcode_packed[7];
+
+    // Mealy handshake: valid mirrors tl_pkt_valid, ready mirrors serializer ready
+    assign tl_ser_in_valid   = tl_pkt_valid;
+    assign tl_pkt_ready      = tl_ser_in_ready & tl_ser_in_valid; // consume exactly when accepted
+
+    // Drive serializer inputs directly from the unpacked fields
+    assign tl_in_bits_chanId = channel_id[2:0];
     assign tl_in_bits_opcode = opcode;
-    assign tl_in_bits_param = param;
-    assign tl_in_bits_size = size_field;
-    assign tl_in_bits_source = 8'h00;                 // Source is always 0 for host transactions
-    assign tl_in_bits_address = {32'h00000000, address_field}; // Extend 32-bit to 64-bit
-    assign tl_in_bits_data = data_field;
-    assign tl_in_bits_corrupt = corrupt;
-    assign tl_in_bits_union = {1'b0, union_field};    // Zero-extend 8-bit to 9-bit
-    assign tl_in_bits_last = 1'b1;                    // Always last for single-beat transactions
+    assign tl_in_bits_param  = param;
+    assign tl_in_bits_size   = size_field;
+    assign tl_in_bits_source = 8'h00; // Host source ID = 0
+    assign tl_in_bits_address= {32'h00000000, address_field};
+    assign tl_in_bits_data   = data_field;
+    assign tl_in_bits_corrupt= corrupt;
+    assign tl_in_bits_union  = {1'b0, union_field};
+    assign tl_in_bits_last   = 1'b1;  // single-beat transactions
 
 endmodule

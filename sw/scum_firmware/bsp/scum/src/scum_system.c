@@ -13,112 +13,112 @@ volatile enum DEBUG_STATUS debug_status = NONE;
 /* ==== Exception Handlers ==== */
 __attribute__((weak)) void HAL_instructionAddressMisalignedExceptionHandler() {
   while (1) {
-    printf("Exception: instruction address misaligned\n");
+    //printf("Exception: instruction address misaligned\n");
   }
 }
 
 __attribute__((weak)) void HAL_instructionAccessFaultExceptionHandler() {
   while (1) {
-    printf("Exception: instruction access fault\n");
+    //printf("Exception: instruction access fault\n");
   }
 }
 
 __attribute__((weak)) void HAL_illegalInstructionExceptionHandler() {
   while (1) {
-    printf("Exception: illegal instruction\n");
+    //printf("Exception: illegal instruction\n");
   }
 }
 
 __attribute__((weak)) void HAL_breakpointExceptionHandler() {
   while (1) {
-    printf("Exception: breakpoint\n");
+    //printf("Exception: breakpoint\n");
   }
 }
 
 __attribute__((weak)) void HAL_loadAddressMisalignedExceptionHandler() {
   while (1) {
-    printf("Exception: load address misaligned\n");
+    //printf("Exception: load address misaligned\n");
   }
 }
 
 __attribute__((weak)) void HAL_loadAccessFaultExceptionHandler() {
   while (1) {
-    printf("Exception: load access fault\n");
+    //printf("Exception: load access fault\n");
   }
 }
 
 __attribute__((weak)) void HAL_storeAMOAddressMisalignedExceptionHandler() {
   while (1) {
-    printf("Exception: store/AMO address misaligned\n");
+    //printf("Exception: store/AMO address misaligned\n");
   }
 }
 
 __attribute__((weak)) void HAL_storeAMOAccessFaultExceptionHandler() {
   while (1) {
-    printf("Exception: store/AMO access fault\n");
+    //printf("Exception: store/AMO access fault\n");
   }
 }
 
 __attribute__((weak)) void HAL_environmentCallUModeExceptionHandler() {
   // TODO: implement mode transfer
   while (1) {
-    printf("Exception: environment call from U-mode\n");
+    //printf("Exception: environment call from U-mode\n");
   }
 }
 
 __attribute__((weak)) void HAL_environmentCallMModeExceptionHandler() {
 //   // TODO: implement mode transfer
   while (1) {
-    printf("Exception: environment call from M-mode\n");
+    //printf("Exception: environment call from M-mode\n");
   }
 }
 
 __attribute__((weak)) void HAL_instructionPageFaultExceptionHandler() {
   while (1) {
-    printf("Exception: instruction page fault\n");
+    //printf("Exception: instruction page fault\n");
   }
 }
 
 /* ==== Interrupt Callbacks ==== */
 __attribute__((weak)) void HAL_userSoftwareInterruptCallback() {
-  printf("user software irq\n");
+  //printf("user software irq\n");
   // HAL_CORE_clearIRQ(UserSoftware_IRQn);
 }
 
 __attribute__((weak)) void HAL_supervisorSoftwareInterruptCallback() {
-  printf("supervisor software irq\n");
+  //printf("supervisor software irq\n");
   // HAL_CORE_clearIRQ(SupervisorSoftware_IRQn);
 }
 
 __attribute__((weak)) void HAL_hypervisorSoftwareInterruptCallback() {
-  printf("hypervisor software irq\n");
+  //printf("hypervisor software irq\n");
   // HAL_CORE_clearIRQ(HypervisorSoftware_IRQn);
 }
 
 __attribute__((weak)) void HAL_machineSoftwareInterruptCallback() {
-  printf("machine software irq\n");
+  //printf("machine software irq\n");
   uint32_t hartid = HAL_CORE_getHartId();
   HAL_CLINT_clearSoftwareInterrupt(hartid);
   // HAL_CORE_clearIRQ(MachineSoftware_IRQn);
 }
 
 __attribute__((weak)) void HAL_userTimerInterruptCallback() {
-  printf("user timer irq\n");
+  //printf("user timer irq\n");
   // HAL_CORE_clearIRQ(UserTimer_IRQn);
 }
 
 __attribute__((weak)) void HAL_supervisorTimerInterruptCallback() {
-  printf("supervisor timer irq\n");
+  //printf("supervisor timer irq\n");
   // HAL_CORE_clearIRQ(SupervisorTimer_IRQn);
 }
 
 __attribute__((weak)) void HAL_hypervisorTimerInterruptCallback() {
-  printf("hypervisor timer irq\n");
+  //printf("hypervisor timer irq\n");
   // HAL_CORE_clearIRQ(HypervisorTimer_IRQn);
 }
 
 __attribute__((weak)) void HAL_machineTimerInterruptCallback() {
-  printf("machine timer irq\n");
+  //printf("machine timer irq\n");
   uint32_t hartid = HAL_CORE_getHartId();
   HAL_CLINT_setTimerInterruptTarget(hartid, 0xFFFFFFFFFFFFFFFF);
 }
@@ -128,6 +128,9 @@ __attribute__((weak)) void HAL_machineExternalInterruptCallback() {
   uint32_t irq_source = HAL_PLIC_claimIRQ(0);
   // printf("src: %u\n", irq_source);
   char str[128];
+  sprintf(str, "irq_source: %u\n", irq_source);
+  HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+  HAL_UART_finishTX(UART0);
 
   if (irq_source == TX_FINISH) {
     sprintf(str, "TX Finished\n");

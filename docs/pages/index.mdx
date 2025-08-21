@@ -1,0 +1,145 @@
+---
+title: "SCuM-V Bringup & Development"
+description: "Complete toolkit for bringing up and developing with the Single-Chip Micro Mote V"
+---
+
+import { Callout, Cards, FileTree } from 'nextra/components'
+
+# SCuM-V Bringup & Development
+
+Development toolkit for the **Single-Chip Micro Mote V (SCμM-V)** - a 16nm system-on-chip for IoT applications.
+
+This repository contains FPGA controllers, host software, firmware, and documentation for bringing up the SCuM-V chip.
+
+## Quick Start
+
+<Cards num={2}>
+  <Cards.Card 
+    href="/hardware-setup"
+  >
+    **Hardware Setup →**
+    
+    Complete guide for setting up your SCuM-V development environment with FPGA boards and level shifters. Includes equipment checklist, PCB connections, and power supply configuration.
+  </Cards.Card>
+  
+  <Cards.Card 
+    href="/fpga-setup"
+  >
+    **FPGA Programming →**
+    
+    Program the Arty A7 FPGA with SerialTL controller and analog scan chain interfaces. Covers Vivado project setup, bitstream generation, and simulation.
+  </Cards.Card>
+  
+  <Cards.Card 
+    href="/firmware-development"
+  >
+    **Firmware Development →**
+    
+    Develop and flash RISC-V firmware for the SCuM-V chip using our BSP and examples. Includes toolchain setup and debugging tools.
+  </Cards.Card>
+  
+  <Cards.Card 
+    href="/bootloading-guide"
+  >
+    **Bootloading Guide →**
+    
+    Use Python host tools to communicate with SCuM-V via SerialTL and analog scan chain. Programming and debugging the chip.
+  </Cards.Card>
+</Cards>
+
+## Technical Documentation
+
+### Core Systems
+- **[System Overview](overview)** - Architecture and block diagrams
+- **[Digital Core](digital-core)** - RISC-V processor and memory system
+- **[Digital Baseband](digital-baseband)** - Wireless communication modem
+
+### Analog Subsystems  
+- **[Power System](power-system)** - DC-DC converters and voltage regulation
+- **[Clock Generation](oscillators)** - Oscillators and timing systems
+- **[2.4 GHz Radio](radio)** - Wireless transceiver front-end
+- **[94 GHz Radar](radar)** - High-frequency radar system
+- **[Precision ADC](uv-adc)** - Sensor interface and data acquisition
+
+### Development Resources
+- **[API Reference](api-reference)** - SerialTL commands and register maps
+
+## Design Resources
+
+| Resource | Description | Link |
+|----------|-------------|------|
+| **SCuM-V24B Final Review** | End of semester design presentation | [Google Slides](https://docs.google.com/presentation/d/12go3DiuhL_MuZc9lrPC-D9m9Jhr7LV5_/edit?usp=sharing) |
+| **SCuM-V24B Mid-term Review** | Mid-semester design checkpoint | [Google Slides](https://docs.google.com/presentation/d/1NwGTKHJewxJkg_gc0BDnHbPr_JOrNUo1XQNuW6IDmBM/edit?usp=sharing) |
+| **RF Simulation Guide** | Analog RF simulation setup and usage | [Google Doc](https://docs.google.com/document/d/1AonYYLMqA6wxp_P3jY-1RgbcOX0xAsPm3z0Vx6l0DUo/edit?usp=sharing) |
+| **SCuM-V22 Bringup** | Previous generation test results | [Google Slides](https://docs.google.com/presentation/d/1fyWcBpSb9hvuizlRUf65NovWjaN5w86_6e52kjnYkxQ/edit?usp=sharing) |
+
+## Repository Structure
+
+<FileTree>
+  <FileTree.Folder name="hw" defaultOpen>
+    <FileTree.Folder name="scumv-controller" defaultOpen>
+      <FileTree.File name="src/" />
+      <FileTree.File name="sim/" />
+      <FileTree.File name="scripts/" />
+      <FileTree.File name="create_project.tcl" />
+    </FileTree.Folder>
+    <FileTree.Folder name="scanchain">
+      <FileTree.File name="src/" />
+      <FileTree.File name="sim/" />
+      <FileTree.File name="create_project.tcl" />
+    </FileTree.Folder>
+    <FileTree.Folder name="sensoradc-bringup">
+      <FileTree.File name="sensoradc-bringup.srcs/" />
+      <FileTree.File name="make_proj.tcl" />
+    </FileTree.Folder>
+    <FileTree.File name="client.py" />
+  </FileTree.Folder>
+  <FileTree.Folder name="sw" defaultOpen>
+    <FileTree.Folder name="scum_firmware" defaultOpen>
+      <FileTree.Folder name="bsp/">
+        <FileTree.File name="inc/" />
+        <FileTree.File name="src/" />
+      </FileTree.Folder>
+      <FileTree.Folder name="core/">
+        <FileTree.File name="inc/" />
+        <FileTree.File name="src/" />
+        <FileTree.File name="startup/" />
+      </FileTree.Folder>
+      <FileTree.Folder name="lib/">
+        <FileTree.File name="htif/" />
+      </FileTree.Folder>
+      <FileTree.File name="Makefile" />
+    </FileTree.Folder>
+    <FileTree.Folder name="TileLinkTrafficAdapter-H723">
+      <FileTree.File name="Core/" />
+      <FileTree.File name="Drivers/" />
+      <FileTree.File name="Debug/" />
+    </FileTree.Folder>
+    <FileTree.File name="tl_host.py" />
+    <FileTree.File name="tl_host_sim.py" />
+    <FileTree.File name="sensor_adc.py" />
+  </FileTree.Folder>
+  <FileTree.Folder name="pcb">
+    <FileTree.Folder name="pmod_lvl_shft">
+      <FileTree.File name="jlcpcb/" />
+      <FileTree.File name="pmod_lvl_shft.kicad_pcb" />
+      <FileTree.File name="pmod_lvl_shft.kicad_sch" />
+    </FileTree.Folder>
+  </FileTree.Folder>
+  <FileTree.Folder name="docs-nextra">
+    <FileTree.File name="pages/" />
+    <FileTree.File name="components/" />
+    <FileTree.File name="public/" />
+    <FileTree.File name="theme.config.tsx" />
+  </FileTree.Folder>
+</FileTree>
+
+## Getting Help
+
+- **Issues**: Report bugs and request features on [GitHub](https://github.com/ucb-ee290c/scum-v-bringup/issues)
+- **Documentation**: Browse the navigation menu for detailed guides
+- **Legacy Docs**: [SCuM-V23 Archive](archive/scum-v23) for previous generation
+
+<Callout type="info">
+This project is developed as part of UC Berkeley's EE194/EE290C Special Topics in Circuit Design course.
+</Callout>

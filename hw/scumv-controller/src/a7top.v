@@ -183,20 +183,20 @@
     );
 
     assign led[0] = n_reset;
-    assign led[1] = active_mode[0]; // ASC mode active
-    assign led[2] = active_mode[1]; // STL mode active  
+    assign led[1] = TL_OUT_READY;
+    assign led[2] = TL_CLK; // STL mode active  
     assign led[3] = TL_IN_VALID;
 
-    // ila_0 ILA1 (
-    //     .clk    (FPGA_CLK),
-    //     .probe0 (debug_state),                     // 8 bit
-    //     .probe1 ({debug_bridge_packet_valid, debug_bridge_packet_ready, debug_serializer_in_ready, debug_serializer_in_valid, debug_tl_response_ready, debug_tl_response_valid, debug_byte_count}),                     // 8 bit
-    //     .probe2 (TL_CLK),                     // 1 bit
-    //     .probe3 (stl_data_valid),                 // 1 bit
-    //     .probe4 (TL_OUT_READY),                    // 1 bit
-    //     .probe5 (TL_OUT_VALID),                  // 1 bit
-    //     .probe6 (TL_IN_VALID),              // 1 bit
-    //     .probe7 (debug_tl_response_valid),                // 1 bit
-    //     .probe8 ({2'b00, debug_stl_state})
-    // );
+    ila_0 ILA1 (
+        .clk    (FPGA_CLK),
+        .probe0 (debug_state),                     // 8 bit
+        .probe1 ({debug_bridge_packet_valid, debug_bridge_packet_ready, debug_serializer_in_ready, debug_serializer_in_valid, debug_tl_response_ready, debug_tl_response_valid, debug_byte_count}),                     // 8 bit
+        .probe2 (TL_CLK),                     // 1 bit
+        .probe3 (stl_data_valid),                 // 1 bit
+        .probe4 (TL_OUT_READY),                    // 1 bit
+        .probe5 (TL_OUT_VALID),                  // 1 bit
+        .probe6 (TL_IN_VALID),              // 1 bit
+        .probe7 (debug_tl_response_valid),                // 1 bit
+        .probe8 ({2'b00, debug_stl_state})
+    );
 endmodule

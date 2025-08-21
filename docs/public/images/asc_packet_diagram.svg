@@ -1,0 +1,78 @@
+<svg width="1000" height="400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1000" height="400" fill="#f8f9fa"/>
+  
+  <!-- Title -->
+  <text x="500" y="30" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#333">ASC Scan Chain Packet Structure (173 bits total, padded to 176 bits = 22 bytes)</text>
+  
+  <!-- Bit scale at top -->
+  <text x="50" y="60" font-family="Arial, sans-serif" font-size="10" fill="#666">Bit:</text>
+  <text x="950" y="60" font-family="Arial, sans-serif" font-size="10" text-anchor="end" fill="#666">175</text>
+  <text x="90" y="60" font-family="Arial, sans-serif" font-size="10" fill="#666">0</text>
+  
+  <!-- Main frame box -->
+  <rect x="50" y="70" width="900" height="50" fill="none" stroke="#333" stroke-width="2"/>
+  
+  <!-- Field divisions -->
+  <!-- RESERVED: 3 bits (173-175) - 60px -->
+  <rect x="50" y="70" width="60" height="50" fill="#E0E0E0" stroke="#333"/>
+  <text x="80" y="100" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#333" font-weight="bold">RSVD</text>
+  
+  <!-- RESET: 1 bit (172) - 60px -->
+  <rect x="110" y="70" width="60" height="50" fill="#FF6B6B" stroke="#333"/>
+  <text x="140" y="100" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="white" font-weight="bold">RESET</text>
+  
+  <!-- PAYLOAD: 160 bits (12-171) - 720px -->
+  <rect x="170" y="70" width="720" height="50" fill="#4ECDC4" stroke="#333"/>
+  <text x="530" y="100" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="white" font-weight="bold">PAYLOAD (160 bits) - Domain-specific configuration data</text>
+  
+  <!-- ADDRESS: 12 bits (0-11) - 60px -->
+  <rect x="890" y="70" width="60" height="50" fill="#F39C12" stroke="#333"/>
+  <text x="920" y="95" font-family="Arial, sans-serif" font-size="9" text-anchor="middle" fill="white" font-weight="bold">ADDR</text>
+  <text x="920" y="105" font-family="Arial, sans-serif" font-size="9" text-anchor="middle" fill="white" font-weight="bold">(12b)</text>
+  
+  <!-- Field labels below with spacing -->
+  <g font-family="Arial, sans-serif" font-size="10" fill="#333">
+    <!-- Bit positions -->
+    <text x="80" y="140" text-anchor="middle">175-173</text>
+    <text x="140" y="140" text-anchor="middle">172</text>
+    <text x="530" y="140" text-anchor="middle">171-12</text>
+    <text x="920" y="140" text-anchor="middle">11-0</text>
+    
+    <!-- Field names -->
+    <text x="80" y="155" text-anchor="middle" font-weight="bold">RESERVED</text>
+    <text x="140" y="155" text-anchor="middle" font-weight="bold">RESET</text>
+    <text x="530" y="155" text-anchor="middle" font-weight="bold">PAYLOAD</text>
+    <text x="920" y="155" text-anchor="middle" font-weight="bold">ADDRESS</text>
+    
+    <!-- Sizes -->
+    <text x="80" y="170" text-anchor="middle" font-size="8" fill="#666">(3 bits)</text>
+    <text x="140" y="170" text-anchor="middle" font-size="8" fill="#666">(1 bit)</text>
+    <text x="530" y="170" text-anchor="middle" font-size="8" fill="#666">(160 bits)</text>
+    <text x="920" y="170" text-anchor="middle" font-size="8" fill="#666">(12 bits)</text>
+  </g>
+  
+  <!-- Legend -->
+  <text x="50" y="210" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#333">Field Descriptions:</text>
+  
+  <g font-family="Arial, sans-serif" font-size="10" fill="#333">
+    <text x="50" y="230">• ADDRESS (11:0): Scan chain domain address (0-5) - Selects which analog domain to configure</text>
+    <text x="50" y="245">• PAYLOAD (159:0): Domain-specific configuration data - 160 bits of analog register settings</text>
+    <text x="50" y="260">• RESET (0): Reset flag for the domain - When set, resets the selected analog domain</text>
+    <text x="50" y="275">• RESERVED (2:0): Must be 0 - Reserved for future use</text>
+  </g>
+  
+  <!-- Command format -->
+  <text x="50" y="310" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#333">ASC Command Format:</text>
+  <g font-family="Arial, sans-serif" font-size="10" fill="#333">
+    <text x="50" y="330">Total Command: 26 bytes = 4-byte prefix ("asc+") + 22-byte packet</text>
+    <text x="50" y="345">Response: 1 byte (0x01 = success, 0x00 = failure)</text>
+  </g>
+  
+  <!-- Total size indicator -->
+  <text x="500" y="375" font-family="Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#333">Total Packet Size: 176 bits (22 bytes) - 173 bits used, 3 bits padding</text>
+  
+  <!-- MSB/LSB indicators -->
+  <text x="50" y="395" font-family="Arial, sans-serif" font-size="10" fill="#666">MSB (Most Significant Bit)</text>
+  <text x="950" y="395" font-family="Arial, sans-serif" font-size="10" text-anchor="end" fill="#666">LSB (Least Significant Bit)</text>
+</svg>

@@ -172,6 +172,9 @@ void baseband_debug(uint8_t *addr, uint8_t num_bytes);
 uint8_t baseband_read_adc_i();
 uint8_t baseband_read_adc_q();
 
+// Set LUT value
+void baseband_set_lut(uint8_t lut, uint8_t address, uint32_t value);
+
 /*
     INTERRUPTS
  */
@@ -179,3 +182,4 @@ uint8_t baseband_read_adc_q();
 uint32_t baseband_rxerror_message();
 uint32_t baseband_txerror_message();
 uint32_t baseband_rxfinish_message();
+

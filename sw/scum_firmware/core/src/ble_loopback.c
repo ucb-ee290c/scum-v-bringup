@@ -1,7 +1,8 @@
 
 #include "ble_loopback.h"
-#include "sim_utils.h"
+// #include "sim_utils.h"
 #include "scum_hal_plic.h"
+#include "build_config.h"
 
 char str[512];
 
@@ -57,26 +58,28 @@ void run_ble_loopback()
 
   // Check that an interrupt was generated and/or
   // that the interrupt message is correct.
-  #define TIMEOUT_MS 30
+  #define TIMEOUT_MS 3000
   uint32_t ms_count = 0, bytes_read;
   uint8_t *rx_packet = packet + NUM_BYTES + 4;
 
   while (1) {
-    printf("-1-\r\n");
-    // HAL_delay(1);
-    printf("-2-\r\n");
     ms_count++;
+    HAL_delay(1);
+    // sprintf(str, "ms_count: %u\r\n", ms_count);
+    // HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
+    // HAL_UART_finishTX(UART0);
     if (ms_count > TIMEOUT_MS) {
       sprintf(str, "Timeout!\r\n");
       HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-      sim_finish();
+      HAL_UART_finishTX(UART0);
+      //sim_finish();
       return;
     }
     switch (debug_status) {
       case DEBUG_TX_FAIL:
       case DEBUG_RX_FAIL:
         // TODO: Exit with error code
-        sim_finish();
+        //sim_finish();
         return;
 
       case DEBUG_RX_FINISH:
@@ -87,7 +90,7 @@ void run_ble_loopback()
         }
         sprintf(str, "\r\n");
         HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-        sim_finish();
+        //sim_finish();
         return;
       
       default:
@@ -101,50 +104,33 @@ int main() {
   HAL_init();
   HAL_CORE_enableGlobalInterrupt();
   HAL_CORE_enableInterrupt(MachineExternalInterrupt);
-  
-  //HAL_GPIO_init(GPIOA, GPIO_PIN_0);
-  //HAL_GPIO_writePin(GPIOA, GPIO_PIN_0, 0);
+  HAL_PLIC_enable(0, TX_FINISH);
+  HAL_PLIC_enable(0, RX_FINISH);
+  HAL_PLIC_enable(0, TX_ERROR);
+  HAL_PLIC_enable(0, RX_ERROR);
+  HAL_PLIC_enable(0, RX_START);
+
 
   UART_InitTypeDef UART_init_config;
-  UART_init_config.baudrate = 115200;
+  UART_init_config.baudrate = UART_BAUDRATE_DEFAULT;
   UART_init_config.mode = UART_MODE_TX_RX;
-  UART_init_config.stopbits = UART_STOPBITS_1;
+  UART_init_config.stopbits = UART_STOPBITS_DEFAULT;
   HAL_UART_init(UART0, &UART_init_config);  
 
   sprintf(str, "SCuM-V24B says, 'I'm alive!'\r\n");
   HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
 
   print_baseband_status0();
-
-  // Set scum-v tuning registers
-  // rtc_tune_in<3> CPU oscillator - 1 exterior / 0 interior
-  // rtc_tune_in<2> ADC/RTC oscillator - 1 exterior / 0 interior
-  // rtc_tune_in<1:0> MUX_CLK_OUT - 00 CPU / 01 RTC / 11 ADC
-  #define SCUM_TUNING 0xA000
-  // uint16_t rtc_tune_in = 0b1000;
-  // reg_write16(SCUM_TUNING + 0x04, rtc_tune_in);
   
-  uint8_t counter = 0;
-  uint8_t adc_i_data = 0;
+  // // Set the channel tuning LUTs for BLE operation
+  // int i;
+  // for (i = 0; i < 40; i++) {
+  //   baseband_set_lut(LUT_VCO_CT_BLE, i, i*1638);
+  // }
 
-  int i;
-  // Set the channel tuning LUTs
-  for (i = 0; i < 40; i++) {
-    baseband_set_lut(LUT_VCO_CT_BLE, i, i*1638);
+  while(1) {
+    run_ble_loopback();
   }
-
-  int j;
-  while(1){
-    baseband_configure(BASEBAND_CONFIG_BLE_CHANNEL_INDEX, j++);
-    if (j >= 40) {
-      j = 0;
-    }
-    HAL_delay(2000);
-    sprintf(str, "Channel %d\r\n", j);
-    HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-  }
-
-  // run_ble_loopback();
 }
 
 void __attribute__((weak, noreturn)) __main(void) {

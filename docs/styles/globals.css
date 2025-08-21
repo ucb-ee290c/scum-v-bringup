@@ -1,0 +1,344 @@
+/* UC Berkeley Brand Colors */
+:root {
+  --berkeley-blue: #003262;
+  --california-gold: #FDB515;
+  --pacific-blue: #46535E;
+  --golden-gate-orange: #ED4E33;
+  --sather-gate-brass: #D9661F;
+  --berkeley-blue-light: #6C9BD1;
+  --california-gold-light: #FFE066;
+
+  /* Typography & layout density */
+  --font-size-base: 15.5px;
+  --line-height-base: 1.6;
+  --heading-letter-spacing: -0.01em;
+
+  /* Hairline separators */
+  --line: rgba(3, 7, 18, 0.08);
+
+  /* Ambient gradient tokens */
+  --bg: #0b1220;
+  --bg-grad-1: 70, 130, 180; /* steel blue */
+  --bg-grad-2: 31, 59, 77;   /* deep steel */
+  --bg-grad-opacity: 0.05;
+}
+
+/* Minimal font improvements - let Nextra handle layout */
+html {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Noto Sans, "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+  font-size: var(--font-size-base);
+}
+
+/* Base text rhythm */
+.nextra-content {
+  line-height: var(--line-height-base);
+}
+
+.nextra-content h1,
+.nextra-content h2,
+.nextra-content h3 {
+  letter-spacing: var(--heading-letter-spacing);
+}
+
+.nextra-content p,
+.nextra-content li {
+  font-size: 0.95rem;
+}
+
+/* Ambient background gradients */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(2600px 1800px at -12% -18%, rgba(var(--bg-grad-1), var(--bg-grad-opacity)) 0%, rgba(var(--bg-grad-2), 0) 80%);
+    /* radial-gradient(2200px 1500px at 112% 8%, rgba(var(--bg-grad-1), var(--bg-grad-opacity)) 0%, rgba(var(--bg-grad-1), 0) 80%); */
+  z-index: 0;
+}
+
+/* Ensure layout appears above the overlay */
+#__next, .nextra-nav-container, .nextra-sidebar, .nextra-content, .nextra-toc {
+  position: relative;
+  z-index: 1;
+}
+
+/* Clean header styling without dividers */
+.nextra-content h2 {
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.25rem;
+}
+
+/* Cards container styling - NO hover effects on container */
+.nextra-content [class*="cards"] {
+  gap: 1.5rem !important;
+  margin: 2rem 0 !important;
+}
+
+.nextra-content [class*="cards"]:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Individual card styling */
+.nextra-content [class*="card"]:not([class*="cards"]) {
+  padding: 1.25rem !important;
+  border-radius: 0.75rem !important;
+  border: 1px solid #e5e7eb !important;
+  min-height: 140px !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+}
+
+/* Individual card hover with nice pop effect */
+.nextra-content [class*="card"]:not([class*="cards"]):hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 4px 16px rgba(0, 50, 98, 0.15) !important;
+  border-color: var(--berkeley-blue) !important;
+}
+
+/* Dark mode cards */
+.dark .nextra-content [class*="card"]:not([class*="cards"]) {
+  border-color: #4b5563 !important;
+  background: rgba(31, 41, 55, 0.95) !important;
+  color: #f9fafb !important;
+}
+
+.dark .nextra-content [class*="card"]:not([class*="cards"]):hover {
+  transform: translateY(-3px) !important;
+  border-color: var(--berkeley-blue-light) !important;
+  box-shadow: 0 4px 16px rgba(108, 155, 209, 0.15) !important;
+}
+
+/* Card title improvements */
+.nextra-content [class*="card"] h3,
+.nextra-content [class*="card"] [class*="title"],
+.nextra-content [class*="card"] strong {
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+  color: var(--berkeley-blue) !important;
+  margin-bottom: 0.75rem !important;
+  line-height: 1.4 !important;
+}
+
+.dark .nextra-content [class*="card"] h3,
+.dark .nextra-content [class*="card"] [class*="title"],
+.dark .nextra-content [class*="card"] strong {
+  color: var(--berkeley-blue-light) !important;
+}
+
+/* Card content text */
+.nextra-content [class*="card"] p {
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
+  color: #6b7280 !important;
+  margin-bottom: 0.5rem !important;
+  flex-grow: 1 !important;
+}
+
+.dark .nextra-content [class*="card"] p {
+  color: #d1d5db !important;
+}
+
+/* Arrow and link styling */
+.nextra-content [class*="card"] [class*="arrow"] {
+  color: var(--berkeley-blue) !important;
+  font-weight: 500 !important;
+  font-size: 0.875rem !important;
+}
+
+.dark .nextra-content [class*="card"] [class*="arrow"] {
+  color: var(--berkeley-blue-light) !important;
+}
+
+/* Site logo styling with dark mode support */
+.nextra-logo {
+  font-weight: 600;
+  color: var(--berkeley-blue);
+  font-size: 1.25rem;
+  letter-spacing: -0.025em;
+}
+
+.nextra-logo-docs {
+  opacity: 0.7;
+  font-weight: 500;
+  color: var(--pacific-blue);
+}
+
+/* Dark mode logo styling */
+.dark .nextra-logo {
+  color: var(--berkeley-blue-light);
+}
+
+.dark .nextra-logo-docs {
+  color: #9ca3af;
+}
+
+/* Better blockquote styling */
+.nextra-content blockquote {
+  border-left-color: var(--line);
+  background: linear-gradient(90deg, rgba(0,0,0,0.02), transparent 60%);
+}
+
+.dark .nextra-content blockquote {
+  background: linear-gradient(90deg, rgba(255,255,255,0.05), transparent 60%);
+}
+
+/* Custom theme overrides */
+[data-theme="light"] {
+  --nextra-primary-hue: 215deg;
+  --nextra-primary-saturation: 100%;
+  --line: rgba(3, 7, 18, 0.08);
+  --bg: #ffffff;
+  --bg-grad-opacity: 0.07;
+}
+
+.dark {
+  --nextra-primary-hue: 215deg;
+  --nextra-primary-saturation: 80%;
+  --line: rgba(255, 255, 255, 0.12);
+  --bg: #0b1220;
+  --bg-grad-opacity: 0.06;
+}
+
+/* UC Berkeley branded elements */
+.nextra-nav-container {
+  border-bottom: 1px solid var(--line);
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 999 !important;
+}
+
+/* Custom callout styling */
+.nextra-callout-info {
+  border-left-color: var(--berkeley-blue);
+}
+
+.nextra-callout-warning {
+  border-left-color: var(--golden-gate-orange);
+}
+
+/* Code block improvements */
+.nextra-code-block {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Courier New', monospace;
+}
+
+/* Table styling */
+.nextra-content table {
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+.nextra-content table th {
+  background-color: var(--berkeley-blue);
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.nextra-content table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.dark .nextra-content table td {
+  border-bottom-color: var(--line);
+}
+
+/* Custom badge styling */
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-current {
+  background-color: var(--california-gold);
+  color: var(--berkeley-blue);
+}
+
+.badge-archive {
+  background-color: var(--pacific-blue);
+  color: white;
+}
+
+/* Memory map and register table styling */
+.memory-map-table {
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+
+.memory-map-table th,
+.memory-map-table td {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.memory-map-table .address {
+  font-family: 'SF Mono', monospace;
+  font-weight: 600;
+  color: var(--berkeley-blue);
+}
+
+.dark .memory-map-table .address {
+  color: var(--berkeley-blue-light);
+}
+
+/* Pin diagram styling */
+.pin-diagram {
+  border: 2px solid var(--berkeley-blue);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin: 1rem 0;
+  background-color: #f8fafc;
+}
+
+.dark .pin-diagram {
+  background-color: #1f2937;
+  border-color: var(--berkeley-blue-light);
+}
+
+/* Protocol frame styling */
+.protocol-frame {
+  font-family: monospace;
+  background-color: var(--berkeley-blue);
+  color: white;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  text-align: center;
+  margin: 1rem 0;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+  .nextra-content table {
+    font-size: 0.875rem;
+  }
+  
+  .nextra-content table th,
+  .nextra-content table td {
+    padding: 0.5rem;
+  }
+}
+
+/* Print styles */
+@media print {
+  .nextra-nav-container,
+  .nextra-sidebar,
+  .nextra-toc {
+    display: none !important;
+  }
+  
+  .nextra-content {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}

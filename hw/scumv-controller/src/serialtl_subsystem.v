@@ -149,8 +149,10 @@ module serialtl_subsystem #(
         .reset(reset),
         
         // Input from UART-to-TileLink bridge
-        .io_in_ready(tl_ser_in_ready),
-        .io_in_valid(tl_ser_in_valid),
+        // Ready/valid interface
+        .io_in_ready(tl_ser_in_ready), // Serializer output (to UART-to-TileLink bridge)
+        .io_in_valid(tl_ser_in_valid), // Serializer input (from UART-to-TileLink bridge)
+        // UART-to-TileLink bridge input
         .io_in_bits_chanId(tl_ser_in_bits_chanId),
         .io_in_bits_opcode(tl_ser_in_bits_opcode),
         .io_in_bits_param(tl_ser_in_bits_param),
@@ -162,7 +164,7 @@ module serialtl_subsystem #(
         .io_in_bits_union(tl_ser_in_bits_union),
         .io_in_bits_last(tl_ser_in_bits_last),
         
-        // Output to SerialTL interface
+        // Output to TOP level SerialTL interface
         .io_out_ready(tl_out_ready),
         .io_out_valid(tl_out_valid),
         .io_out_bits(tl_out_data)
@@ -173,13 +175,13 @@ module serialtl_subsystem #(
         .clock(tl_clk),
         .reset(reset),
         
-        // Input from SerialTL interface
+        // Input from TOP level SerialTL interface
         .io_in_ready(tl_in_ready),
         .io_in_valid(tl_in_valid),
         .io_in_bits(tl_in_data),
         
-        // Output to TileLink-to-UART bridge
-        .io_out_ready(tl_deser_out_ready),
+        // Output to TileLink-to-UART bridge 
+        .io_out_ready(tl_deser_out_ready), 
         .io_out_valid(tl_deser_out_valid),
         .io_out_bits_chanId(tl_deser_out_bits_chanId),
         .io_out_bits_opcode(tl_deser_out_bits_opcode),

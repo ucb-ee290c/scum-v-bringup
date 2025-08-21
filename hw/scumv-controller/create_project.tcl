@@ -66,6 +66,7 @@ proc checkRequiredFiles { origin_dir} {
  "[file normalize "$origin_dir/src/stl_uart_client.v"]"\
  "[file normalize "$origin_dir/src/uart_to_tilelink_bridge.v"]"\
  "[file normalize "$origin_dir/src/tilelink_to_uart_bridge.v"]"\
+ "[file normalize "$origin_dir/src/cdc_synchronizer.v"]"\
  "[file normalize "$origin_dir/src/tilelink/GenericSerializer.sv"]"\
  "[file normalize "$origin_dir/src/tilelink/GenericDeserializer.sv"]"\
  "[file normalize "$origin_dir/src/a7top.xdc"]"\
@@ -169,6 +170,7 @@ create_project ${_xil_proj_name_} ./${_xil_proj_name_} -part xc7a100tcsg324-1 -f
 # Set the directory path for the new project
 set proj_dir [get_property directory [current_project]]
 
+
 # Set project properties
 set obj [current_project]
 set_property -name "default_lib" -value "xil_defaultlib" -objects $obj
@@ -211,6 +213,7 @@ set files [list \
  [file normalize "${origin_dir}/src/stl_uart_client.v"] \
  [file normalize "${origin_dir}/src/uart_to_tilelink_bridge.v"] \
  [file normalize "${origin_dir}/src/tilelink_to_uart_bridge.v"] \
+ [file normalize "${origin_dir}/src/cdc_synchronizer.v"] \
  [file normalize "${origin_dir}/src/tilelink/GenericSerializer.sv"] \
  [file normalize "${origin_dir}/src/tilelink/GenericDeserializer.sv"] \
 ]

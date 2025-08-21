@@ -1,6 +1,7 @@
 
 #include "lrwpan_loopback.h"
 #include "sim_utils.h"
+#include "build_config.h"
 
 char str[512];
 
@@ -122,9 +123,9 @@ int main() {
   //HAL_GPIO_writePin(GPIOA, GPIO_PIN_0, 0);
 
   UART_InitTypeDef UART_init_config;
-  UART_init_config.baudrate = 921600;
+  UART_init_config.baudrate = UART_BAUDRATE_DEFAULT;
   UART_init_config.mode = UART_MODE_TX_RX;
-  UART_init_config.stopbits = UART_STOPBITS_2;
+  UART_init_config.stopbits = UART_STOPBITS_DEFAULT;
   HAL_UART_init(UART0, &UART_init_config);
 
   sprintf(str, "SCuM-V24B says, 'I'm alive!'\r\n");

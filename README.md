@@ -4,11 +4,23 @@ Various files for bringing up the Single-Chip Micro Mote V (SCμM-V)
 
 ## Documentation
 
-[SCuM-V23 Specification (PDF Version)](https://github.com/ucb-ee290c/scum-v-bringup/raw/gh-pages/SCuM-V23.pdf)
+📖 **[SCuM-V Documentation (New Nextra Site)](https://ucb-ee290c.github.io/scum-v-bringup/)** - Modern interactive documentation
 
-[SCuM-V23 Specification (Web Version)](https://ucb-ee290c.github.io/scum-v-bringup/)
+### Legacy Documentation
+- [SCuM-V23 PDF Version](https://github.com/ucb-ee290c/scum-v-bringup/raw/gh-pages/SCuM-V23.pdf)
+- [SCuM-V23 Web Version (Legacy)](https://ucb-ee290c.github.io/scum-v-bringup/docs/)
 
-Want to contribute to the documentation? Start here: [Contributing to the specification document](docs/README.md)
+### Contributing to Documentation
+- **Nextra Documentation**: Edit files in `docs-nextra/` and submit pull requests
+- **Legacy AsciiDoc**: See [Contributing to the specification document](docs/README.md)
+
+### Building Documentation Locally
+```bash
+cd docs-nextra
+npm install
+npm run dev    # Development server at http://localhost:3000
+npm run build  # Production build
+```
 
 ## Project Structure
 

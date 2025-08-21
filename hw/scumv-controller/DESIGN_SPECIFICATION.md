@@ -6,7 +6,7 @@ The SCuM-V Controller is a dual-mode FPGA implementation that provides UART-base
 
 ### 1.1 System Requirements
 
-The controller must support both the Analog Scan Chain (ASC) and Serial TileLink (STL) protocols. It will multiplex between them by detecting a 4-byte prefix (`"asc+"` or `"stl+"`) at the start of each incoming UART command. The design must maintain compatibility with the existing Python host scripts (`hw/client.py` and `sw/tl_host.py`) and support configurable baud rates up to and including 2 MBaud. To ensure compliance with the SCuM-V24B ASIC, the implementation will reuse the exact `GenericSerializer` and `GenericDeserializer` modules. Architecturally, the design will follow a clean, hierarchical structure with well-defined FIFO-based interfaces between modules.
+The controller must support three logical protocols: Analog Scan Chain (ASC), Serial TileLink (STL), and a DUT UART Passthrough bridge. It multiplexes among them by detecting a 4-byte prefix ("asc+", "stl+", or "uar+") at the start of each incoming UART command from the host. Bytes originating on the DUT UART and forwarded to the host SHALL be framed by the FPGA using the same "uar+" prefix (see §3.4). The design must maintain compatibility with the existing Python host scripts (`hw/client.py` and `sw/tl_host.py`) and support configurable baud rates up to and including 2 MBaud. To ensure compliance with the SCuM-V24B ASIC, the implementation will reuse the exact `GenericSerializer` and `GenericDeserializer` modules. Architecturally, the design will follow a clean, hierarchical structure with well-defined FIFO-based interfaces between modules.
 
 ## 2. System Architecture
 
@@ -45,12 +45,6 @@ The controller must support both the Analog Scan Chain (ASC) and Serial TileLink
 │                   │                                                      │  │ │   Bridge    │ ││ │   Bridge    │ │  │
 │                   │                                                      │  │ └─────────────┘ ││ └─────────────┘ │ │  │
 │                   │                                                      │  │        │        ││        ▲        │ │  │
-│                   │                                                      │  │        ▼        ││        │        │ │  │
-│                   │                                                      │  │ ┌─────────────┐ ││ ┌─────────────┐ │ │  │
-│                   │                                                      │  │ │  Generic    │ ││ │   Generic   │ │ │  │
-│                   │                                                      │  │ │ Serializer  │ ││ │Deserializer │ │ │  │
-│                   │                                                      │  │ └─────────────┘ ││ └─────────────┘ │ │  │
-│                   │                                                      │  │        │        ││        ▲        │ │  │
 │                   │                                                      │  │        └────────│─│────────┘        │ │  │
 │                   │                                                      │  │                 ││                 │ │  │
 │                   │                                                      │  │     ┌─────────────────────────┐    │ │  │
@@ -80,6 +74,8 @@ a7top
 │   ├── GenericSerializer (ASIC-provided)
 │   ├── GenericDeserializer (ASIC-provided)
 │   └── tilelink_to_uart_bridge
+├── dut_uart_subsystem
+│   └── uart (second instance for DUT UART passthrough)
 └── button_parser (existing, unchanged)
 ```
 
@@ -94,8 +90,9 @@ All commands from the host PC follow this format:
 ```
 
 - **PREFIX**: 4-byte string identifier
-  - `"asc+"` (0x61, 0x73, 0x63, 0x2B) for Analog Scan Chain
-  - `"stl+"` (0x73, 0x74, 0x6C, 0x2B) for Serial TileLink
+  - "asc+" (0x61, 0x73, 0x63, 0x2B) for Analog Scan Chain
+  - "stl+" (0x73, 0x74, 0x6C, 0x2B) for Serial TileLink
+  - "uar+" (0x75, 0x61, 0x72, 0x2B) for DUT UART Passthrough
 - **PAYLOAD**: Protocol-specific data
 
 ### 3.2 ASC Protocol Specification
@@ -145,6 +142,31 @@ For STL commands, responses depend on the transaction type:
 - **Write (PutFullData)**: Returns AccessAck packet (16 bytes)
 - **Read (Get)**: Returns AccessAckData packet (16 bytes)
 
+### 3.4 DUT UART Passthrough Protocol Specification
+
+#### 3.4.1 Command Format (Host → FPGA → DUT)
+```
+Prefix: "uar+" (4 bytes)
+Payload:
+  LEN (1 byte): number of data bytes to forward to the DUT UART (1..255). LEN=0 is reserved.
+  DATA (LEN bytes): raw UART payload to transmit to the DUT.
+Total: 5 + LEN bytes
+```
+
+#### 3.4.2 Response Format (DUT → FPGA → Host)
+For each chunk of bytes received on the DUT UART, the FPGA emits a framed message to the host:
+```
+"uar+" + LEN (1 byte) + DATA (LEN bytes)
+```
+Framing behavior:
+- The FPGA may coalesce or fragment the DUT UART stream.
+- A frame is emitted when either (a) LEN reaches a configurable high-watermark (≤255), or (b) an inter-byte idle timeout elapses (default 1 ms), whichever occurs first.
+- Frames may be emitted back-to-back and may interleave with "stl+" and "asc+" responses.
+
+#### 3.4.3 Notes
+- The host must demultiplex by prefix when parsing FPGA→host traffic.
+- No additional CRC is applied; underlying UART framing and optional higher-level checks are assumed sufficient for bring-up/debug. A future extension may add a simple checksum if needed.
+
 ## 4. Hardware Interface Specifications
 
 ### 4.1 External Interfaces (a7top.v)
@@ -175,6 +197,13 @@ input  wire TL_IN_DATA,    // Serial data going to SCuM-V
 output wire TL_OUT_VALID,  // Valid signal for data coming from SCuM-V
 input  wire TL_OUT_READY,  // Ready signal for data coming from SCuM-V
 output wire TL_OUT_DATA    // Serial data coming from SCuM-V
+```
+
+#### 4.1.4 DUT UART Interface
+```verilog
+// DUT (SCuM-V) UART passthrough signals
+input  wire DUT_UART_TXD_IN,   // UART TX from DUT (into FPGA)
+output wire DUT_UART_RXD_OUT   // UART RX to DUT (from FPGA)
 ```
 
 ### 4.2 Internal FIFO Interfaces
@@ -243,9 +272,19 @@ module scumvcontroller_uart_handler (
     input  wire       stl_response_valid,
     output wire       stl_response_ready,
     input  wire [7:0] stl_response_data,
+
+    // DUT UART passthrough FIFO interface
+    // Host→DUT data (after removing "uar+" prefix and LEN)
+    output wire       uar_data_valid,
+    input  wire       uar_data_ready,
+    output wire [7:0] uar_data_out,
+    // DUT→Host data (raw bytes; handler frames into "uar+" + LEN + DATA)
+    input  wire       uar_response_valid,
+    output wire       uar_response_ready,
+    input  wire [7:0] uar_response_data,
     
     // Status and control
-    output wire [1:0] active_mode,   // 0=idle, 1=asc, 2=stl
+    output wire [1:0] active_mode,   // 0=idle, 1=asc, 2=stl (note: uar handled as stream, not latched mode)
     output wire [3:0] debug_state    // Internal state for debugging
 );
 ```
@@ -282,6 +321,22 @@ module serialtl_subsystem (
     input  wire       tl_clk, tl_in_valid, tl_in_data,
     output wire       tl_in_ready, tl_out_valid, tl_out_data,
     input  wire       tl_out_ready
+);
+
+// DUT UART Passthrough Subsystem
+module dut_uart_subsystem (
+    input  wire       clk, reset,
+    // Host→DUT byte stream (from handler after stripping prefix+len)
+    input  wire       data_valid,
+    output wire       data_ready,
+    input  wire [7:0] data_in,
+    // DUT→Host byte stream (to handler for framing)
+    output wire       response_valid,
+    input  wire       response_ready,
+    output wire [7:0] response_data,
+    // DUT UART physical lines
+    input  wire       dut_uart_txd_in,   // from DUT
+    output wire       dut_uart_rxd_out   // to DUT
 );
 ```
 
@@ -328,33 +383,45 @@ module serialtl_subsystem (
               ┌─────────────▼─────────────┐
         'a' ──┤         PREFIX_1          ├── 's'
               └─────────────┬─────────────┘
-                            │
+                            │             
               ┌─────────────▼─────────────┐
-        's' ──┤         PREFIX_2          ├── 't'
+        's' ──┤         PREFIX_2          ├── 't' / 'u'
               └─────────────┬─────────────┘
                             │
               ┌─────────────▼─────────────┐
-        'c' ──┤         PREFIX_3          ├── 'l'
+        'c' ──┤         PREFIX_3          ├── 'l' / 'r'
               └─────────────┬─────────────┘
                             │
               ┌─────────────▼─────────────┐
         '+' ──┤         PREFIX_4          ├── '+'
               └─────────────┬─────────────┘
                             │
-          ┌─────────────────▼─────────────────┐
-          │        DETERMINE_PROTOCOL         │
-          └─────────┬───────────┬─────────────┘
+          ┌─────────────────▼──────────────────┐
+          │        DETERMINE_PROTOCOL          │
+          └─────────┬───────────┬──────────────┘
                     │           │
            "asc+"   │           │   "stl+"
-           ┌────────▼─┐       ┌─▼────────┐
-           │ ASC_MODE │       │ STL_MODE │
-           │ 22 bytes │       │ 16 bytes │
-           └────────┬─┘       └─┬────────┘
-                    │           │
-           ┌────────▼─┐       ┌─▼────────┐
-           │ ASC_RESP │       │ STL_RESP │
-           │  1 byte  │       │ 16 bytes │
-           └──────────┘       └──────────┘
+           ┌────────▼─┐       ┌─▼────────┐        "uar+"
+           │ ASC_MODE │       │ STL_MODE │◄──────┐
+           │ 22 bytes │       │ 16 bytes │       │ LEN (1B) +
+           └────────┬─┘       └─┬────────┘       │ DATA (LENB)
+                    │           │                │ (stream)
+           ┌────────▼─┐       ┌─▼────────┐       │
+           │ ASC_RESP │       │ STL_RESP │       │
+           │  1 byte  │       │ 16 bytes │       │
+           └──────────┘       └──────────┘       └─────────────► framed by handler
+```
+
+### 5.4 UART Passthrough Flow
+```
+ Host PC           UART Handler           DUT UART Subsystem              SCuM-V UART
+─────────         ──────────────         ────────────────────            ────────────
+"uar+"+LEN+N  ───► Strip prefix+LEN ───► N raw bytes ────────────────►   DUT_RX
+               
+               ◄────────────────────────────────  Bytes from DUT RX (raw)
+         Frame into "uar+" + LEN + DATA  ◄───┘
+           (coalesce/idle-timeout)
+
 ```
 
 ## 6. Testbench Architecture
@@ -435,4 +502,6 @@ The testbench provides multi-level validation:
 ### 7.3 Key Design Decisions
 
 The final architecture was shaped by several key design decisions. A three-level hierarchy (top-level, subsystem, and implementation) was chosen to create a clean separation of concerns. Standardizing on a ready/valid FIFO handshake provides a consistent and reliable interface pattern throughout the design. This modularity also ensures that the ASC and STL subsystems are fully independent and can be tested in isolation. The simple and reliable prefix-based routing mechanism was selected for protocol detection. Finally, to guarantee correctness, the design reuses the exact `GenericSerializer` and `GenericDeserializer` modules from the SCuM-V24B ASIC without modification.
+
+Additional decision: extend the prefix space with `"uar+"` to carry DUT UART payloads bidirectionally. UART bytes are length-framed at the FPGA boundary to avoid ambiguity and allow interleaving with STL/ASC traffic without breaking legacy tooling.
 

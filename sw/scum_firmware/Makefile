@@ -1,4 +1,12 @@
-TARGETS = power_test lrwpan_loopback ble_loopback template simple afe_test baseband_test nfc_test rtc_timer_test scumvtuning_test sensor_adc_test 
+# Auto-detect all demo programs from .c files in core/src/, excluding scum.ld
+TARGETS = $(basename $(filter-out scum.ld, $(notdir $(wildcard $(SRC_DIR)*.c)))) 
+
+#################################
+# Build Configuration
+#################################
+
+# Build mode: SIM (simulation) or BRINGUP (post-silicon)
+BUILD_MODE ?= BRINGUP
 
 #################################
 # RISCV Toolchain
@@ -10,8 +18,8 @@ TARGETS = power_test lrwpan_loopback ble_loopback template simple afe_test baseb
 # Nuclei Toolchain
 #PREFIX = riscv-nuclei-elf-
 
-# xPack Toolchain
-PREFIX = riscv-none-elf-
+# xPack Toolchain (default, can be overridden via command line)
+PREFIX ?= riscv-none-elf-
 
 
 CC = $(PREFIX)gcc
@@ -39,8 +47,8 @@ LIB_DIR = lib/
 #################################
 
 
-USE_HTIF = 1
-ifeq ($(USE_HTIF), 1)
+# Only include HTIF library for simulation builds
+ifeq ($(BUILD_MODE), SIM)
 LIBRARIES += htif
 endif
 
@@ -105,15 +113,17 @@ CODEMODEL = medany
 LD_SCRIPT = $(SRC_DIR)scum.ld
 
 ARCHFLAGS = -march=$(ARCH) -mabi=$(ABI) -mcmodel=$(CODEMODEL) -fno-pie
-SPECFLAGS = --specs="nano.specs"
+# Use nano.specs if available, can be overridden with SPECFLAGS=
+SPECFLAGS ?= --specs="nano.specs"
 
 # compiler Flags
-CFLAGS  = -g -std=gnu11 -O0
+CFLAGS  = -g -std=gnu11 -Os
 CFLAGS += -fno-common -fno-builtin-printf
 CFLAGS += -Wall -Wextra -Warray-bounds -Wno-unused-parameter
 CFLAGS += $(ARCHFLAGS)
 CFLAGS += $(SPECFLAGS)
 CFLAGS += $(INCLUDES)
+CFLAGS += -DBUILD_MODE_$(BUILD_MODE)
 
 # linker Flags
 LFLAGS  = -static
@@ -129,6 +139,9 @@ LFLAGS += -T $(LD_SCRIPT)
 
 # default target
 all: $(TARGET_ELF) $(TARGET_HEX) $(TARGET_DUMP) $(TARGET_BIN)
+
+# Individual target rules
+$(TARGETS): %: $(BUILD_DIR)%.elf
 
 $(TARGET_ELF): $(BUILD_DIR)%.elf: $(BUILD_DIR)$(SRC_DIR)%.o $(OBJECTS)
 	@echo "[LD] linking $@"
@@ -164,6 +177,13 @@ $(C_OBJECTS) $(TARGET_OBJS): $(BUILD_DIR)%.o: %.c
 clean:
 	@rm -rf $(BUILD_DIR)
 
+# Convenience targets for different build modes
+%-sim: BUILD_MODE=SIM
+%-sim: %
+
+%-bringup: BUILD_MODE=BRINGUP
+%-bringup: %
+
 # hex: $(TARGET_HEX)
 
 bin: $(TARGET_BIN)
@@ -172,6 +192,7 @@ dump: $(TARGET_DUMP)
 
 # for debugging Makefile
 list:
+	@echo "TARGETS: $(TARGETS)"
 	@echo "A_SOURCES: $(A_SOURCES)"
 	@echo "C_SOURCES: $(C_SOURCES)"
 	@echo "A_OBJECTS: $(A_OBJECTS)"
