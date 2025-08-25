@@ -81,14 +81,14 @@ export const pageMap = [{
   route: "/digital-baseband",
   frontMatter: {
     "title": "Digital Baseband-Modem",
-    "description": "Dual-Mode Baseband-Modem for Bluetooth LE and IEEE 802.15.4 for SCuM-V24B"
+    "description": "Dual-Mode Baseband-Modem for Bluetooth LE and IEEE 802.15.4"
   }
 }, {
   name: "digital-core",
   route: "/digital-core",
   frontMatter: {
     "title": "Digital Core",
-    "description": "Digital Core architecture and specifications for SCuM-V24B"
+    "description": "Digital Core architecture and specifications"
   }
 }, {
   name: "firmware-development",
