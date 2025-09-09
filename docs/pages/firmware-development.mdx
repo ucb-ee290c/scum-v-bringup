@@ -56,11 +56,9 @@ cd ~/Downloads/riscv-gnu-toolchain/
 
 Run configuration. The prefix is where we want to install the toolchain. Here, we will be installing under the `riscv64-unknown-toolchain` directory. NOTE: MAKE SURE TO ADD `--with-languages="c,c++,fortran". `
 
-{% code overflow="wrap" %}
 ```bash
 ./configure --prefix=/home/tk/Documents/RISCV/riscv64-unknown-toolchain/ --with-multilib-generator="rv32i-ilp32--;rv32im-ilp32--;rv32iac-ilp32--;rv32imac-ilp32--;rv32imafc-ilp32f--;rv64imac-lp64--;rv64imafdc-lp64d--" --with-languages="c,c++,fortran"
 ```
-{% endcode %}
 
 
 Build the toolchain
