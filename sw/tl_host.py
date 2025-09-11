@@ -33,6 +33,14 @@ TL_OPCODE_D_ACCESSACKDATA = 1
 SERIAL_INTERFACE_BAUD_RATE = 2000000
 SERIAL_INTERFACE_TIMEOUT = 2  # seconds
 
+# UART initialization constants (matching C firmware defaults)
+UART_BAUDRATE_DEFAULT = 115200
+UART_MODE_RX = 0x01
+UART_MODE_TX = 0x02  
+UART_MODE_TX_RX = 0x03
+UART_STOPBITS_DEFAULT = 0
+SYS_CLK_FREQ_DEFAULT = 1000000
+
 
 def isWindows() -> bool:
     """Returns whether running on Windows."""
@@ -253,40 +261,23 @@ class TileLinkHost:
                     raise ValueError(f"Incorrect memory readback at address "
                                      f"0x{address:008X}.")
 
-    def read_uart_registers(self) -> None:
-        """Reads UART registers."""
-        for address in range(UART_BASE, UART_BASE + 0x1C, 4):
-            self.read_address(address)
-            time.sleep(0.1)
-
     def read_baseband_registers(self) -> None:
         """Reads baseband registers."""
         for address in range(BASEBAND_BASE, BASEBAND_BASE + 0x70, 4):
             self.read_address(address)
 
-    def enable_uart_tx(self) -> None:
-        """Enables UART TX."""
-        self.write_address(UART_BASE + 0x08, 0x01)
+    def uart_transmit(self, data: bytes) -> None:
+        """Transmit a bytestream over UART like HAL_UART_transmit.
 
-    def send_uart_byte(self, data: bytes) -> None:
-        """Sends a byte over UART."""
-        self.write_address(UART_BASE, data)
+        Busy-waits on TXDATA.FULL and writes one byte at a time to TXDATA.
+        """
+        UART_TXDATA_OFFSET = 0x00
+        UART_TXDATA_FULL_MSK = 0x1 << 31
 
-    def send_uart_bytestream(self, data: bytes) -> None:
-        """Sends a bytestream over UART."""
         for byte in data:
-            while self.get_tx_fifo_depth() == 0:
+            while self.read_address(UART_BASE + UART_TXDATA_OFFSET, verbose=False) & UART_TXDATA_FULL_MSK:
                 pass
-            self.send_uart_byte(byte)
-
-    def send_hello_world(self) -> None:
-        """Sends 'Hello World' over UART."""
-        self.send_uart_bytestream(b"Hello World!")
-
-    def get_tx_fifo_depth(self) -> None:
-        """Returns the TX FIFO depth."""
-        tx_control = self.read_address(UART_BASE + 0x0C)
-        return tx_control & 0x7
+            self.write_address(UART_BASE + UART_TXDATA_OFFSET, byte & 0xFF, verbose=False)
 
     def trigger_software_interrupt(self) -> None:
         """Triggers a software interrupt."""
@@ -295,12 +286,75 @@ class TileLinkHost:
         time.sleep(1)
         self.read_address(CLINT_BASE)
 
+    def uart_init(self, baudrate: int = UART_BAUDRATE_DEFAULT, mode: int = UART_MODE_TX_RX, stopbits: int = UART_STOPBITS_DEFAULT, sys_clk_freq: int = SYS_CLK_FREQ_DEFAULT) -> None:
+        """Initializes UART with specified parameters.
+        
+        This function replicates the behavior of HAL_UART_init() from the C firmware.
+        
+        Args:
+            baudrate: UART baud rate (default: 921600)
+            mode: UART mode - 0x01=RX, 0x02=TX, 0x03=TX_RX (default: 0x03)
+            stopbits: Stop bits configuration (default: 0)
+            sys_clk_freq: System clock frequency (default: 200000000)
+            
+        Example:
+            # Initialize with defaults (matches C firmware)
+            tl_host.uart_init()
+            
+            # Initialize with custom baud rate
+            tl_host.uart_init(baudrate=115200)
+        """
+        # Register offsets from UART_TypeDef structure
+        UART_TXCTRL_OFFSET = 0x08
+        UART_RXCTRL_OFFSET = 0x0C
+        UART_DIV_OFFSET = 0x18
+        
+        # Bit field masks and positions
+        UART_RXCTRL_RXEN_MSK = 0x1
+        UART_TXCTRL_TXEN_MSK = 0x1
+        UART_TXCTRL_NSTOP_MSK = 0x2
+        
+        # Mode flags
+        UART_MODE_RX = 0x01
+        UART_MODE_TX = 0x02
+        
+        # Clear RX and TX enable bits
+        rxctrl = self.read_address(UART_BASE + UART_RXCTRL_OFFSET, verbose=False)
+        txctrl = self.read_address(UART_BASE + UART_TXCTRL_OFFSET, verbose=False)
+        
+        # Clear enable bits
+        rxctrl &= ~UART_RXCTRL_RXEN_MSK
+        txctrl &= ~UART_TXCTRL_TXEN_MSK
+        
+        self.write_address(UART_BASE + UART_RXCTRL_OFFSET, rxctrl, verbose=False)
+        self.write_address(UART_BASE + UART_TXCTRL_OFFSET, txctrl, verbose=False)
+        
+        # Set RX enable if mode includes RX
+        if mode & UART_MODE_RX:
+            rxctrl |= UART_RXCTRL_RXEN_MSK
+            self.write_address(UART_BASE + UART_RXCTRL_OFFSET, rxctrl, verbose=False)
+        
+        # Set TX enable if mode includes TX  
+        if mode & UART_MODE_TX:
+            txctrl |= UART_TXCTRL_TXEN_MSK
+            self.write_address(UART_BASE + UART_TXCTRL_OFFSET, txctrl, verbose=False)
+        
+        # Configure stop bits
+        txctrl &= ~UART_TXCTRL_NSTOP_MSK  # Clear stop bits field
+        txctrl &= ~stopbits  # Apply stop bits configuration
+        self.write_address(UART_BASE + UART_TXCTRL_OFFSET, txctrl, verbose=False)
+        
+        # Set baud rate divisor: f_baud = f_sys / (div + 1)
+        div_value = (sys_clk_freq // baudrate) - 1
+        self.write_address(UART_BASE + UART_DIV_OFFSET, div_value, verbose=False)
+        
+        print(f"[UART Init] Baud rate: {baudrate}, Mode: 0x{mode:02X}, DIV: {div_value}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Script for the TileLink host.")
     parser.add_argument("-p", "--port", default="COM6")
-    parser.add_argument("-t", "--target", default="template")
+    parser.add_argument("-t", "--target", default="scumvtuning_test")
     parser.add_argument("--baud", type=int, default=SERIAL_INTERFACE_BAUD_RATE)
     parser.add_argument("--batch", type=int, default=1, help="Number of words per write batch during flashing")
     args = parser.parse_args()
@@ -320,10 +374,6 @@ if __name__ == "__main__":
         binary_path = f"./scum_firmware/build/{args.target}.bin"
 
     tl_host = TileLinkHost(serial)
-    # tl_host.read_uart_registers()
-    #tl_host.enable_uart_tx()
-    #tl_host.send_hello_world()
-    #tl_host.read_uart_registers()
     time.sleep(0.1)
     tl_host.flash_binary(binary_path, batch_size=args.batch)
     # time.sleep(0.02)

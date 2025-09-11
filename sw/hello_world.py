@@ -10,7 +10,7 @@ SERIAL_INTERFACE_TIMEOUT = 2  # seconds
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Script for the TileLink host.")
-    parser.add_argument("-p", "--port", default="COM4")
+    parser.add_argument("-p", "--port", default="COM6")
     args = parser.parse_args()
 
     serial = serial.Serial(args.port,
@@ -18,7 +18,6 @@ if __name__ == "__main__":
                            timeout=SERIAL_INTERFACE_TIMEOUT)
  
     tl_host = TileLinkHost(serial)
-    tl_host.read_uart_registers()
-    tl_host.enable_uart_tx()
-    tl_host.send_hello_world()
-    tl_host.read_uart_registers()
+    # Initialize UART like firmware defaults and transmit message
+    tl_host.uart_init()
+    tl_host.uart_transmit(b"SCuM-V24B says 'hello world'\r\n")
