@@ -17,17 +17,15 @@ This guide assumes you have completed the [FPGA Programming](/fpga-setup) and ha
 
 ## Communication Interfaces
 
+![SCuM-V Controller Block Diagram](/images/fpga-setup/scumv_controller.png)
+
 The SCuM-V Controller supports two primary communication paths:
 
 ### SerialTL (TileLink over UART)
-- **Purpose**: Digital subsystem communication
-- **Protocol**: TileLink transactions over UART
-- **Use Cases**: Memory access, register configuration, firmware loading
+Digital subsystem communication using TileLink transactions over UART for memory access, register configuration, and firmware loading.
 
 ### Analog Scan Chain (ASC)
-- **Purpose**: Analog subsystem configuration  
-- **Protocol**: Shift-register based scan chain
-- **Use Cases**: AFE tuning, power management, analog block configuration
+Analog subsystem configuration through shift-register based scan chain to interface with the analog blocks **without involvement of the digital core**.
 
 ## Host Scripts Overview
 
@@ -59,13 +57,13 @@ python tl_host.py [options]
 - Burst transfer capabilities
 
 **Command Line Arguments**:
-- `-p/--port`: Serial port (default: COM6)
+- `-p/--port`: Serial port (default: COM6 **must be overridden to the correct port**)
 - `-t/--target`: Target application name (default: template)  
-- `--baud`: Baud rate (default: 1,000,000)
+- `--baud`: Baud rate (default: 2,000,000)
 - `--batch`: Batch size during flashing (default: 1)
 
 **Configuration**:
-- **Default Baud Rate**: 1,000,000 (can be overridden)
+- **Default Baud Rate**: 2,000,000 (can be overridden)
 - **Protocol**: TileLink-UH (Uncached Heavyweight)
 - **Interface**: UART/SerialTL bridge
 
@@ -86,7 +84,9 @@ python client.py [scan_chain_commands]
 
 ## Firmware Bootloading Process
 
-### Step 1: Prepare Firmware Binary
+<Steps>
+
+### Prepare Firmware Binary
 
 1. **Build Firmware**
    ```bash
@@ -100,7 +100,7 @@ python client.py [scan_chain_commands]
    # Expected: build/simple.bin (or your target application)
    ```
 
-### Step 2: Establish Communication
+### Establish Communication
 
 1. **Identify COM Port**
    - Windows: Check Device Manager for "USB Serial Port (COMx)"
@@ -112,7 +112,7 @@ python client.py [scan_chain_commands]
    python tl_host.py -p COMx
    ```
 
-### Step 3: Load Firmware
+### Load Firmware
 
 **Basic Firmware Loading**:
 ```bash
@@ -133,7 +133,7 @@ python tl_host.py -p COMx --baud 115200
 python tl_host.py -p COMx --batch 512
 ```
 
-### Step 4: Execute Firmware
+### Execute Firmware
 
 **Start Execution**:
 
@@ -145,6 +145,8 @@ The tl_host.py script automatically flashes the binary and triggers execution. F
 # Firmware execution is automatic after flashing
 # No additional commands needed
 ```
+
+</Steps>
 
 ## Advanced Bootloading Operations
 
@@ -212,34 +214,6 @@ For monitoring firmware output, use a standard terminal program (PuTTY, minicom,
 tl.memory_scan()  # Built-in memory scan function
 ```
 
-## Analog Subsystem Configuration
-
-### AFE (Analog Front-End) Setup
-
-```bash
-cd hw
-python client.py --afe-config --gain 10 --bandwidth 1MHz
-```
-
-### Power System Configuration
-
-```bash
-# Configure power domains
-python client.py --power-config --domain digital --voltage 1.2V
-
-# Enable low-power modes
-python client.py --power-config --sleep-mode deep
-```
-
-### Oscillator Tuning
-
-```bash
-# Set reference oscillator frequency
-python client.py --osc-config --ref-freq 32.768kHz
-
-# Configure PLL settings
-python client.py --pll-config --target-freq 100MHz
-```
 
 ## Communication Protocol Details
 
@@ -262,89 +236,13 @@ SerialTL uses a custom framing protocol over UART. Refer to `hw/scumv-controller
 ### ASC Protocol Details
 
 **Scan Chain Structure**:
-- **Total Length**: Variable (depends on enabled blocks)
+- **Total Length**: Variable (depends on the architecture of SCuM-V, specifically which version)
 - **Clock Domain**: Separate SCAN_CLK from system clock
 - **Data Format**: MSB-first shift register
 
 **Block Addressing**:
 ```
 [BLOCK_ID] [REG_ADDR] [DATA_BITS]
-```
-
-## Troubleshooting
-
-### Communication Issues
-
-**UART Connection Problems**:
-```bash
-# Test raw UART connection
-python -c "import serial; s=serial.Serial('COMx', 1000000); print('Connected')"
-
-# Try different baud rates
-python tl_host.py -p COMx --baud 115200
-```
-
-**Protocol Errors**:
-- Verify baud rate matches FPGA configuration
-- Check for EMI/noise affecting signal integrity
-- Ensure proper ground connections
-
-### Firmware Loading Failures
-
-**Verification Errors**:
-```bash
-# Try smaller batch sizes for reliability
-python tl_host.py -p COMx --batch 64
-
-# Try lower baud rate
-python tl_host.py -p COMx --baud 115200
-```
-
-**Memory Access Issues**:
-- Verify target memory addresses are valid
-- Check for memory protection or bus errors
-- Ensure firmware size fits available memory
-
-### Analog Configuration Issues
-
-**Scan Chain Verification**:
-```bash
-# Test scan chain connectivity
-python client.py --scan-test --verbose
-
-# Verify block responses
-python client.py --block-test --all-blocks
-```
-
-**Configuration Validation**:
-- Check analog supply voltages
-- Verify reference clock stability
-- Ensure proper bias current settings
-
-## Performance Optimization
-
-### Transfer Speed
-
-**Optimal Baud Rates**:
-- **Simulation**: 2,000,000 bps (fast turnaround)
-- **Hardware**: 115,200 bps (reliable operation)
-- **Debug**: 9,600 bps (maximum compatibility)
-
-**Optimized Transfers**:
-```bash
-# Use larger batch sizes for faster transfers
-python tl_host.py -p COMx --batch 1024
-```
-
-### Power Considerations
-
-**Efficient Bootloading**:
-```bash
-# Use optimal batch size to minimize programming time
-python tl_host.py -p COMx --batch 256
-
-# Configure analog power states via scan chain
-python client.py [scan_chain_power_commands]
 ```
 
 ## Script Customization
