@@ -338,6 +338,49 @@ class TileLinkHost:
         if mode & UART_MODE_TX:
             txctrl |= UART_TXCTRL_TXEN_MSK
             self.write_address(UART_BASE + UART_TXCTRL_OFFSET, txctrl, verbose=False)
+
+    # ------------------------------
+    # Word-aligned field RMW helpers
+    # ------------------------------
+    def write_field_word_aligned(self,
+                                 word_addr: int,
+                                 shift: int,
+                                 width: int,
+                                 value: int,
+                                 verbose: bool = True) -> None:
+        """Read-modify-write a 32-bit word-aligned register field.
+
+        Args:
+            word_addr: Absolute 32-bit-aligned address of the containing word.
+            shift: Bit shift of the field inside the 32-bit word.
+            width: Field width in bits (1..32).
+            value: New value to program into the field.
+            label: Optional label to include in logs.
+            verbose: If True, print read and write words.
+        """
+        mask = ((1 << width) - 1) << shift
+        sanitized = value & ((1 << width) - 1)
+        current_word = self.read_address(word_addr, verbose=False) & 0xFFFFFFFF
+        new_word = (current_word & ~mask) | (sanitized << shift)
+        if verbose:
+            print(f"RMW @0x{word_addr:08X}: read=0x{current_word:08X} -> write=0x{new_word:08X}")
+        self.write_address(word_addr, new_word, verbose=False)
+
+    def write_field_by_offset(self,
+                              base_addr: int,
+                              byte_offset: int,
+                              bit_index: int,
+                              width: int,
+                              value: int,
+                              verbose: bool = True) -> None:
+        """RMW using a byte offset and bit index within that byte.
+
+        Computes the containing 32-bit word and shifts accordingly.
+        """
+        word_addr = base_addr + (byte_offset & ~0x3)
+        intra_byte = (byte_offset & 0x3) * 8
+        shift = intra_byte + bit_index
+        self.write_field_word_aligned(word_addr, shift, width, value, verbose=verbose)
         
         # Configure stop bits
         txctrl &= ~UART_TXCTRL_NSTOP_MSK  # Clear stop bits field
