@@ -10,15 +10,23 @@ uint32_t status0[BUF_SIZE];
 
 void print_scumvtuning()
 {
-    uint16_t tuneOut_adc_coarse = scumvtuning_get_tuneOut_adc_coarse();
-    uint8_t tuneOut_dig = scumvtuning_get_tuneOut_dig();
-    uint8_t sel_cpu_clk = scumvtuning_get_sel_cpu_clk();
-    uint8_t sel_debug_clk = scumvtuning_get_sel_debug_clk();
-    uint8_t bgr_tempCtrl = scumvtuning_get_bgr_tempCtrl();
-    uint8_t bgr_vrefCtrl = scumvtuning_get_bgr_vrefCtrl();
-    uint8_t clkOvrd = scumvtuning_get_clkOvrd();
+    uint16_t adc_tune = scumvtuning_get_adc_tune_out_coarse();
+    uint8_t idac = scumvtuning_get_ramp_generator_idac_control();
+    uint8_t dig_tune = scumvtuning_get_dig_tune_out();
+    uint8_t cpu_sel = scumvtuning_get_cpu_sel();
+    uint8_t bgr_temp = scumvtuning_get_bgr_temp_ctrl();
+    uint8_t bgr_vref = scumvtuning_get_bgr_vref_ctrl();
+    uint8_t clk_ovrd = scumvtuning_get_clk_ovrd();
     char status_str[512];
-    sprintf(status_str, "tuneOut_adc_coarse: %u\n tuneOut_dig: %u\n sel_cpu_clk: %u\n sel_debug_clk: %u\n bgr_tempCtrl: %u\n bgr_vrefCtrl: %u\n clkOvrd: %u\n", tuneOut_adc_coarse, tuneOut_dig, sel_cpu_clk, sel_debug_clk, bgr_tempCtrl, bgr_vrefCtrl, clkOvrd);
+    sprintf(status_str,
+            "adc_tune: %u\n idac: %u\n dig_tune: %u\n cpu_sel: %u\n bgr_temp: %u\n bgr_vref: %u\n clk_ovrd: %u\n",
+            adc_tune,
+            idac,
+            dig_tune,
+            cpu_sel,
+            bgr_temp,
+            bgr_vref,
+            clk_ovrd);
     HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
 }
 
@@ -28,13 +36,13 @@ void run_scumvtuning_test()
     HAL_delay(100);
     uint16_t test_16 = 7;
     uint8_t test_8 = 7;
-    scumvtuning_set_tuneOut_adc_coarse(test_16);
-    scumvtuning_set_tuneOut_dig(test_8);
-    scumvtuning_set_sel_cpu_clk(test_8);
-    scumvtuning_set_sel_debug_clk(test_8);
-    scumvtuning_set_bgr_tempCtrl(test_8);
-    scumvtuning_set_bgr_vrefCtrl(test_8);
-    scumvtuning_set_clkOvrd(test_8);
+    scumvtuning_set_adc_tune_out_coarse(test_16);
+    scumvtuning_set_ramp_generator_idac_control(test_8);
+    scumvtuning_set_dig_tune_out(test_8);
+    scumvtuning_set_cpu_sel(test_8);
+    scumvtuning_set_bgr_temp_ctrl(test_8);
+    scumvtuning_set_bgr_vref_ctrl(test_8);
+    scumvtuning_set_clk_ovrd(test_8);
     HAL_delay(100);
     print_scumvtuning();
 }

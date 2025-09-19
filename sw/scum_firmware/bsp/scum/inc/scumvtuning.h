@@ -4,62 +4,73 @@
 #include <stdint.h>
 #include "mmio.h"
 
-#define SCUMVTUNING_BASE                    0xA000
-#define SCUMVTUNING_TUNEOUT_ADC_COARSE      (SCUMVTUNING_BASE + 0x00)
-#define SCUMVTUNING_TUNEOUT_DIG             (SCUMVTUNING_BASE + 0x02)
-#define SCUMVTUNING_SEL_CPU_CLK             (SCUMVTUNING_BASE + 0x03)
-#define SCUMVTUNING_SEL_DEBUG_CLK           (SCUMVTUNING_BASE + 0x04)
-#define SCUMVTUNING_BGR_TEMP_CTRL           (SCUMVTUNING_BASE + 0x05)
-#define SCUMVTUNING_BGT_VREF_CTRL           (SCUMVTUNING_BASE + 0x06)
-#define SCUMVTUNING_CLK_OVRD                (SCUMVTUNING_BASE + 0x07)
+#define SCUMVTUNING_BASE                              0xA000
+#define SCUMVTUNING_ADC_TUNE_OUT_COARSE              (SCUMVTUNING_BASE + 0x00)
+#define SCUMVTUNING_RAMP_GENERATOR_IDAC_CONTROL      (SCUMVTUNING_BASE + 0x02)
+#define SCUMVTUNING_RAMP_GENERATOR_RX_OUT_SEL        (SCUMVTUNING_BASE + 0x03)
+#define SCUMVTUNING_DIG_TUNE_OUT                     (SCUMVTUNING_BASE + 0x04)
+#define SCUMVTUNING_CPU_SEL                          (SCUMVTUNING_BASE + 0x05)
+#define SCUMVTUNING_ADC_RESET                        (SCUMVTUNING_BASE + 0x06)
+#define SCUMVTUNING_DIG_RESET                        (SCUMVTUNING_BASE + 0x07)
+#define SCUMVTUNING_BGR_TEMP_CTRL                    (SCUMVTUNING_BASE + 0x08)
+#define SCUMVTUNING_BGR_VREF_CTRL                    (SCUMVTUNING_BASE + 0x09)
+#define SCUMVTUNING_CURRENT_SRC_LEFT_CTRL            (SCUMVTUNING_BASE + 0x0A)
+#define SCUMVTUNING_CURRENT_SRC_RIGHT_CTRL           (SCUMVTUNING_BASE + 0x0B)
+#define SCUMVTUNING_CLK_OVRD                         (SCUMVTUNING_BASE + 0x0C)
+#define SCUMVTUNING_RAMP_GENERATOR_CLK_MUX_SEL       (SCUMVTUNING_BASE + 0x0D)
+#define SCUMVTUNING_RAMP_GENERATOR_ENABLE            (SCUMVTUNING_BASE + 0x0E)
+#define SCUMVTUNING_RAMP_GENERATOR_FREQ_STEP_START   (SCUMVTUNING_BASE + 0x0F)
+#define SCUMVTUNING_RAMP_GENERATOR_NUM_FREQ_STEPS    (SCUMVTUNING_BASE + 0x10)
+#define SCUMVTUNING_RAMP_GENERATOR_NUM_CYCLES_PER_FREQ (SCUMVTUNING_BASE + 0x11)
+#define SCUMVTUNING_RAMP_GENERATOR_NUM_IDLE_CYCLES   (SCUMVTUNING_BASE + 0x14)
+#define SCUMVTUNING_RAMP_GENERATOR_RST               (SCUMVTUNING_BASE + 0x18)
+#define SCUMVTUNING_VCO_CAP_TUNING                   (SCUMVTUNING_BASE + 0x19)
+#define SCUMVTUNING_VCO_ENABLE                       (SCUMVTUNING_BASE + 0x1A)
+#define SCUMVTUNING_VCO_DIV_ENABLE                   (SCUMVTUNING_BASE + 0x1B)
+#define SCUMVTUNING_PA_ENABLE                        (SCUMVTUNING_BASE + 0x1C)
+#define SCUMVTUNING_PA_BYPASS                        (SCUMVTUNING_BASE + 0x1D)
+#define SCUMVTUNING_PA_INPUT_MUX_SEL                 (SCUMVTUNING_BASE + 0x1E)
 
 
-static inline int16_t scumvtuning_get_tuneOut_adc_coarse()
+static inline uint16_t scumvtuning_get_adc_tune_out_coarse(void)
 {
-    int16_t data = (int16_t)(reg_read16(SCUMVTUNING_TUNEOUT_ADC_COARSE));
-    return data;
+    return (uint16_t)reg_read16(SCUMVTUNING_ADC_TUNE_OUT_COARSE);
 }
 
-static inline int8_t scumvtuning_get_tuneOut_dig()
+static inline uint8_t scumvtuning_get_ramp_generator_idac_control(void)
 {
-    int8_t data = (int8_t)(reg_read8(SCUMVTUNING_TUNEOUT_DIG));
-    return data;
+    return (uint8_t)reg_read8(SCUMVTUNING_RAMP_GENERATOR_IDAC_CONTROL);
 }
 
-static inline int8_t scumvtuning_get_sel_cpu_clk()
+static inline uint8_t scumvtuning_get_dig_tune_out(void)
 {
-    int8_t data = (int8_t)(reg_read8(SCUMVTUNING_SEL_CPU_CLK));
-    return data;
+    return (uint8_t)reg_read8(SCUMVTUNING_DIG_TUNE_OUT);
 }
 
-static inline int8_t scumvtuning_get_sel_debug_clk()
+static inline uint8_t scumvtuning_get_cpu_sel(void)
 {
-    int8_t data = (int8_t)(reg_read8(SCUMVTUNING_SEL_DEBUG_CLK));
-    return data;
+    return (uint8_t)reg_read8(SCUMVTUNING_CPU_SEL);
 }
 
-static inline int8_t scumvtuning_get_bgr_tempCtrl()
+static inline uint8_t scumvtuning_get_bgr_temp_ctrl(void)
 {
-    int8_t data = (int8_t)(reg_read8(SCUMVTUNING_BGR_TEMP_CTRL));
-    return data;
+    return (uint8_t)reg_read8(SCUMVTUNING_BGR_TEMP_CTRL);
 }
 
-static inline int8_t scumvtuning_get_bgr_vrefCtrl()
+static inline uint8_t scumvtuning_get_bgr_vref_ctrl(void)
 {
-    int8_t data = (int8_t)(reg_read8(SCUMVTUNING_BGT_VREF_CTRL));
-    return data;
+    return (uint8_t)reg_read8(SCUMVTUNING_BGR_VREF_CTRL);
 }
 
-static inline int8_t scumvtuning_get_clkOvrd()
+static inline uint8_t scumvtuning_get_clk_ovrd(void)
 {
-    int8_t data = (int8_t)(reg_read8(SCUMVTUNING_CLK_OVRD));
-    return data;
+    return (uint8_t)reg_read8(SCUMVTUNING_CLK_OVRD);
 }
 
-void scumvtuning_set_tuneOut_adc_coarse(int16_t tuneOut_adc_coarse);
-void scumvtuning_set_tuneOut_dig(int8_t tuneOut_dig);
-void scumvtuning_set_sel_cpu_clk(int8_t sel_cpu_clk);
-void scumvtuning_set_sel_debug_clk(int8_t sel_debug_clk);
-void scumvtuning_set_bgr_tempCtrl(int8_t bgr_tempCtrl);
-void scumvtuning_set_bgr_vrefCtrl(int8_t bgr_vrefCtrl);
-void scumvtuning_set_clkOvrd(int8_t clkOvrd);
+void scumvtuning_set_adc_tune_out_coarse(uint16_t value);
+void scumvtuning_set_ramp_generator_idac_control(uint8_t value);
+void scumvtuning_set_dig_tune_out(uint8_t value);
+void scumvtuning_set_cpu_sel(uint8_t value);
+void scumvtuning_set_bgr_temp_ctrl(uint8_t value);
+void scumvtuning_set_bgr_vref_ctrl(uint8_t value);
+void scumvtuning_set_clk_ovrd(uint8_t value);
