@@ -38,7 +38,7 @@ void run_lo_sweep_test()
   int i;
   // Set the channel tuning LUTs
   for (i = 0; i < 40; i++) {
-    baseband_set_lut(LUT_VCO_CT_BLE, i, i*1638);
+    baseband_set_lut(LUT_VCO_CT_BLE, i, i*25);
   }
 
   int j = 0;
@@ -47,7 +47,7 @@ void run_lo_sweep_test()
     if (j >= 40) {
       j = 0;
     }
-    HAL_delay(1); // 1 microsecond
+    HAL_delay(1000000); // 1 microsecond
     sprintf(str, "Channel %d\r\n", j);
     HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
   }

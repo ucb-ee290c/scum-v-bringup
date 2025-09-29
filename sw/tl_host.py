@@ -381,17 +381,6 @@ class TileLinkHost:
         intra_byte = (byte_offset & 0x3) * 8
         shift = intra_byte + bit_index
         self.write_field_word_aligned(word_addr, shift, width, value, verbose=verbose)
-        
-        # Configure stop bits
-        txctrl &= ~UART_TXCTRL_NSTOP_MSK  # Clear stop bits field
-        txctrl &= ~stopbits  # Apply stop bits configuration
-        self.write_address(UART_BASE + UART_TXCTRL_OFFSET, txctrl, verbose=False)
-        
-        # Set baud rate divisor: f_baud = f_sys / (div + 1)
-        div_value = (sys_clk_freq // baudrate) - 1
-        self.write_address(UART_BASE + UART_DIV_OFFSET, div_value, verbose=False)
-        
-        print(f"[UART Init] Baud rate: {baudrate}, Mode: 0x{mode:02X}, DIV: {div_value}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
