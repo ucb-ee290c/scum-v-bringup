@@ -85,7 +85,9 @@ def baseband_set_lut_entry(host: TileLinkHost,
 def _pack_channel_tuning_value(coarse: int, medium: int) -> int:
     coarse_mask = (1 << COARSE_WIDTH) - 1
     medium_mask = (1 << MEDIUM_WIDTH) - 1
-    return ((medium & medium_mask) << COARSE_WIDTH) | (coarse & coarse_mask)
+    packed_code = ((medium & medium_mask) << COARSE_WIDTH) | (coarse & coarse_mask)
+    print(f"Packed code: 0b{packed_code:016b}")
+    return packed_code
 
 
 def _configure_ble_channel0(host: TileLinkHost, verbose: bool = True) -> None:
@@ -131,6 +133,50 @@ def _prompt_step(label: str, current: int, width: int) -> Optional[int]:
     except ValueError:
         print(f"Unrecognized entry '{command}', keeping previous value.")
         return current
+
+
+def _prompt_step_both(coarse: int, medium: int) -> Optional[tuple[int, int]]:
+    """Prompt for both coarse and medium values.
+    
+    Returns:
+        Tuple of (coarse, medium) or None to quit.
+        Enter increments medium first, then coarse on overflow.
+    """
+    command = input(
+        f"[VCO both] coarse={coarse} (0x{coarse:03X}), medium={medium} (0x{medium:02X}). "
+        "Enter=inc, 'r'=reset, 'q'=quit, or type 'coarse, medium': "
+    ).strip()
+
+    coarse_mask = (1 << COARSE_WIDTH) - 1
+    medium_mask = (1 << MEDIUM_WIDTH) - 1
+
+    if not command:
+        # Increment medium first, then coarse on overflow
+        new_medium = (medium + 1) & medium_mask
+        new_coarse = coarse
+        if new_medium == 0:  # Medium wrapped, increment coarse
+            new_coarse = (coarse + 1) & coarse_mask
+        return (new_coarse, new_medium)
+
+    lowered = command.lower()
+    if lowered in {"q", "quit"}:
+        return None
+    if lowered in {"r", "reset"}:
+        return (0, 0)
+
+    # Try parsing "coarse, medium" format
+    if "," in command:
+        try:
+            parts = command.split(",")
+            if len(parts) == 2:
+                new_coarse = int(parts[0].strip(), 0) & coarse_mask
+                new_medium = int(parts[1].strip(), 0) & medium_mask
+                return (new_coarse, new_medium)
+        except ValueError:
+            pass
+
+    print(f"Unrecognized entry '{command}', keeping previous values.")
+    return (coarse, medium)
 
 
 def sweep_vco_idac(host: TileLinkHost,
@@ -180,6 +226,27 @@ def sweep_channel0_medium(host: TileLinkHost,
         if next_value is None:
             break
         medium = next_value & medium_mask
+
+def sweep_channel0_both(host: TileLinkHost,
+                        coarse_start: int,
+                        medium_start: int) -> None:
+    """Sweep both coarse and medium VCO codes for BLE channel 0.
+    
+    Increment behavior: medium increments first, then coarse when medium overflows.
+    """
+    _configure_ble_channel0(host, verbose=True)
+    coarse_mask = (1 << COARSE_WIDTH) - 1
+    medium_mask = (1 << MEDIUM_WIDTH) - 1
+    coarse = coarse_start & coarse_mask
+    medium = medium_start & medium_mask
+
+    print("Entering BLE channel 0 VCO both sweep. Ctrl+C or 'q' to exit.")
+    while True:
+        _program_channel0_tuning(host, coarse, medium)
+        next_values = _prompt_step_both(coarse, medium)
+        if next_values is None:
+            break
+        coarse, medium = next_values
 
 
 def set_debug_enable(host: TileLinkHost, enabled: bool, verbose: bool = True) -> None:
@@ -290,6 +357,8 @@ if __name__ == "__main__":
                         help="Interactively sweep BLE channel 0 VCO coarse bits")
     parser.add_argument("--sweep_ct_medium", action="store_true",
                         help="Interactively sweep BLE channel 0 VCO medium bits")
+    parser.add_argument("--sweep_ct_both", action="store_true",
+                        help="Interactively sweep BLE channel 0 VCO both coarse and medium bits")
     parser.add_argument("--ct_coarse_start", type=int, default=0,
                         help="Initial coarse value (10-bit) when sweeping")
     parser.add_argument("--ct_medium_start", type=int, default=0,
@@ -347,6 +416,8 @@ if __name__ == "__main__":
             sweep_channel0_coarse(host, args.ct_coarse_start, medium_hold)
         if args.sweep_ct_medium:
             sweep_channel0_medium(host, args.ct_medium_start, coarse_hold)
+        if args.sweep_ct_both:
+            sweep_channel0_both(host, args.ct_coarse_start, args.ct_medium_start)
         if args.sweep_vco_idac:
             sweep_vco_idac(host, args.vco_idac_start)
     except KeyboardInterrupt:
