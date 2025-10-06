@@ -5,28 +5,6 @@
 
 char str[512];
 
-void print_baseband_status0()
-{
-  baseband_status0_t status;
-  baseband_get_status0(&status);
-  char status_str[512];
-  sprintf(status_str, "Assembler State: %u\r\n", status.assembler_state);
-  HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
-  sprintf(status_str, "Disassembler State: %u\r\n", status.disassembler_state);
-  HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
-  sprintf(status_str, "TX State: %u\r\n", status.tx_state);
-  HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
-  sprintf(status_str, "RX Controller State: %u\r\n", status.rx_controller_state);
-  HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
-  sprintf(status_str, "TX Controller State: %u\r\n", status.tx_controller_state);
-  HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
-  sprintf(status_str, "Controller State: %u\r\n", status.controller_state);
-  HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
-  sprintf(status_str, "ADC I data: %u\r\n", status.adc_i_data);
-  HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
-  sprintf(status_str, "ADC Q data: %u\r\n", status.adc_q_data);
-  HAL_UART_transmit(UART0, (uint8_t *)status_str, strlen(status_str), 0);
-}
 
 void run_lrwpan_loopback()
 {
@@ -68,28 +46,26 @@ void run_lrwpan_loopback()
   sprintf(str, "-----LRWPAN Loopback Test-----\r\n");
   HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
 
-  #define TIMEOUT_US 3
-  uint32_t us_count = 0, bytes_read;
+  #define TIMEOUT_MS 10
+  uint32_t ms_count = 0, bytes_read;
   uint8_t *rx_packet = packet + NUM_BYTES + 4;
 
   while (1) {
-    us_count += 1;
-    if (us_count > TIMEOUT_US) {
-      sprintf(str, "Timeout after %u us!\r\n", us_count);
+    ms_count += 1;
+    HAL_delay(1);
+    if (ms_count > TIMEOUT_MS) {
+      sprintf(str, "Timeout!\r\n");
       HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-      sim_finish();
+      HAL_UART_finishTX(UART0);
+      //sim_finish();
       return;
-    }
-    if ((us_count % (TIMEOUT_US / 10)) == 0) {
-      sprintf(str, "us_count: %u\r\n", us_count);
-      HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
     }
     
     switch (debug_status) {
       case DEBUG_TX_FAIL:
       case DEBUG_RX_FAIL:
         // TODO: Exit with error code
-        sim_finish();
+        // sim_finish();
         return;
 
       case DEBUG_RX_FINISH:
@@ -102,7 +78,7 @@ void run_lrwpan_loopback()
         }
         sprintf(str, "\r\n");
         HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
-        sim_finish();
+        // sim_finish();
         return;
       
       default:
@@ -113,35 +89,27 @@ void run_lrwpan_loopback()
 
 int main() {
   HAL_init();
+  HAL_CORE_enableGlobalInterrupt();
   HAL_CORE_enableInterrupt(MachineExternalInterrupt);
-  HAL_CORE_enableInterrupt(MachineExternalInterrupt);
-  // HAL_CORE_enableIRQ(MachineExternal_IRQn);
+  HAL_PLIC_enable(0, TX_FINISH);
+  HAL_PLIC_enable(0, RX_FINISH);
+  HAL_PLIC_enable(0, TX_ERROR);
+  HAL_PLIC_enable(0, RX_ERROR);
+  HAL_PLIC_enable(0, RX_START);
 
-  // system_init();
-  
-  //HAL_GPIO_init(GPIOA, GPIO_PIN_0);
-  //HAL_GPIO_writePin(GPIOA, GPIO_PIN_0, 0);
 
   UART_InitTypeDef UART_init_config;
   UART_init_config.baudrate = UART_BAUDRATE_DEFAULT;
   UART_init_config.mode = UART_MODE_TX_RX;
   UART_init_config.stopbits = UART_STOPBITS_DEFAULT;
-  HAL_UART_init(UART0, &UART_init_config);
+  HAL_UART_init(UART0, &UART_init_config);  
 
   sprintf(str, "SCuM-V24B says, 'I'm alive!'\r\n");
   HAL_UART_transmit(UART0, (uint8_t *)str, strlen(str), 0);
 
-  // Set scum-v tuning registers
-  // rtc_tune_in<3> CPU oscillator - 1 exterior / 0 interior
-  // rtc_tune_in<2> ADC/RTC oscillator - 1 exterior / 0 interior
-  // rtc_tune_in<1:0> MUX_CLK_OUT - 00 CPU / 01 RTC / 11 ADC
-  #define SCUM_TUNING 0xA000
-  uint16_t rtc_tune_in = 0b1000;
-  reg_write16(SCUM_TUNING + 0x04, rtc_tune_in);
-  
-  uint8_t counter = 0;
-  uint8_t adc_i_data = 0;
-  run_lrwpan_loopback();
+  while(1) {
+    run_lrwpan_loopback();
+  }
 }
 
 void __attribute__((weak, noreturn)) __main(void) {
