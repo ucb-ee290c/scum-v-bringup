@@ -3,9 +3,11 @@ title: "Power System"
 description: "Power management system including switched capacitor converter, LDOs, and reference circuits for SCuM-V24B"
 ---
 
+import BasePathImage from '../components/BasePathImage'
+
 # Power System
 
-![Power System Block Diagram](/images/2023-08-18T04-39-38-412Z.png)
+<BasePathImage src="/images/power_system_diagram.png" alt="Power System Block Diagram" width="500px" />
 
 SCuM-V24B has 3 power domains:
 
@@ -21,7 +23,7 @@ Ladder 3:1 Topology
 - Externally Reconfigurable for 3:1, 2:1, 3:2 for exploiting full battery voltage range.
 
 **Switched capacitor converter schematic:**
-![Switched Capacitor Converter Schematic](/images/2023-08-18T05-11-42-302Z.png)
+<BasePathImage src="/images/swcap_converter.png" alt="Switched Capacitor Converter Schematic" width="500px" />
 
 Simulated Efficiency Variation with Load
 
@@ -55,13 +57,22 @@ Simulated Efficiency Variation with Load
 
 The design of the LDO is a 2-stage amplifier where the output of the differential amplifier drives the gate of the PMOS at the second stage and the output of the drain of this PMOS is the regulated voltage. This voltage is then passed through a resistor-feedback network to get the desired regulated voltage for different power domains. An additional capacitor is attached at the output voltage as well to stabilize the LDO. Since each domain requires different voltages, the resistors values were chosen to such that the feedback yielded the desired voltage for different domains (1V for the RF analog, and 0.85V for Digital).
 
-**Simulated performance**
+### Simulated performance
 
 | Parameter | LDO_RF (1 V) | LDO_Digital (0.85 V) | LDO_Analog (1 V) |
 |---|---|---|---|
 | Vin | 1.8 V - 1.2 V | 1.8 V - 1.2 V | 1.8 V - 1.2 V |
 | Vout range (at full load) | 1.08 V - 0.81 V | 0.83 V - 0.73 V | 1.19 V - 0.978 V |
 | Max Output Power | 15 mW | 15 mW | 5 mW |
+
+
+### Measured performance
+
+#### Line regulation
+<BasePathImage src="/images/3ldo_line_reg.png" alt="Line regulation" width="600px" />
+
+#### Load regulation
+<BasePathImage src="/images/3ldo_load_reg.png" alt="Load regulation" width="600px" />
 
 ## Current Reference
 
@@ -77,7 +88,7 @@ Parasitic extraction results:
 
 The Bandgap Reference Circuit (BGR) can be splitted into 3 parts: startup circuit, 2-stage op-amp, and the core BGR circuit. There are 2 included RDACs for the temperature coefficient and output voltage (Vref) adjustment.
 
-**Key parameters and simulated performance**
+**Parameters and simulated performance**
 
 | Parameter | Spec |
 |-----------|------|
@@ -98,7 +109,7 @@ A two stage opamp with Miller compensation and pole cancellation was used.
 **Utility Current DAC schematic:**
 ![Utility Current DAC Schematic](/images/2023-08-18T16-31-54-728Z.png)
 
-**Key parameters and simulated performance**
+**Parameters and simulated performance**
 
 | Parameter | Spec |
 |-----------|------|
